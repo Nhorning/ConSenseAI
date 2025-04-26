@@ -10,8 +10,7 @@ def load_keys():
     access_token=48365055_your_access_token_Py4EEaZ9K5AXd0LfAWVbNP4
     access_token_secret=x__your_access_toke_secret_T2xmh5TPTHaIhxJpb9
     bearer_token=AAAAAAAAA_your_bearer_token_AAPXkoDoc
-    
-    also include your chatgpt key accouding to the same scheme using the key below
+    CHATGPT_API_KEY=your_chat_gpt_secret_key_
     """
     keys = {}
     try:
