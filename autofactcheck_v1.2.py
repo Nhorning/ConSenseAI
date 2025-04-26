@@ -9,8 +9,8 @@ def load_keys():
     consumer_secret=m76B6_your_consumer_secret_fHuAXstAmxHwuEx84G9nHAO
     access_token=48365055_your_access_token_Py4EEaZ9K5AXd0LfAWVbNP4
     access_token_secret=x__your_access_toke_secret_T2xmh5TPTHaIhxJpb9
-    bearer_token=AAAAAAAAA_your_bearer_token_AAPXkoDoc
-    CHATGPT_API_KEY=your_chat_gpt_secret_key_
+    bearer_token=AAAAAAAAA_your_bearer_token_AAPXkoDocWVyM32XlaMoS3pPxIZnk%3D3MwUD37WflW3OeCANdzHAaaNERieJsFQl8ibqDyABX919C9Ly4
+    CHATGPT_API_KEY=_your_chat_gpt_secret_key_219geCEC7NDNj9HP1zkL05yCs3J5uUaNL9iLhd4x_K-rRnvIuuT3BlbkFJ2XHps_UuNS4UZ3SddCVTaHRwGyh6MorbvJpRP9jAp39yrXcyPyGhljQ5RJ_txLpPMtvmtO8NsA
     """
     keys = {}
     try:
@@ -67,7 +67,7 @@ def fact_check(tweet_text, tweet_id):
     # Fake URL since ChatGPT doesn’t provide one
     #response_url = f"https://chatgpt.com/response/fake_id_{tweet_id}"
     
-    reply = f"Auto Fact-check v1: {verdict}"# Details: {response_url}"
+    reply = f"AutoGrok AI Fact-check v1: {verdict}"# Details: {response_url}"
     #if len(reply) > 280:  # X’s character limit
         #reply = f"Fact-check: Asked ChatGPT. Response: {verdict[:500]}... Details: {response_url}"
     if verdict != 'Not a factual claim.':
@@ -87,8 +87,6 @@ def post_reply(tweet_id, reply_text):
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
         
-#Cell 2 get and reply to tweets
-
 #Cell 2 get and reply to tweets
 
 import time
@@ -230,7 +228,7 @@ def main():
             time.sleep(RESTART_DELAY)
             continue
         except KeyboardInterrupt:
-            print("\nStopping the tweet checker.")
+            print("\nStopping AutoGrok.")
             break
 
 if __name__ == "__main__":
