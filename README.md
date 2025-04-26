@@ -1,6 +1,6 @@
 A simple fact checking bot for X  
 
-It currently uses Chat GPT to prompt Grok for the fact check. This might change with newer version.
+It currently uses Chat GPT to prompt Grok for the fact check. This might change with newer versions.
 
 To Run:
 1. Purchase X api and OpenAI keys.
