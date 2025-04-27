@@ -66,7 +66,8 @@ def fact_check(tweet_text, tweet_id):
                 {"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
                 {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide a brief initial answer (30 characters or less). Include a DeepSearch web summary (150 characters or less). Prompt @Grok for verification."}
             ],
-            max_tokens=150
+            max_tokens=150,
+            #reasoning={"effort": "high"}  # Boost reasoning
         )
         verdict = response.choices[0].message.content.strip()
     except Exception as e:
@@ -76,6 +77,7 @@ def fact_check(tweet_text, tweet_id):
     # Parse verdict for initial answer, search summary, and Grok prompt
     try:
         # Expect verdict format: "Initial answer: ... Search: ... @Grok ..."
+        #print(verdict)
         parts = verdict.split("Search: ")
         initial_answer = parts[0].replace("Initial answer: ", "").strip()
         if len(parts) > 1:
@@ -96,7 +98,7 @@ def fact_check(tweet_text, tweet_id):
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply if factual claim
-    if verdict != 'Not a factual claim.' and dryrun==False:
+    if 'Not a factual claim.' not in verdict and dryrun==False:
         success = post_reply(tweet_id, reply)
     else:
         print(reply)
@@ -110,7 +112,8 @@ def post_reply(tweet_id, reply_text):
         print('done!')
         return 'done!'
     except tweepy.TweepyException as e:
-        print(f"Error posting reply: {e}") 
+        print(f"Error posting reply: {e}")
+        
 #Cell 2 get and reply to tweets
 
 import time
