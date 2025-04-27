@@ -99,7 +99,27 @@ import tweepy
 import time
 import threading
 from openai import OpenAI
+import argparse
 
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
+parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
+parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
+args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
+
+# Set username and delay, prompting if not provided
+if args.username:
+    username = args.username.lower()
+else:
+    username = input("X username to factcheck: @").lower()
+
+if args.delay:
+    delay = int(args.delay * 60)  # Convert minutes to seconds
+else:
+    delay = int(float(input('Delay in minutes between checks: ')) * 60)
+
+# File to store the last processed tweet ID
+LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 
 def authenticate():
     global client_oauth1, client_oauth2
@@ -123,11 +143,8 @@ def authenticate():
 # Replace with your actual client initialization if different
 # Example: client_oauth2 = tweepy.Client(bearer_token="your_bearer_token")
 
-# Set the target username
-username = input("X username to factcheck: @").lower()
 
-# File to store the last processed tweet ID
-LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
+
 
 def read_last_tweet_id():
     """
@@ -211,7 +228,8 @@ def fetch_and_process_tweets(user_id, username):
 #     pass
 
 # Main loop to check for tweets every minute
-delay = int(float(input('Delay in minutes between checks: '))*60)
+
+#delay = int(float(input('Delay in minutes between checks: '))*60)
 RESTART_DELAY = 10
 
 def main():
