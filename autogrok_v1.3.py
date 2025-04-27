@@ -10,7 +10,7 @@ def load_keys():
     access_token=48365055_your_access_token_Py4EEaZ9K5AXd0LfAWVbNP4
     access_token_secret=x__your_access_toke_secret_T2xmh5TPTHaIhxJpb9
     bearer_token=AAAAAAAAA_your_bearer_token_AAPXkoDocWVyM32XlaMoS3pPxIZnk%3D3MwUD37WflW3OeCANdzHAaaNERieJsFQl8ibqDyABX919C9Ly4
-    CHATGPT_API_KEY=_your_chat_gpt_secret_key_219geCEC7NDNj9HP1zkL05yCs3J5uUaNL9iLhd4x_K-rRnvIuuT3BlbkFJ2XHps_UuNS4UZ3SddCVTaHRwGyh6MorbvJpRP9jAp39yrXcyPyGhljQ5RJ_txLpPMtvmtO8NsA
+    XAI_API_KEY=your_xai_api_key
     """
     keys = {}
     try:
@@ -31,46 +31,72 @@ def load_keys():
     except (IOError, ValueError) as e:
         print(f"Error reading {KEY_FILE}: {e}")
         exit(1)
-        
-# Set up ChatGPT client
-keys = load_keys()
-client = OpenAI(api_key=keys['CHATGPT_API_KEY'])
 
+# Set up Grok client (using OpenAI SDK)
+keys = load_keys()
+client = OpenAI(api_key=keys['XAI_API_KEY'], base_url="https://api.x.ai/v1")
 
 def fact_check(tweet_text, tweet_id):
-    # Ask ChatGPT if the tweet is true
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a fact-checking assistant for X posts. You are skeptical of authoritarianism. Your job is to prompt @Grok correctly to verify if something is true.\
-             It is important that you verify the content of what is being claimed, not the fact that something was claimed. When in doubt, prompt @grok to rate the post for accuracy on a scale from 1 to 10."},          
-            {"role": "user", "content":"Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
-            {"role": "assistant", "content": "@grok is he correct?"},
-            {"role": "user", "content":"If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
-            {"role": "assistant", "content":"@Grok is @StephenM lying here?"},
-            {"role": "user", "content":"America is a CHRISTIAN nation!"},
-            {"role": "assistant", "content":"@Grok is this true according to the constitution?"},
-            {"role": "user", "content":"Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
-            {"role": "assistant", "content":"@Grok rate this post for accuracy on a scale from 1 to 10 please."},
-            {"role": "user", "content":"The incompetence from the liberal media is astonishing."},
-            {"role": "assistant", "content":"@Grok rate the accuracy of what Miller says in the video on a one to 10 scale."},
-            {"role": "user", "content":"Judicial coup"},
-            {"role": "assistant", "content":"@grok is this a judicial coup?"},
-            {"role": "user", "content":"This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
-            {"role": "assistant", "content":"@grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-            {"role": "user", "content": tweet_text}
-        ],
-        max_tokens=100
-    )
-    verdict = response.choices[0].message.content.strip()
-    
-    # Fake URL since ChatGPT doesn’t provide one
-    #response_url = f"https://chatgpt.com/response/fake_id_{tweet_id}"
-    
-    reply = f"AutoGrok AI Fact-check v1: {verdict}"# Details: {response_url}"
-    #if len(reply) > 280:  # X’s character limit
-        #reply = f"Fact-check: Asked ChatGPT. Response: {verdict[:500]}... Details: {response_url}"
-    if verdict != 'Not a factual claim.':
+    # Ask Grok for initial answer, web search, and fact-check prompt
+    try:
+        response = client.chat.completions.create(
+            model="grok-3-beta",
+            messages=[
+                {"role": "system", "content": "You are a fact-checking assistant for X posts.\
+                You are skeptical of authoritarianism. Your job is to verify claims, provide a brief initial answer,\
+                include web search results via DeepSearch, and prompt @Grok for further verification.\
+                Verify the content of the claim, not the fact that it was claimed.\
+                When in doubt, prompt @Grok to rate the post for accuracy on a scale from 1 to 10.\
+                Use DeepSearch to fetch and summarize web search results supporting your answer in 100 characters or less.\
+                If you detect satire attempt a witty response. if there is absolutely no information to verify respond only\
+                \"not a factual claim.\""},
+                {"role": "user", "content": "Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
+                {"role": "assistant", "content": "Initial answer: Courts have authority to review executive actions. Search: Courts can check executive power (Constitution). @grok is he correct?"},
+                {"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
+                {"role": "assistant", "content": "Initial answer: Due process was available but challenging. Search: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
+                {"role": "user", "content": "America is a CHRISTIAN nation!"},
+                {"role": "assistant", "content": "Initial answer: U.S. has no official religion. Search: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
+                {"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
+                {"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
+                {"role": "user", "content": "The incompetence from the liberal media is astonishing."},
+                {"role": "assistant", "content": "Initial answer: Opinion, not fact-based. Search: Media bias varies (studies). @Grok rate the accuracy of what Miller says in the video on a one to 10 scale."},
+                {"role": "user", "content": "Judicial coup"},
+                {"role": "assistant", "content": "Initial answer: No evidence of a judicial coup. Search: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
+                {"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
+                {"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
+                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide a brief initial answer (30 characters or less). Include a DeepSearch web summary (150 characters or less). Prompt @Grok for verification."}
+            ],
+            max_tokens=150
+        )
+        verdict = response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error with Grok API: {e}")
+        verdict = "Error: Could not verify with Grok."
+
+    # Parse verdict for initial answer, search summary, and Grok prompt
+    try:
+        # Expect verdict format: "Initial answer: ... Search: ... @Grok ..."
+        parts = verdict.split("Search: ")
+        initial_answer = parts[0].replace("Initial answer: ", "").strip()
+        if len(parts) > 1:
+            search_summary = parts[1].split("@")[0].strip()
+            grok_prompt = "@" + parts[1].split("@")[1].strip()
+        else:
+            search_summary = "No search results."
+            grok_prompt = verdict  # Fallback to full verdict
+    except Exception as e:
+        print(f"Error parsing Grok response: {e}")
+        initial_answer = "Verification failed."
+        search_summary = "No search results."
+        grok_prompt = verdict
+
+    # Construct reply
+    reply = f"AutoGrok AI Fact-check v1.3: {initial_answer} {search_summary} {grok_prompt}"
+    #if len(reply) > 280:  # Twitter’s character limit
+    #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
+
+    # Post reply if factual claim
+    if verdict != 'Not a factual claim.' and dryrun==False:
         success = post_reply(tweet_id, reply)
     else:
         print(reply)
@@ -83,10 +109,8 @@ def post_reply(tweet_id, reply_text):
         client_oauth1.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
         print('done!')
         return 'done!'
-        
     except tweepy.TweepyException as e:
-        print(f"Error posting reply: {e}")
-        
+        print(f"Error posting reply: {e}") 
 #Cell 2 get and reply to tweets
 
 import time
@@ -105,6 +129,7 @@ import argparse
 parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
 parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
+parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -117,6 +142,11 @@ if args.delay:
     delay = int(args.delay * 60)  # Convert minutes to seconds
 else:
     delay = int(float(input('Delay in minutes between checks: ')) * 60)
+    
+if args.dryrun:
+    dryrun=True
+else:
+    dryrun=False
 
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
