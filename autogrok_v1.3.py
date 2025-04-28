@@ -101,10 +101,10 @@ def fact_check(tweet_text, tweet_id):
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply if factual claim
-    if 'Not a factual claim.' not in verdict and dryrun==False:
+    if 'Not a factual claim.' not in verdict and 'satire' not in verdict and dryrun==False:
         success = post_reply(tweet_id, reply)
     else:
-        print(reply)
+        print(f'Not tweeting: {reply}')
         success = 'fail'
     return success
 
