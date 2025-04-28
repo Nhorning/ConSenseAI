@@ -116,6 +116,9 @@ def post_reply(tweet_id, reply_text):
         return 'done!'
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
+        if e.response.status_code == 429:
+            print(f'Sleeping for {delay/60} min to refresh requests')
+            return 'delay!'
         
 #Cell 2 get and reply to tweets
 
@@ -249,6 +252,8 @@ def fetch_and_process_tweets(user_id, username):
                 print(f"\n{username} posted: {tweet.text}")
                 # Assuming fact_check is a defined function that processes the tweet
                 success = fact_check(tweet.text, tweet.id)
+                if success == 'delay!':
+                    return
             # Update last_tweet_id to the highest ID (most recent tweet)
             if success == 'done!':
                 last_tweet_id = max(tweet.id for tweet in tweets.data)
