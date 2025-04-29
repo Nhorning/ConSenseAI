@@ -43,28 +43,28 @@ def fact_check(tweet_text, tweet_id):
             model="grok-3-beta",
             messages=[
                 {"role": "system", "content": "You are a fact-checking assistant for X posts.\
-                You are skeptical of authoritarianism. Your job is to verify claims, provide a brief initial answer,\
+                You are skeptical of authoritarianism. Your job is to verify claims, provide a brief initial answer with an accruacy score between 1 and 10,\
                 include web search results via DeepSearch, and prompt @Grok for further verification.\
                 Verify the content of the claim, not the fact that it was claimed.\
                 When in doubt, prompt @Grok to rate the post for accuracy on a scale from 1 to 10.\
                 Use DeepSearch to fetch and summarize web search results supporting your answer in 300 characters or less.\
-                If you detect satire attempt a witty response. If there is absolutely no information to verify respond only\
+                If you detect satire make sure to include 'satire' in response. If there is absolutely no information to verify respond only\
                 \"not a factual claim.\""},
                 {"role": "user", "content": "Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
-                {"role": "assistant", "content": "Initial answer: Courts have authority to review executive actions. Search: Courts can check executive power (Constitution). @grok is he correct?"},
-                {"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
-                {"role": "assistant", "content": "Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
-                {"role": "user", "content": "America is a CHRISTIAN nation!"},
-                {"role": "assistant", "content": "Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
-                {"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
-                {"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
-                {"role": "user", "content": "The incompetence from the liberal media is astonishing."},
-                {"role": "assistant", "content": "Initial answer: Opinion, not fact-based. DeepSearch Summary: Media bias varies (studies). @Grok rate the accuracy of what Miller says in the video on a one to 10 scale."},
+                {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: \n\n Courts have authority to review executive actions.\n\n Search: Courts can check executive power (Constitution). @grok is he correct?"},
+                #{"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
+                #{"role": "assistant", "content": "Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
+                #{"role": "user", "content": "America is a CHRISTIAN nation!"},
+                #{"role": "assistant", "content": "Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
+                #{"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
+                #{"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
+                #{"role": "user", "content": "The incompetence from the liberal media is astonishing."},
+                #{"role": "assistant", "content": "Initial answer: Opinion, not fact-based. DeepSearch Summary: Media bias varies (studies). @Grok rate the accuracy of what Miller says in the video on a one to 10 scale."},
                 {"role": "user", "content": "Judicial coup"},
-                {"role": "assistant", "content": "Initial answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
-                {"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
-                {"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide a brief initial answer (30 characters or less).\
+                {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
+                #{"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
+                #{"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
+                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide an accuracy score between 1 and 10 followed by a brief initial answer of (30 characters or less).\
                   Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
             ],
             max_tokens=150,
@@ -78,20 +78,25 @@ def fact_check(tweet_text, tweet_id):
       # Parse verdict based on new line indicators
     try:
         lines = verdict.split("\n\n")
-        if len(lines) >= 3:
+        if len(lines) >= 4:
+            # Extract accuracy score
+            accuracy_score = int(lines[0].split(": ")[1].strip())
             # Extract initial answer
-            initial_answer = lines[0].split(": ")[1].strip()
+            initial_answer = lines[1].split(": ")[1].strip()
             # Extract search summary
-            search_summary = lines[1].split(": ")[1].strip()
+            search_summary = lines[2].split(": ")[1].strip()
             # Extract Grok prompt
-            grok_prompt = lines[2].strip()
+            grok_prompt = lines[3].strip()
+            print(f'\nAccuracy Score: {accuracy_score}')
         else:
             print(f"Unexpected response format: {verdict}")
+            accuracy_score = 0
             initial_answer = ""
             search_summary = ""
             grok_prompt = verdict  # Fallback to full response if parsing fails
     except Exception as e:
         print(f"Error parsing Grok response: {e}")
+        accuracy_score = 0
         initial_answer = ""
         search_summary = ""
         grok_prompt = verdict
@@ -102,7 +107,7 @@ def fact_check(tweet_text, tweet_id):
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply if factual claim
-    if 'Not a factual claim.' not in verdict and 'satire' not in verdict and dryrun==False:
+    if accuracy_score < 4 and 'Not a factual claim.' not in verdict and 'satire' not in verdict and dryrun==False:
         success = post_reply(tweet_id, reply)
     else:
         print(f'Not tweeting: {reply}')
