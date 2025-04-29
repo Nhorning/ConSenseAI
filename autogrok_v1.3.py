@@ -64,7 +64,8 @@ def fact_check(tweet_text, tweet_id):
                 {"role": "assistant", "content": "Initial answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
                 {"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
                 {"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide a brief initial answer (30 characters or less). Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
+                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide a brief initial answer (30 characters or less).\
+                  Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
             ],
             max_tokens=150,
             #reasoning={"effort": "high"}  # Boost reasoning
@@ -252,12 +253,14 @@ def fetch_and_process_tweets(user_id, username):
                 print(f"\n{username} posted: {tweet.text}")
                 # Assuming fact_check is a defined function that processes the tweet
                 success = fact_check(tweet.text, tweet.id)
+                # Update last_tweet_id to the highest ID (most recent tweet)
+                if success == 'done!':
+                    last_tweet_id = tweet.id
+                    write_last_tweet_id(last_tweet_id)
+                #if there were too many requests to for output we need to return early and wait past the next delay
                 if success == 'delay!':
                     return
-            # Update last_tweet_id to the highest ID (most recent tweet)
-            if success == 'done!':
-                last_tweet_id = max(tweet.id for tweet in tweets.data)
-                write_last_tweet_id(last_tweet_id)
+            
         else:
             print("No new tweets found.")
     except tweepy.TweepyException as e:
