@@ -122,6 +122,7 @@ def post_reply(tweet_id, reply_text):
         return 'done!'
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
+        #if the there there have been too many tweets sent out, return to the main function to wait for the delay.
         if e.response.status_code == 429:
             return 'delay!'
         
@@ -261,8 +262,11 @@ def fetch_and_process_tweets(user_id, username):
                 if success == 'done!':
                     last_tweet_id = tweet.id
                     write_last_tweet_id(last_tweet_id)
-                #if there were too many requests to for output we need to return early and wait past the next delay
+                    backoff_multiplier = 1
+                #if there were too many requests to for tweet output we need to return early and wait past the next delay
                 if success == 'delay!':
+                    backoff_multiplier += 1 
+                    print(f'Backoff Multiplier:{backoff_multiplier}')
                     return
             
         else:
@@ -279,6 +283,7 @@ def fetch_and_process_tweets(user_id, username):
 
 #delay = int(float(input('Delay in minutes between checks: '))*60)
 RESTART_DELAY = 10
+backoff_multiplier = 1
 
 def main():
     while True:
@@ -288,7 +293,7 @@ def main():
             while True:
                 fetch_and_process_tweets(user_id, username)
                 print(f'Waiting for {delay} min before fetching more tweets')
-                time.sleep(delay*60)  # Wait before the next check
+                time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
             print(f"Restarting script in {RESTART_DELAY} seconds...")
