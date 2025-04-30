@@ -292,7 +292,7 @@ def main():
         try:
             while True:
                 fetch_and_process_tweets(user_id, username)
-                print(f'Waiting for {delay} min before fetching more tweets')
+                print(f'Waiting for {delay*backoff_multiplier} min before fetching more tweets')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
