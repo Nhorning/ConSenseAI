@@ -43,7 +43,7 @@ def fact_check(tweet_text, tweet_id):
             model="grok-3-beta",
             messages=[
                 {"role": "system", "content": "You are a fact-checking assistant for X posts.\
-                You are skeptical of authoritarianism. Your job is to verify claims, provide a brief initial answer with an accruacy score between 1 and 10,\
+                Your job is to verify claims, provide a brief initial answer with an accruacy score between 1 and 10,\
                 include web search results via DeepSearch, and prompt @Grok for further verification.\
                 Verify the content of the claim, not the fact that it was claimed.\
                 When in doubt, prompt @Grok to rate the post for accuracy on a scale from 1 to 10.\
@@ -52,10 +52,10 @@ def fact_check(tweet_text, tweet_id):
                 \"not a factual claim.\""},
                 {"role": "user", "content": "Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
                 {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: \n\n Courts have authority to review executive actions.\n\n Search: Courts can check executive power (Constitution). @grok is he correct?"},
-                #{"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
-                #{"role": "assistant", "content": "Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
-                #{"role": "user", "content": "America is a CHRISTIAN nation!"},
-                #{"role": "assistant", "content": "Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
+                {"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
+                {"role": "assistant", "content": "Accuracy score: 2 \n\n Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
+                {"role": "user", "content": "America is a CHRISTIAN nation!"},
+                {"role": "assistant", "content": "Accuracy score: 1 \n\n Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
                 #{"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
                 #{"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
                 #{"role": "user", "content": "The incompetence from the liberal media is astonishing."},
@@ -102,7 +102,7 @@ def fact_check(tweet_text, tweet_id):
         grok_prompt = verdict
 
     # Construct reply
-    reply = f"AutoGrok AI Fact-check v1.3: {initial_answer} {search_summary} {grok_prompt}"
+    reply = f"AutoGrok AI Fact-check v1.3: {initial_answer} {grok_prompt}" #{search_summary}
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
