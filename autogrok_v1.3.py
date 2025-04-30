@@ -123,7 +123,6 @@ def post_reply(tweet_id, reply_text):
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
         if e.response.status_code == 429:
-            print(f'Sleeping for {delay/60} min to refresh requests')
             return 'delay!'
         
 #Cell 2 get and reply to tweets
@@ -154,9 +153,9 @@ else:
     username = input("X username to factcheck: @").lower()
 
 if args.delay:
-    delay = int(args.delay * 60)  # Convert minutes to seconds
+    delay = int(args.delay)  # Convert minutes to seconds
 else:
-    delay = int(float(input('Delay in minutes between checks: ')) * 60)
+    delay = int(float(input('Delay in minutes between checks: ')))
     
 if args.dryrun:
     dryrun=True
@@ -288,7 +287,8 @@ def main():
         try:
             while True:
                 fetch_and_process_tweets(user_id, username)
-                time.sleep(delay)  # Wait before the next check
+                print(f'Waiting for {delay} min before fetching more tweets')
+                time.sleep(delay*60)  # Wait before the next check
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
             print(f"Restarting script in {RESTART_DELAY} seconds...")
