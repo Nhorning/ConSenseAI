@@ -1,6 +1,6 @@
 A simple fact checking bot for X  
 
-It can use ChatGPT or Grok 3 API to prompt Grok for the fact check.
+It can use ChatGPT or Grok 3 API to prompt Grok for a futher fact check.
 
 To Run:
 1. Purchase X API and OpenAI or XAPI keys.
