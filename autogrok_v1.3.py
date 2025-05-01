@@ -106,14 +106,30 @@ def fact_check(tweet_text, tweet_id):
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
-    # Post reply if factual claim
-    if accuracy_score < 4 and 'Not a factual claim.' not in verdict and 'satire' not in verdict and dryrun==False:
+    # Post reply checks are passed
+    if accuracy_score > accuracy_threshold:
+        print(f'Accuracy above threshold ({accuracy_threshold}), Not Tweeting:\n {reply} ')
+        success = dryruncheck()
+    elif 'not a factual claim' in verdict.lower():
+        print(f'No claim detected. Not tweeting:\n{reply}')
+        success = dryruncheck()
+    elif 'satire' in verdict.lower():
+        print(f'Satire detected, not tweeting:\n{reply}')
+        success = dryruncheck()
+    elif dryruncheck() == 'done!':
         success = post_reply(tweet_id, reply)
     else:
-        print(f'Not tweeting: {reply}')
+        print(f'Not tweeting:\n{reply}')
         success = 'fail'
     return success
 
+def dryruncheck():
+    if dryrun == True:
+        print('Dry run, not saving tweet id.')
+        return 'fail'
+    else:
+        return 'done!'
+    
 def post_reply(tweet_id, reply_text):
     try:
         print(f"attempting reply to tweet {tweet_id}: {reply_text}\n")
@@ -145,6 +161,7 @@ parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking 
 parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
 parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
+parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -162,6 +179,11 @@ if args.dryrun:
     dryrun=True
 else:
     dryrun=False
+
+if args.accuracy:
+    accuracy_threshold = args.accuracy
+else:
+    accuracy_threshold = 4
 
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
@@ -210,8 +232,13 @@ def write_last_tweet_id(tweet_id):
     """
     Write the given tweet ID to the file.
     """
-    with open(LAST_TWEET_FILE, 'w') as f:
-        f.write(str(tweet_id))
+    try:
+        with open(LAST_TWEET_FILE, 'w') as f:
+            f.write(str(tweet_id))
+            print('last tweet id written to file')
+    except:
+        print(f'error writing last tweet id')
+
 
 
 
