@@ -262,7 +262,7 @@ def fetch_and_process_tweets(user_id, username):
     Fetch and process new tweets from the specified user.
     Updates the global last_tweet_id and saves it to the file.
     """
-    global last_tweet_id
+    last_tweet_id = read_last_tweet_id()
     print(f"Checking for new tweets from {username} at {datetime.datetime.now()}")
     try:
         # Fetch tweets, using since_id if we have a last_tweet_id
