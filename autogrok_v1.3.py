@@ -262,6 +262,7 @@ def fetch_and_process_tweets(user_id, username):
     Fetch and process new tweets from the specified user.
     Updates the global last_tweet_id and saves it to the file.
     """
+    global backoff_multiplier
     last_tweet_id = read_last_tweet_id()
     print(f"Checking for new tweets from {username} at {datetime.datetime.now()}")
     try:
@@ -311,7 +312,6 @@ def fetch_and_process_tweets(user_id, username):
 
 #delay = int(float(input('Delay in minutes between checks: '))*60)
 RESTART_DELAY = 10
-global backoff_multiplier
 backoff_multiplier = 1
 
 def main():
