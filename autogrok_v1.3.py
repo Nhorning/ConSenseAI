@@ -294,7 +294,7 @@ def fetch_and_process_tweets(user_id, username):
                     backoff_multiplier = 1
                 #if there were too many requests to for tweet output we need to return early and wait past the next delay
                 if success == 'delay!':
-                    backoff_multiplier += 1 
+                    backoff_multiplier *= 2 
                     print(f'Backoff Multiplier:{backoff_multiplier}')
                     return
             
@@ -302,6 +302,7 @@ def fetch_and_process_tweets(user_id, username):
             print("No new tweets found.")
     except tweepy.TweepyException as e:
         print(f"Error fetching tweets: {e}\n")
+        backoff_multiplier += 1
 
 # Assuming fact_check is defined elsewhere, e.g.:
 # def fact_check(tweet_text, tweet_id):
