@@ -255,7 +255,7 @@ def getid():
         exit(1)
 
 # Load the last processed tweet ID from the file
-last_tweet_id = read_last_tweet_id()
+# last_tweet_id = read_last_tweet_id()
 
 def fetch_and_process_tweets(user_id, username):
     """
@@ -311,6 +311,7 @@ def fetch_and_process_tweets(user_id, username):
 
 #delay = int(float(input('Delay in minutes between checks: '))*60)
 RESTART_DELAY = 10
+global backoff_multiplier
 backoff_multiplier = 1
 
 def main():
