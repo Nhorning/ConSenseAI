@@ -236,7 +236,7 @@ def write_last_tweet_id(tweet_id):
     try:
         with open(LAST_TWEET_FILE, 'w') as f:
             f.write(str(tweet_id))
-            print('last tweet id written to file')
+            print(f'Last tweet id - {tweet_id} - written to file.')
     except:
         print(f'error writing last tweet id')
 
