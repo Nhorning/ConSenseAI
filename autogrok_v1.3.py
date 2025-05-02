@@ -223,6 +223,7 @@ def read_last_tweet_id():
             with open(LAST_TWEET_FILE, 'r') as f:
                 content = f.read().strip()
                 if content:  # Check if the file is not empty
+                    print(f'Last tweet id: {content}')
                     return int(content)
         except ValueError:
             print(f"Warning: Invalid content in {LAST_TWEET_FILE}: {content}")
