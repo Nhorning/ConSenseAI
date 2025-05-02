@@ -300,9 +300,11 @@ def fetch_and_process_tweets(user_id, username):
             
         else:
             print("No new tweets found.")
+            backoff_multiplier = 1
     except tweepy.TweepyException as e:
         print(f"Error fetching tweets: {e}\n")
         backoff_multiplier += 1
+        print(f'Backoff Multiplier:{backoff_multiplier}')
 
 # Assuming fact_check is defined elsewhere, e.g.:
 # def fact_check(tweet_text, tweet_id):
