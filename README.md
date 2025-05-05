@@ -3,7 +3,7 @@ A simple fact checking bot for X
 It can use ChatGPT or Grok 3 API to prompt Grok for a futher fact check.
 
 To Run:
-1. Purchase X API and OpenAI or XAPI keys.
+1. Purchase X API and OpenAI or XAI API keys.
 2. Download Script or clone repo.
 3. Create key file according to format in Load_keys() function.
 4. Run script: $ python autogrok_v1.3.py
