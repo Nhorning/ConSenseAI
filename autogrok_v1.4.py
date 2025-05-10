@@ -32,8 +32,18 @@ def load_keys():
 keys = load_keys()
 client = OpenAI(api_key=keys['XAI_API_KEY'], base_url="https://api.x.ai/v1")
 
-def fact_check(tweet_text, tweet_id):
-    # Ask Grok for initial answer, web search, and fact-check prompt
+def fact_check(tweet_text, tweet_id, context=None):
+    # Construct context string
+    context_str = ""
+    if context:
+        if context["original_tweet"]:
+            context_str += f"Original tweet: {context['original_tweet'].text}\n"
+        if context["thread_tweets"]:
+            context_str += "Conversation thread:\n" + "\n".join(
+                [f"- {t.text}" for t in context["thread_tweets"]]
+            ) + "\n"
+    
+    # Include context in Grok prompt
     try:
         response = client.chat.completions.create(
             model="grok-3-beta",
@@ -60,16 +70,15 @@ def fact_check(tweet_text, tweet_id):
                 #{"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
                 #{"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
                 #{"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-                {"role": "user", "content": f"{tweet_text}\n\nIs this claim true? Provide an accuracy score between 1 and 10 followed by a brief initial answer of (30 characters or less).\
-                  Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
+                {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}\nIs this claim true? Provide an accuracy score between 1 and 10..."}
             ],
-            max_tokens=150,
-            #reasoning={"effort": "high"}  # Boost reasoning
+            max_tokens=150
         )
         verdict = response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Error with Grok API: {e}")
         verdict = "Error: Could not verify with Grok."
+    
 
       # Parse verdict based on new line indicators
     try:
@@ -258,63 +267,74 @@ def getid():
 # last_tweet_id = read_last_tweet_id()
 
 def fetch_and_process_tweets(user_id, username):
-    """
-    Fetch and process new tweets from the specified user.
-    Updates the global last_tweet_id and saves it to the file.
-    """
     global backoff_multiplier
     last_tweet_id = read_last_tweet_id()
     print(f"Checking for new tweets from {username} at {datetime.datetime.now()}")
     try:
-        # Fetch tweets, using since_id if we have a last_tweet_id
-        if last_tweet_id is None:
-            tweets = client_oauth2.get_users_tweets(
-                id=user_id,
-                max_results=5,
-                tweet_fields=["id", "text"]
-            )
-        else:
-            tweets = client_oauth2.get_users_tweets(
-                id=user_id,
-                since_id=last_tweet_id,
-                max_results=5,
-                tweet_fields=["id", "text"]
-            )
+        tweets = client_oauth2.get_users_tweets(
+            id=user_id,
+            since_id=last_tweet_id,
+            max_results=5,
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets"]
+        )
         
-        # Process any new tweets
         if tweets.data:
             for tweet in tweets.data:
                 print(f"\n{username} posted: {tweet.text}")
-                # Assuming fact_check is a defined function that processes the tweet
-                success = fact_check(tweet.text, tweet.id)
-                # Update last_tweet_id to the highest ID (most recent tweet)
+                
+                # Fetch conversation context
+                context = get_tweet_context(tweet)
+                
+                # Pass context to fact_check
+                success = fact_check(tweet.text, tweet.id, context)
                 if success == 'done!':
                     last_tweet_id = tweet.id
                     write_last_tweet_id(last_tweet_id)
                     backoff_multiplier = 1
-                    time.sleep(30) #wait a bit after successfully making a tweet so we don't look like spam 
-                #if there were too many requests to for tweet output we need to return early and wait past the next delay
+                    time.sleep(30)
                 if success == 'delay!':
-                    backoff_multiplier *= 2 
+                    backoff_multiplier *= 2
                     print(f'Backoff Multiplier:{backoff_multiplier}')
                     return
-            
         else:
             print("No new tweets found.")
             backoff_multiplier = 1
     except tweepy.TweepyException as e:
-        print(f"Error fetching tweets: {e}\n")
+        print(f"Error fetching tweets: {e}")
         backoff_multiplier += 1
         print(f'Backoff Multiplier:{backoff_multiplier}')
 
-# Assuming fact_check is defined elsewhere, e.g.:
-# def fact_check(tweet_text, tweet_id):
-#     # Your fact-checking and replying logic here
-#     pass
-
-# Main loop to check for tweets every minute
-
-#delay = int(float(input('Delay in minutes between checks: '))*60)
+def get_tweet_context(tweet):
+    """Fetch context for a tweet, including conversation thread or original tweet."""
+    context = {"original_tweet": None, "thread_tweets": []}
+    
+    # Check if tweet is a reply
+    if tweet.in_reply_to_user_id or tweet.referenced_tweets:
+        # Get the original tweet if this is a reply
+        for ref_tweet in tweet.referenced_tweets or []:
+            if ref_tweet.type == "replied_to":
+                try:
+                    original_tweet = client_oauth2.get_tweet(
+                        id=ref_tweet.id,
+                        tweet_fields=["text", "author_id", "created_at"]
+                    )
+                    context["original_tweet"] = original_tweet.data
+                except tweepy.TweepyException as e:
+                    print(f"Error fetching original tweet {ref_tweet.id}: {e}")
+    
+    # Fetch conversation thread
+    try:
+        thread_tweets = client_oauth2.search_recent_tweets(
+            query=f"conversation_id:{tweet.conversation_id} -from:{username}",
+            max_results=10,
+            tweet_fields=["text", "author_id", "created_at"]
+        )
+        if thread_tweets.data:
+            context["thread_tweets"] = thread_tweets.data
+    except tweepy.TweepyException as e:
+        print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+    
+    return context
 RESTART_DELAY = 10
 backoff_multiplier = 1
 
