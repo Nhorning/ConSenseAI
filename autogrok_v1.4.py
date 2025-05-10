@@ -95,7 +95,7 @@ def fact_check(tweet_text, tweet_id, context=None):
             print(f'\nAccuracy Score: {accuracy_score}')
         else:
             print(f"Unexpected response format: {verdict}")
-            accuracy_score = 0
+            #accuracy_score = 0
             initial_answer = ""
             search_summary = ""
             grok_prompt = verdict  # Fallback to full response if parsing fails
@@ -116,11 +116,11 @@ def fact_check(tweet_text, tweet_id, context=None):
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply checks are passed
-    if accuracy_score > accuracy_threshold:
-        print(f'Accuracy above threshold ({accuracy_threshold}), Not Tweeting:\n {reply} ')
-        success = dryruncheck()
-    elif 'not a factual claim' in verdict.lower():
+    if 'not a factual claim' in verdict.lower() or accuracy_score == 'N/A':
         print(f'No claim detected. Not tweeting:\n{reply}')
+        success = dryruncheck()
+    elif accuracy_score > accuracy_threshold:
+        print(f'Accuracy above threshold ({accuracy_threshold}), Not Tweeting:\n {reply} ')
         success = dryruncheck()
     elif 'satire' in verdict.lower():
         print(f'Satire detected, not tweeting:\n{reply}')
