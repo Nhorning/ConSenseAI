@@ -70,7 +70,9 @@ def fact_check(tweet_text, tweet_id, context=None):
                 #{"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
                 #{"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
                 #{"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-                {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}\nIs this claim true? Provide an accuracy score between 1 and 10..."}
+                {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}\nIs this claim true?\
+                  Provide an accuracy score between 1 and 10 followed by a brief initial answer of (30 characters or less).\
+                  Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
             ],
             max_tokens=150
         )
