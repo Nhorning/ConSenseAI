@@ -113,7 +113,7 @@ def fact_check(tweet_text, tweet_id, context=None):
         version = ' '+__file__.split('_')[1].split('.p')[0]
     except:
         version = ""
-    reply = f"AutoGrok AI Fact-check{version}: {initial_answer} {grok_prompt}" #{search_summary}
+    reply = f"🤖 AutoGrok AI Fact-check v1.4: {initial_answer} {grok_prompt}" #{search_summary}
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
