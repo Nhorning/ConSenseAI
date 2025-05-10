@@ -9,6 +9,6 @@ To Run:
 4. Run script: $ python autogrok_v1.3.py
 5. Specify X user name and minutes between checking for more tweets from the user. This can also be done with the --username and --delay arguments
 
-At Basic Tier X API the script can check for more tweets 15 times every 15 minutes and post 100 tweets every 24 hours. 
+At Basic Tier X API the script can check for more tweets 5 times every 15 minutes and post 100 tweets every 24 hours. 
 It can be run in multiple terminals for an arbitrary amount of users according to these limits. 
 
