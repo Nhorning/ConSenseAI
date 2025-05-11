@@ -153,7 +153,6 @@ def post_reply(tweet_id, reply_text):
         if e.response.status_code == 429:
             return 'delay!'
         
-#Cell 2 get and reply to tweets
 
 import time
 import datetime
@@ -220,9 +219,6 @@ def authenticate():
 # Assuming client_oauth2 is a tweepy.Client object configured with an OAuth 2.0 bearer token
 # Replace with your actual client initialization if different
 # Example: client_oauth2 = tweepy.Client(bearer_token="your_bearer_token")
-
-
-
 
 def read_last_tweet_id():
     """
@@ -349,6 +345,52 @@ def get_tweet_context(tweet):
         print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
     
     return context
+
+
+import time
+import datetime
+import tweepy
+import os
+
+import tweepy
+#import requests
+import time
+import threading
+from openai import OpenAI
+import argparse
+
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
+parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
+parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
+parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
+parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
+args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
+
+# Set username and delay, prompting if not provided
+if args.username:
+    username = args.username.lower()
+else:
+    username = input("X username to factcheck: @").lower()
+
+if args.delay:
+    delay = int(args.delay)  # Convert minutes to seconds
+else:
+    delay = int(float(input('Delay in minutes between checks: ')))
+    
+if args.dryrun:
+    dryrun=True
+else:
+    dryrun=False
+
+if args.accuracy:
+    accuracy_threshold = args.accuracy
+else:
+    accuracy_threshold = 4
+
+# File to store the last processed tweet ID
+LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
+
 RESTART_DELAY = 10
 backoff_multiplier = 1
 
