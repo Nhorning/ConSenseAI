@@ -333,16 +333,17 @@ def get_tweet_context(tweet):
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
     
     # Fetch conversation thread
-    try:
-        thread_tweets = client_oauth2.search_recent_tweets(
-            query=f"conversation_id:{tweet.conversation_id} -from:{username}",
-            max_results=10,
-            tweet_fields=["text", "author_id", "created_at"]
-        )
-        if thread_tweets.data:
-            context["thread_tweets"] = thread_tweets.data
-    except tweepy.TweepyException as e:
-        print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+    if args.fetchthread:
+        try:
+            thread_tweets = client_oauth2.search_recent_tweets(
+                query=f"conversation_id:{tweet.conversation_id} -from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at"]
+            )
+            if thread_tweets.data:
+                context["thread_tweets"] = thread_tweets.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
     
     return context
 
@@ -365,6 +366,7 @@ parser.add_argument('--username', type=str, help='X username to fact-check (e.g.
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
 parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
 parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
+parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry')
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -387,6 +389,7 @@ if args.accuracy:
     accuracy_threshold = args.accuracy
 else:
     accuracy_threshold = 4
+
 
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
