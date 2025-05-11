@@ -287,6 +287,18 @@ def fetch_and_process_tweets(user_id, username):
                 # Fetch conversation context
                 context = get_tweet_context(tweet)
                 
+
+                #print tweet context:
+                context_str=''
+                if context["original_tweet"]:
+                    context_str += f"Original tweet: {context['original_tweet'].text}\n"
+                if context["thread_tweets"]:
+                    context_str += "Conversation thread:\n" + "\n".join(
+                        [f"- {t.text}" for t in context["thread_tweets"]]
+                        ) + "\n"
+                if len(context_str) > 1:
+                    print(context_str)
+                    
                 # Pass context to fact_check
                 success = fact_check(tweet.text, tweet.id, context)
                 if success == 'done!':
