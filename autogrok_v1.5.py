@@ -135,7 +135,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     return success
 
 def dryruncheck():
-    if dryrun == True:
+    if args.dryrun == True:
         print('Dry run, not saving tweet id.')
         return 'fail'
     else:
@@ -183,17 +183,12 @@ else:
 if args.delay:
     delay = int(args.delay)  # Convert minutes to seconds
 else:
-    delay = int(float(input('Delay in minutes between checks: ')))
-    
-if args.dryrun:
-    dryrun=True
-else:
-    dryrun=False
+    delay = int(float(input('Delay in minutes between checks: ')))    
 
 if args.accuracy:
     accuracy_threshold = args.accuracy
 else:
-    accuracy_threshold = 4
+    accuracy_threshold = 3
 
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
