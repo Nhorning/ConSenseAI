@@ -196,7 +196,7 @@ LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 def authenticate():
     global client_oauth1, client_oauth2
     #load the keys
-    keys = load_keys()
+    #keys = load_keys()
     
     #Authenticate with X API v2
     client_oauth1 = tweepy.Client(
