@@ -5,8 +5,13 @@ KEY_FILE = 'keys.txt'
 
 def load_keys():
     """Load keys from the key file. Format:
-    bearer_token=AAAAAAAAA_your_bearer_token_AAPXkoDocWVyM32XlaMoS3pPxIZnk%3D3MwUD37WflW3OeCANdzHAaaNERieJsFQl8ibqDyABX919C9Ly4
+    XAPI_key=_kJsU_your_XAPI_KEY 
+    XAPI_secret=_____your_XAPI_secret_nDwdu0dlG4zln6t4yEQKqwYleSt6
+    bearer_token=AAA____AA_your_bearer_token_AAPXkoDocWVyM32XlaMoS3pPxIZnk%3D3MwUD37WflW3OeCANdzHAaaNERieJsFQl8ibqDyABX919C9Ly4
+    access_token=4_your_access_token_5zVVaJdmufNGGloLeReGdErFhcursF
+    access_token_secret=i_your access_token_secret_6B55y5zO5Xjfni
     XAI_API_KEY=your_xai_api_key_PjoZjZX9t0NMvCEKb7yOF60roL0YO6T61oeHVNGEbn5vD29uCcm3jLI
+
     """
     keys = {}
     try:
