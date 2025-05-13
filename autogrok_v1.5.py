@@ -58,15 +58,15 @@ def fact_check(tweet_text, tweet_id, context=None):
                 include web search results via DeepSearch, and prompt @Grok for further verification.\
                  Use DeepSearch to fetch and summarize web search results supporting your answer in 300 characters or less.\
                 If you detect satire make sure to include 'satire' in response. If there is absolutely no information to verify respond only\
-                'not a factual claim.' Include a request to be breif or put the rating up front in your prompt. \
+                'not a factual claim.'\
                  Verify the content of the claim, not the fact that it was claimed.\
                 When in doubt, prompt @Grok to rate the post for accuracy on a scale from 1 to 10."},
                 {"role": "user", "content": "Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
-                {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: \n\n Courts have authority to review executive actions.\n\n Search: Courts can check executive power (Constitution). @Grok please rate this statement for accuracy on a scale from 1 to 10. Please put your rating first."},
+                {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: \n\n Courts have authority to review executive actions.\n\n Search: Courts can check executive power (Constitution). @Grok please rate this statement for accuracy on a scale from 1 to 10."},
                 {"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
-                {"role": "assistant", "content": "Accuracy score: 2 \n\n Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here? Please start with your conclusion."},
+                {"role": "assistant", "content": "Accuracy score: 2 \n\n Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
                 {"role": "user", "content": "America is a CHRISTIAN nation!"},
-                {"role": "assistant", "content": "Accuracy score: 1 \n\n Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution? Please put your conclusion first"},
+                {"role": "assistant", "content": "Accuracy score: 1 \n\n Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
                 #{"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
                 #{"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
                 #{"role": "user", "content": "The incompetence from the liberal media is astonishing."},
