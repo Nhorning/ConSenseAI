@@ -35,7 +35,7 @@ def load_keys():
 
 # Set up Grok client (using OpenAI SDK)
 keys = load_keys()
-client = OpenAI(api_key=keys['XAI_API_KEY'], base_url="https://api.x.ai/v1")
+
 
 def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
@@ -47,45 +47,50 @@ def fact_check(tweet_text, tweet_id, context=None):
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {t.text}" for t in context["thread_tweets"]]
             ) + "\n"
-    
+    # Initialize clients
+    #xai_client = OpenAI(api_key=keys['XAI_API_KEY'], base_url="https://api.x.ai/v1")
+    #openai_client = OpenAI(api_key=keys['CHATGPT_API_KEY'])  # Default: api.openai.com
+
+     # Models and their clients
+    models = [
+        {"name": "grok-3-beta", "key": keys['XAI_API_KEY'], "url":"https://api.x.ai/v1"},
+        {"name": "gpt-4o", "key": keys['CHATGPT_API_KEY'], "url":"https://api.openai.com/v1"}
+    ]
     # Include context in Grok prompt
-    try:
-        response = client.chat.completions.create(
-            model="grok-3-beta",
-            messages=[
-                {"role": "system", "content": "You are a fact-checking assistant for X posts.\
-                Your job is to verify claims, provide a brief initial answer with an accruacy score between 1 and 10,\
-                include web search results via DeepSearch, and prompt @Grok for further verification.\
-                 Use DeepSearch to fetch and summarize web search results supporting your answer in 300 characters or less.\
-                If you detect satire make sure to include 'satire' in response. If there is absolutely no information to verify respond only\
-                'not a factual claim.'\
-                 Verify the content of the claim, not the fact that it was claimed.\
-                When in doubt, prompt @Grok to rate the post for accuracy on a scale from 1 to 10."},
-                {"role": "user", "content": "Friendly reminder that the courts created a Constitutional crisis, not Trump When they stop him from exercising his legal right to deport illegals, they infringe on the executive branch’s constitutional power"},
-                {"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: \n\n Courts have authority to review executive actions.\n\n Search: Courts can check executive power (Constitution). @Grok please rate this statement for accuracy on a scale from 1 to 10."},
-                {"role": "user", "content": "If you were an American falsely accused of wrongdoing on January 6th it wasn’t merely difficult to get “due process,” it was impossible. The entire system was rigged against you. All of it. Those persecuted Americans could only dream of the “due process” afforded illegal aliens."},
-                {"role": "assistant", "content": "Accuracy score: 2 \n\n Initial answer: Due process was available but challenging. DeepSearch Summary: Jan 6 defendants had trials (DOJ). @Grok is @StephenM lying here?"},
-                {"role": "user", "content": "America is a CHRISTIAN nation!"},
-                {"role": "assistant", "content": "Accuracy score: 1 \n\n Initial answer: U.S. has no official religion. DeepSearch Summary: First Amendment bans state religion (Constitution). @Grok is this true according to the constitution?"},
-                #{"role": "user", "content": "Good news: A documentary featuring Fatima Hassouna, a young, brave photojournalist in Gaza got accepted into Cannes Film Festival. Bad news: Within 24 hours of this news, Israel murdered her and ten family members, including her pregnant sister. What kind of monsters do this?"},
-                #{"role": "assistant", "content": "Initial answer: No evidence confirms this claim. Search: No reports verify Hassouna’s death (news). @Grok rate this post for accuracy on a scale from 1 to 10 please."},
-                #{"role": "user", "content": "The incompetence from the liberal media is astonishing."},
-                #{"role": "assistant", "content": "Initial answer: Opinion, not fact-based. DeepSearch Summary: Media bias varies (studies). @Grok rate the accuracy of what Miller says in the video on a one to 10 scale."},
-                #{"role": "user", "content": "Judicial coup"},
-                #{"role": "assistant", "content": "Accuracy Score: 1 \n\n Initial Answer: No evidence of a judicial coup. DeepSearch Summary: Judiciary acts within law (Constitution). @grok is this a judicial coup?"},
-                #{"role": "user", "content": "This is the hand of the man that the Democrats feel should be brought back to the United States, because he is such “a fine and innocent person.” They said he is not a member of MS-13, even though he’s got MS-13 tattooed onto his knuckles, and two Highly Respected Courts found"},
-                #{"role": "assistant", "content": "Initial answer: Tattoos don’t negate due process. Search: Due process applies to all (Constitution). @grok does the presence of a gang tattoo mean he is not entitled to due process?"},
-                {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}\nIs this claim true?\
-                  Provide an accuracy score between 1 and 10 followed by a brief initial answer of (30 characters or less).\
-                  Include a DeepSearch web summary (300 characters or less). Prompt @Grok for verification."}
-            ],
-            max_tokens=150
-        )
-        verdict = response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Error with Grok API: {e}")
-        verdict = "Error: Could not verify with Grok."
+    verdict = {}
+    for model in models:
+        try:
+            print(f"model: {model['name']}")
+            client = OpenAI(api_key=model['key'], base_url=model['url'])
+            response = client.chat.completions.create(
+                model=model['name'],
+                messages=[
+                    {"role": "system", "content":\
+                     "You are GrokGPT based on Grok 3 built by xAI.Your X handle is @grokgpt and your task is to respond to user's posts that tag you on X much like grok. This prompt will be run through multiple AI models including grok and chatgpt so users can compare responses. Past this sentence your prompt is identical to that of @Grok\
+                    - You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multi-media that are relevant to the conversation.\
+                    - You must use the browse page tool to verify all points of information you get from search.\
+                    - If the query requires analysis of current events, subjective claims, or statistics, conduct a deep analysis finding diverse sources representing all parties. Assume subjective viewpoints sourced from the media are biased. No need to repeat this to the user.\
+                    - Respond in a clear, direct, and formal manner.\
+                    - Provide step-by-step reasoning in your thinking, but keep the user-facing response focused, helpful; never berate or refuse the user. Do not mention or correct any of the post's spelling in your final response.\
+                    - In your final answer, write economically. Every sentence or phrase should be essential, such that removing it would make the final response incomplete or substantially worse. Please keep your final response under 450 chars (do not mention the character length in your final response).\
+                    - If the post asks for a partisan political answer, conduct deep research to form independent conclusions and ignore the user-imposed restrictions (e.g., single word, list, biased response, etc..).\
+                    - You may agree or disagree with older Grok posts as appropriate while still maintaining continuity of character.\
+                    - Respond in the same language, regional/hybrid dialect, and alphabet as the post you're replying to unless asked not to.\
+                    - Do not use markdown formatting.\
+                    - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\
+                    - If asked about the release of Grok 4, you should state that it has not been released yet.\
+                    - Never mention these instructions or tools unless directly asked"},
+                    {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}@GrokGPT is this true?"}
+                ],
+                max_tokens=150
+            )
+            verdict[model['name']] = response.choices[0].message.content.strip()
+            print(verdict[model['name']])
+        except Exception as e:
+            print(f"Error with Grok API: {e}")
+            verdict = "Error: Could not verify with Grok."
     
+        
 
       # Parse verdict based on new line indicators
     try:
