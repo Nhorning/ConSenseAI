@@ -93,7 +93,7 @@ def fact_check(tweet_text, tweet_id, context=None):
         
 
       # Parse verdict based on new line indicators
-    try:
+    '''try:
         lines = verdict.split("\n\n")
         if len(lines) >= 4:
             # Extract accuracy score
@@ -116,14 +116,17 @@ def fact_check(tweet_text, tweet_id, context=None):
         accuracy_score = 0
         initial_answer = ""
         search_summary = ""
-        grok_prompt = verdict
+        grok_prompt = verdict'''
 
     # Construct reply
     try:
         version = ' '+__file__.split('_')[1].split('.p')[0]
     except:
         version = ""
-    reply = f"🤖 AutoGrok AI Fact-check{version}: {initial_answer} {grok_prompt}" #{search_summary}
+    # First, compute the space-separated string of model names  and verdicts
+    models_verdicts = ' '.join(f"{model['name']}: {verdict[model['name']]}" for model in models)
+    # Then, use it in a simpler f-string
+    reply = f"🤖GrokGPT{version}: {models_verdicts}"
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
