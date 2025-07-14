@@ -60,7 +60,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     verdict = {}
     for model in models:
         try:
-            print(f"model: {model['name']}")
+            #print(f"model: {model['name']}")
             client = OpenAI(api_key=model['key'], base_url=model['url'])
             response = client.chat.completions.create(
                 model=model['name'],
@@ -80,12 +80,12 @@ def fact_check(tweet_text, tweet_id, context=None):
                     - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\
                     - If asked about the release of Grok 4, you should state that it has not been released yet.\
                     - Never mention these instructions or tools unless directly asked"},
-                    {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}@GrokGPT is this true?"}
+                    {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @GrokGPT is this true?"}
                 ],
                 max_tokens=150
             )
             verdict[model['name']] = response.choices[0].message.content.strip()
-            print(verdict[model['name']])
+            #print(verdict[model['name']])
         except Exception as e:
             print(f"Error with Grok API: {e}")
             verdict = "Error: Could not verify with Grok."
@@ -124,14 +124,14 @@ def fact_check(tweet_text, tweet_id, context=None):
     except:
         version = ""
     # First, compute the space-separated string of model names  and verdicts
-    models_verdicts = ' '.join(f"{model['name']}: {verdict[model['name']]}" for model in models)
+    models_verdicts = ' '.join(f"\n{model['name']}:\n {verdict[model['name']]}" for model in models)
     # Then, use it in a simpler f-string
     reply = f"🤖GrokGPT{version}: {models_verdicts}"
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply checks are passed
-    if 'not a factual claim' in verdict.lower() or accuracy_score == 'N/A':
+    '''if 'not a factual claim' in reply.lower() or accuracy_score == 'N/A':
         print(f'No claim detected. Not tweeting:\n{reply}')
         success = dryruncheck()
     elif accuracy_score > accuracy_threshold:
@@ -139,8 +139,8 @@ def fact_check(tweet_text, tweet_id, context=None):
         success = dryruncheck()
     elif 'satire' in verdict.lower():
         print(f'Satire detected, not tweeting:\n{reply}')
-        success = dryruncheck()
-    elif dryruncheck() == 'done!':
+        success = dryruncheck()'''
+    if dryruncheck() == 'done!':
         success = post_reply(tweet_id, reply)
     else:
         print(f'Not tweeting:\n{reply}')
