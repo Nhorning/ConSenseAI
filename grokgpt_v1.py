@@ -1,6 +1,7 @@
 # Cell 1: Fact-check and reply functions
 from openai import OpenAI
 
+
 KEY_FILE = 'keys.txt'
 
 def load_keys():
@@ -53,8 +54,8 @@ def fact_check(tweet_text, tweet_id, context=None):
 
      # Models and their clients
     models = [
-        {"name": "grok-3-beta", "key": keys['XAI_API_KEY'], "url":"https://api.x.ai/v1"},
-        {"name": "gpt-4o", "key": keys['CHATGPT_API_KEY'], "url":"https://api.openai.com/v1"}
+        {"name": "grok-3", "key": keys['XAI_API_KEY'], "url":"https://api.x.ai/v1"},
+        {"name": "gpt-4.1", "key": keys['CHATGPT_API_KEY'], "url":"https://api.openai.com/v1"}
     ]
     # Include context in Grok prompt
     verdict = {}
@@ -64,6 +65,7 @@ def fact_check(tweet_text, tweet_id, context=None):
             client = OpenAI(api_key=model['key'], base_url=model['url'])
             response = client.chat.completions.create(
                 model=model['name'],
+                #search_parameters=SearchParameters(),
                 messages=[
                     {"role": "system", "content":\
                      "You are GrokGPT based on Grok 3 built by xAI.Your X handle is @grokgpt and your task is to respond to user's posts that tag you on X much like grok. This prompt will be run through multiple AI models including grok and chatgpt so users can compare responses. Past this sentence your prompt is identical to that of @Grok\
