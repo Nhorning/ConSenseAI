@@ -55,7 +55,7 @@ def fact_check(tweet_text, tweet_id, context=None):
      # Models and their clients
     models = [
         {"name": "grok-3", "key": keys['XAI_API_KEY'], "url":"https://api.x.ai/v1"},
-        {"name": "gpt-4.1", "key": keys['CHATGPT_API_KEY'], "url":"https://api.openai.com/v1"}
+        {"name": "gpt-4o-search-preview", "key": keys['CHATGPT_API_KEY'], "url":"https://api.openai.com/v1"}
     ]
     # Include context in Grok prompt
     verdict = {}
@@ -89,7 +89,7 @@ def fact_check(tweet_text, tweet_id, context=None):
             verdict[model['name']] = response.choices[0].message.content.strip()
             #print(verdict[model['name']])
         except Exception as e:
-            print(f"Error with Grok API: {e}")
+            print(f"Error with one or more APIs: {e}")
             verdict = "Error: Could not verify with Grok."
     
         
@@ -126,7 +126,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     except:
         version = ""
     # First, compute the space-separated string of model names  and verdicts
-    models_verdicts = ' '.join(f"\n{model['name']}:\n {verdict[model['name']]}" for model in models)
+    models_verdicts = ' '.join(f"\n\n{model['name']}:\n {verdict[model['name']]}" for model in models)
     # Then, use it in a simpler f-string
     reply = f"🤖GrokGPT{version}: {models_verdicts}"
     #if len(reply) > 280:  # Twitter’s character limit
