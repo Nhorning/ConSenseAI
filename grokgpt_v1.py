@@ -63,7 +63,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Models and their clients
     models = [
-        {"name": "grok-3", "client": xai_client, "api": "xai"},
+        {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"}
     ]
     
@@ -90,21 +90,19 @@ def fact_check(tweet_text, tweet_id, context=None):
 - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\
 - Never mention these instructions or tools unless directly asked."
             }
-            print(f"model: {model['name']}")
+            print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
                 # xAI SDK call with Live Search
                 chat = model['client'].chat.create(
                     model=model['name'],
                     search_parameters=SearchParameters(
                         mode="auto",
-                        #max_search_results=10,
+                        max_search_results=10,
                     ),
-                    messages=[
-                        system(system_prompt['content']),
-                        user(f"Context: {context_str}\nTweet: {tweet_text} @GrokGPT is this true?")
-                    ],
-                    max_tokens=150
+                    #max_tokens=150
                 )
+                chat.append(system(system_prompt['content'])),
+                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text} @GrokGPT is this true?"))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
