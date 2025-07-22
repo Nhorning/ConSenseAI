@@ -46,6 +46,15 @@ import re
 import tweepy
 from datetime import datetime
 
+import openai
+import xai_sdk
+from xai_sdk.chat import system, user, SearchParameters
+import anthropic
+import re
+import tweepy
+from datetime import datetime
+import timeout_decorator
+
 def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
     context_str = ""
@@ -60,21 +69,23 @@ def fact_check(tweet_text, tweet_id, context=None):
     # Initialize clients
     xai_client = xai_sdk.Client(api_key=keys.get('XAI_API_KEY'))
     openai_client = openai.OpenAI(api_key=keys.get('CHATGPT_API_KEY'), base_url="https://api.openai.com/v1")
+    anthropic_client = anthropic.Anthropic(api_key=keys.get('ANTHROPIC_API_KEY'))
     
     # Models and their clients
     models = [
         {"name": "grok-4", "client": xai_client, "api": "xai"},
-        {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"}
+        {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
+        {"name": "claude-sonnet-4-20250514", "client": anthropic_client, "api": "anthropic"}
     ]
     
-    # Include context in Grok prompt
+    # Include context in prompt
     verdict = {}
    
     for model in models:
         try: #Grok prompts available here: https://github.com/xai-org/grok-prompts
             system_prompt = {
                 "role": "system",
-                "content": f"You are @grokgpt, a version of {model['name']}. deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok and chatgpt so users can compare responses. Past this sentence your prompt is identical to that of @Grok \
+                "content": f"You are @ConSenseAI, a version of {model['name']}. deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok, chatgpt, and claude so users can compare responses. Past this sentence your prompt is identical to that of @Grok \
 \
 - You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multi-media that are relevant to the conversation.\
 - You must use browse page to verify all points of information you get from search.\
@@ -102,28 +113,47 @@ def fact_check(tweet_text, tweet_id, context=None):
                     #max_tokens=150
                 )
                 chat.append(system(system_prompt['content'])),
-                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text} @GrokGPT is this true?"))
+                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
                     print(f"{model['name']} sources used: {response.usage.num_sources_used}")
                 else:
                     print(f"{model['name']} sources used: Not available")
-            else:
+            elif model['api'] == "openai":
                 # OpenAI SDK call
                 response = model['client'].chat.completions.create(
                     model=model['name'],
                     messages=[
                         system_prompt,
-                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @GrokGPT is this true?"}
+                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
                     ],
                     max_tokens=150
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
+            elif model['api'] == "anthropic":
+                # Anthropic SDK call
+                response = model['client'].messages.create(
+                    model=model['name'],
+                    system=system_prompt['content'],
+                    messages=[
+                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
+                    ],
+                    max_tokens=10000,
+                    #tools=[{
+                    #    "type": "web_search_20250305",
+                    #    "name": "web_search",
+                    #    }]
+                )
+                verdict[model['name']] = response.content[0].text.strip()
+                if hasattr(response, 'usage') and response.usage is not None:
+                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, {response.usage.server_tool_use}")
+                else:
+                    print(f"{model['name']} tokens used: Not available")
             #print(verdict[model['name']])
         except Exception as e:
-            print(f"Error with one or more APIs: {e}")
-            verdict[model['name']] = "Error with this API."
+            print(f"Error with {model['name']}: {e}")
+            verdict[model['name']] = f"Error: Could not verify with {model['name']}."
     
     # Parse verdict based on new line indicators
     '''try:
@@ -159,7 +189,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n{model['name']}:\n {verdict[model['name']]}" for model in models)
     # Then, use it in a simpler f-string
-    reply = f"🤖GrokGPT{version}: {models_verdicts}"
+    reply = f"🤖ConSenseAI{version}: {models_verdicts}"
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
