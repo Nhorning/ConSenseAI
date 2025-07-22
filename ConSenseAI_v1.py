@@ -75,7 +75,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     models = [
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
-        {"name": "claude-sonnet-4-20250514", "client": anthropic_client, "api": "anthropic"}
+        {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
     ]
     
     # Include context in prompt
