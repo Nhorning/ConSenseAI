@@ -145,8 +145,17 @@ def fact_check(tweet_text, tweet_id, context=None):
                         "name": "web_search"
                         }]
                 )
-                #print(response.content)
-                verdict[model['name']] = response.content[-1].text.strip()
+                # Find the last text block in the content array
+                for block in reversed(response.content):
+                    if block.type == "text":
+                        verdict[model['name']] = block.text.strip()
+                        break
+                else:
+                    verdict[model['name']] = "No text response found."
+        
+                # Handle minimal or unhelpful responses
+                if verdict[model['name']] in [".", "", "No results"]:
+                    verdict[model['name']] = "Search yielded no useful results. Unable to verify."
                 if hasattr(response, 'usage') and response.usage is not None:
                     print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: {response.usage.server_tool_use.web_search_requests}")
                 else:
@@ -244,7 +253,7 @@ from openai import OpenAI
 import argparse
 
 # Parse command-line arguments
-parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
+parser = argparse.ArgumentParser(description='ConSenseAI multi-model X bot')
 parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
 parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
