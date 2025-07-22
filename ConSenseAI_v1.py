@@ -140,14 +140,15 @@ def fact_check(tweet_text, tweet_id, context=None):
                         {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
                     ],
                     max_tokens=10000,
-                    #tools=[{
-                    #    "type": "web_search_20250305",
-                    #    "name": "web_search",
-                    #    }]
+                    tools=[{
+                        "type": "web_search_20250305",
+                        "name": "web_search"
+                        }]
                 )
-                verdict[model['name']] = response.content[0].text.strip()
+                #print(response.content)
+                verdict[model['name']] = response.content[-1].text.strip()
                 if hasattr(response, 'usage') and response.usage is not None:
-                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, {response.usage.server_tool_use}")
+                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: {response.usage.server_tool_use.web_search_requests}")
                 else:
                     print(f"{model['name']} tokens used: Not available")
             #print(verdict[model['name']])
