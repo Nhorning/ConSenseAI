@@ -75,7 +75,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     models = [
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
-        {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
+        {"name": "claude-3-7-sonnet-20250225", "client": anthropic_client, "api": "anthropic"}
     ]
     
     # Include context in prompt
@@ -103,18 +103,23 @@ def fact_check(tweet_text, tweet_id, context=None):
             }
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
-                # xAI SDK call with Live Search
-                chat = model['client'].chat.create(
-                    model=model['name'],
-                    search_parameters=SearchParameters(
-                        mode="auto",
-                        max_search_results=10,
-                    ),
-                    #max_tokens=150
-                )
-                chat.append(system(system_prompt['content'])),
-                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"))
-                response = chat.sample()
+                # xAI SDK call with Live Search and timeout
+                @timeout_decorator.timeout(10, timeout_exception=TimeoutError)
+                def xai_call():
+                    chat = model['client'].chat.create(
+                        model=model['name'],
+                        search_parameters=SearchParameters(
+                            mode="auto",
+                            max_search_results=10,
+                        ),
+                        messages=[
+                            system(system_prompt['content']),
+                            user(f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?")
+                        ],
+                        max_tokens=150
+                    )
+                    return chat.sample()
+                response = xai_call()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
                     print(f"{model['name']} sources used: {response.usage.num_sources_used}")
@@ -131,7 +136,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     max_tokens=150
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
-            elif model['api'] == "anthropic":
+            else:  # anthropic
                 # Anthropic SDK call
                 response = model['client'].messages.create(
                     model=model['name'],
@@ -139,29 +144,14 @@ def fact_check(tweet_text, tweet_id, context=None):
                     messages=[
                         {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
                     ],
-                    max_tokens=10000,
-                    tools=[{
-                        "type": "web_search_20250305",
-                        "name": "web_search"
-                        }]
+                    max_tokens=150
                 )
-                # Collect all valid text blocks
-                text_responses = []
-                for block in response.content:
-                    if block.type == "text":
-                        text_responses.append(block.text.strip())
-                # Join valid text blocks or use fallback
-                    if text_responses:
-                        verdict[model['name']] = " ".join(text_responses)
-        
-                # Handle minimal or unhelpful responses
-                if verdict[model['name']] in [".", "", "No results"]:
-                    verdict[model['name']] = "Search yielded no useful results. Unable to verify."
+                verdict[model['name']] = response.content[0].text.strip()
                 if hasattr(response, 'usage') and response.usage is not None:
-                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: {response.usage.server_tool_use.web_search_requests}")
+                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}")
                 else:
                     print(f"{model['name']} tokens used: Not available")
-            #print(verdict[model['name']])
+            print(verdict[model['name']])
         except Exception as e:
             print(f"Error with {model['name']}: {e}")
             verdict[model['name']] = f"Error: Could not verify with {model['name']}."
@@ -254,7 +244,7 @@ from openai import OpenAI
 import argparse
 
 # Parse command-line arguments
-parser = argparse.ArgumentParser(description='ConSenseAI multi-model X bot')
+parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
 parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
 parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
