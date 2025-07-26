@@ -113,7 +113,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     #max_tokens=150
                 )
                 chat.append(system(system_prompt['content'])),
-                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"))
+                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text}"))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
@@ -231,7 +231,7 @@ def dryruncheck():
 def post_reply(tweet_id, reply_text):
     try:
         print(f"attempting reply to tweet {tweet_id}: {reply_text}\n")
-        client_oauth1.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
+        post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
         print('done!')
         return 'done!'
     except tweepy.TweepyException as e:
@@ -284,39 +284,41 @@ import tweepy
 from webbrowser import open as web_open
 
 def authenticate():
-    global client_oauth1
-    global client_oauth2
+    global read_client
+    global post_client
     #keys = load_keys()
     
-    # Check if access_token and access_token_secret are already present
+    # Always use bearer for read_client (app-only, basic-tier app)
+    read_client = tweepy.Client(bearer_token=keys['bearer_token'])
+    print("Read client authenticated with Bearer Token (app-only, basic tier).")
+    
+    # Check if access_token and access_token_secret are already present for post_client
     if 'access_token' in keys and 'access_token_secret' in keys and keys['access_token'] and keys['access_token_secret']:
         try:
-            # Attempt to authenticate with existing tokens
-            client_oauth1 = tweepy.Client(
+            # Post client (as @ConSenseAI - free tier)
+            post_client = tweepy.Client(
                 consumer_key=keys['XAPI_key'],
                 consumer_secret=keys['XAPI_secret'],
                 access_token=keys['access_token'],
                 access_token_secret=keys['access_token_secret']
             )
-            user = client_oauth1.get_me()
+            user = post_client.get_me()
+            print(f"Post client authenticated as @{user.data.username} (free tier).")
             if user.data.username.lower() == 'consenseai':
                 print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
-                global client_oauth2
-                client_oauth2 = None
-                print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
                 return  # Exit early if authentication succeeds
             else:
                 print(f"Warning: Existing tokens authenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
         except tweepy.TweepyException as e:
             print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
     
-    # If no valid tokens or authentication failed, perform three-legged OAuth flow
+    # If no valid tokens or authentication failed, perform three-legged OAuth flow for @ConSenseAI
     print("No valid access tokens found or authentication failed. Initiating three-legged OAuth flow...")
     auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'])
     
     try:
         # Step 1: Get request token
-        redirect_url = "http://localhost:8080"  # Ensure this matches the callback URL in X Developer Portal
+        redirect_url = "http://127.0.0.1:3000/"  # Ensure this matches the callback URL in X Developer Portal
         auth.set_access_token(None, None)  # Clear any existing tokens
         redirect_url = auth.get_authorization_url()
         print(f"Please go to this URL and authorize the app: {redirect_url}")
@@ -335,25 +337,15 @@ def authenticate():
             f.write(f"\naccess_token={access_token}\naccess_token_secret={access_token_secret}\n")
         print(f"New access tokens saved to keys.txt: {access_token}, {access_token_secret}")
         
-        # Step 4: Authenticate client
-        client_oauth1 = tweepy.Client(
-            consumer_key=keys['XAPI_key'],
-            consumer_secret=keys['XAPI_secret'],
-            access_token=access_token,
-            access_token_secret=access_token_secret
-        )
-        user = client_oauth1.get_me()
-        if user.data.username.lower() == 'consenseai':
-            print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully.")
-        else:
-            print(f"Warning: Authenticated as {user.data.username}, not @ConSenseAI.")
+        # Step 4: Call function again with new tokens
+        authenticate()
+       
     except tweepy.TweepyException as e:
         print(f"Error during OAuth flow: {e}")
         exit(1)
-
     
-    client_oauth2 = None
-    print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
+    #client_oauth2 = None
+    #print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
 
 def read_last_tweet_id():
     """
@@ -388,49 +380,44 @@ def write_last_tweet_id(tweet_id):
 # Get the user ID for the specified username
 def getid():
     try:
-        user_info = client_oauth1.get_user(username=username)
+        user_info = read_client.get_user(username=username)
         user_id = user_info.data.id
-        print(f"User ID for {username} (OAuth 1.0a): {user_id}")
+        print(f"User ID for @{username} (app-only auth): {user_id}")
         return user_id
     except tweepy.TweepyException as e:
-        print(f"Error fetching {username}'s user ID (OAuth 1.0a): {e}")
+        print(f"Error fetching @{username}'s user ID: {e}")
         exit(1)
 
-def fetch_and_process_tweets(user_id, username):
+def fetch_and_process_mentions(user_id, username):
     global backoff_multiplier
     last_tweet_id = read_last_tweet_id()
-    print(f"Checking for new tweets from {username} at {datetime.datetime.now()}")
+    print(f"Checking for mentions of {username} at {datetime.datetime.now()}")
     try:
-        tweets = client_oauth2.get_users_tweets(
+        mentions = read_client.get_users_mentions(
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
             tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets"]
         )
         
-        if tweets.data:
-            for tweet in tweets.data:
-                print(f"\n{username} posted: {tweet.text}")
+        if mentions.data:
+            for mention in mentions.data:
+                print(f"\nMention from {mention.author_id}: {mention.text}")
                 
                 # Fetch conversation context
-                context = get_tweet_context(tweet)
-                
-
-                #print tweet context:
-                context_str=''
+                context = get_tweet_context(mention)
+                context_str = ""
                 if context["original_tweet"]:
                     context_str += f"Original tweet: {context['original_tweet'].text}\n"
                 if context["thread_tweets"]:
-                    context_str += "Conversation thread:\n" + "\n".join(
-                        [f"- {t.text}" for t in context["thread_tweets"]]
-                        ) + "\n"
+                    context_str += "Conversation thread:\n" + "\n".join([f"- {t.text}" for t in context["thread_tweets"]]) + "\n"
                 if len(context_str) > 1:
                     print(context_str)
                     
-                # Pass context to fact_check
-                success = fact_check(tweet.text, tweet.id, context)
+                # Pass context to fact_check and reply
+                success = fact_check(mention.text, mention.id, context)
                 if success == 'done!':
-                    last_tweet_id = tweet.id
+                    last_tweet_id = mention.id
                     write_last_tweet_id(last_tweet_id)
                     backoff_multiplier = 1
                     time.sleep(30)
@@ -439,12 +426,14 @@ def fetch_and_process_tweets(user_id, username):
                     print(f'Backoff Multiplier:{backoff_multiplier}')
                     return
         else:
-            print("No new tweets found.")
+            print("No new mentions found.")
             backoff_multiplier = 1
     except tweepy.TweepyException as e:
-        print(f"Error fetching tweets: {e}")
+        print(f"Error fetching mentions: {e}")
         backoff_multiplier += 1
         print(f'Backoff Multiplier:{backoff_multiplier}')
+
+
 
 def get_tweet_context(tweet):
     """Fetch context for a tweet, including conversation thread or original tweet."""
@@ -456,7 +445,7 @@ def get_tweet_context(tweet):
         for ref_tweet in tweet.referenced_tweets or []:
             if ref_tweet.type == "replied_to":
                 try:
-                    original_tweet = client_oauth2.get_tweet(
+                    original_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
                         tweet_fields=["text", "author_id", "created_at"]
                     )
@@ -467,7 +456,7 @@ def get_tweet_context(tweet):
     # Fetch conversation thread
     if args.fetchthread:
         try:
-            thread_tweets = client_oauth2.search_recent_tweets(
+            thread_tweets = read_client.search_recent_tweets(
                 query=f"conversation_id:{tweet.conversation_id} -from:{username}",
                 max_results=10,
                 tweet_fields=["text", "author_id", "created_at"]
@@ -529,14 +518,15 @@ LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 RESTART_DELAY = 10
 backoff_multiplier = 1
 
+# Update main to use fetch_and_process_mentions
 def main():
     while True:
         authenticate()
         user_id = getid()
         try:
             while True:
-                fetch_and_process_tweets(user_id, username)
-                print(f'Waiting for {delay*backoff_multiplier} min before fetching more tweets')
+                fetch_and_process_mentions(user_id, username)  # Changed from fetch_and_process_tweets
+                print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
