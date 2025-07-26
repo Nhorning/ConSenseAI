@@ -139,7 +139,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     messages=[
                         {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
                     ],
-                    max_tokens=10000,
+                    max_tokens=250,
                     tools=[{
                         "type": "web_search_20250305",
                         "name": "web_search"
