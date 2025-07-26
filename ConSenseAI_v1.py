@@ -126,7 +126,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     model=model['name'],
                     messages=[
                         system_prompt,
-                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
+                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}"}
                     ],
                     max_tokens=150
                 )
@@ -137,7 +137,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     model=model['name'],
                     system=system_prompt['content'],
                     messages=[
-                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text} @ConSenseAI is this true?"}
+                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}"}
                     ],
                     max_tokens=250,
                     tools=[{
@@ -415,6 +415,12 @@ def fetch_and_process_mentions(user_id, username):
                     context_str += "Conversation thread:\n" + "\n".join([f"- {t.text}" for t in context["thread_tweets"]]) + "\n"
                 if len(context_str) > 1:
                     print(context_str)
+                
+                # New: Check for reply loop in this thread
+                reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
+                if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
+                    print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
+                    continue  # Move to next mention
                     
                 # Pass context to fact_check and reply
                 success = fact_check(mention.text, mention.id, context)
@@ -467,6 +473,18 @@ def get_tweet_context(tweet):
                 context["thread_tweets"] = thread_tweets.data
         except tweepy.TweepyException as e:
             print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+
+    # Fetch bot's own replies in this thread to count prior responses
+        try:
+            bot_replies = read_client.search_recent_tweets(
+                query=f"conversation_id:{tweet.conversation_id} from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at"]
+            )
+            if bot_replies.data:
+                context["bot_replies_in_thread"] = bot_replies.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching bot's replies in thread {tweet.conversation_id}: {e}")
     
     return context
 
