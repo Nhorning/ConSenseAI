@@ -35,7 +35,7 @@ def load_keys():
         exit(1)
 
 # Set up Grok client (using OpenAI SDK)
-keys = load_keys()
+#keys = load_keys()
 
 
 import openai
@@ -286,7 +286,8 @@ from webbrowser import open as web_open
 def authenticate():
     global read_client
     global post_client
-    #keys = load_keys()
+    global keys
+    keys = load_keys()
     
     # Always use bearer for read_client (app-only, basic-tier app)
     read_client = tweepy.Client(bearer_token=keys['bearer_token'])
@@ -334,10 +335,11 @@ def authenticate():
         
         # Update keys.txt with new tokens
         with open('keys.txt', 'a') as f:
-            f.write(f"\naccess_token={access_token}\naccess_token_secret={access_token_secret}\n")
+            f.write(f"access_token={access_token}\naccess_token_secret={access_token_secret}\n")
         print(f"New access tokens saved to keys.txt: {access_token}, {access_token_secret}")
         
         # Step 4: Call function again with new tokens
+        #keys=load_keys()
         authenticate()
        
     except tweepy.TweepyException as e:
