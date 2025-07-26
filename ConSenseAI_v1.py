@@ -280,27 +280,80 @@ else:
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 
+import tweepy
+from webbrowser import open as web_open
+
 def authenticate():
-    global client_oauth1, client_oauth2
-    #load the keys
+    global client_oauth1
+    global client_oauth2
     #keys = load_keys()
     
-    #Authenticate with X API v2
-    client_oauth1 = tweepy.Client(
-        consumer_key=keys['XAPI_key'],
-        consumer_secret=keys['XAPI_secret'],
-        access_token=keys['access_token'],
-        access_token_secret=keys['access_token_secret']
-    )
-
-    # OAuth 2.0 Bearer Token Authentication (fallback)
-    client_oauth2 = tweepy.Client(bearer_token=keys['bearer_token'])
+    # Check if access_token and access_token_secret are already present
+    if 'access_token' in keys and 'access_token_secret' in keys and keys['access_token'] and keys['access_token_secret']:
+        try:
+            # Attempt to authenticate with existing tokens
+            client_oauth1 = tweepy.Client(
+                consumer_key=keys['XAPI_key'],
+                consumer_secret=keys['XAPI_secret'],
+                access_token=keys['access_token'],
+                access_token_secret=keys['access_token_secret']
+            )
+            user = client_oauth1.get_me()
+            if user.data.username.lower() == 'consenseai':
+                print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
+                global client_oauth2
+                client_oauth2 = None
+                print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
+                return  # Exit early if authentication succeeds
+            else:
+                print(f"Warning: Existing tokens authenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
+        except tweepy.TweepyException as e:
+            print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
+    
+    # If no valid tokens or authentication failed, perform three-legged OAuth flow
+    print("No valid access tokens found or authentication failed. Initiating three-legged OAuth flow...")
+    auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'])
+    
+    try:
+        # Step 1: Get request token
+        redirect_url = "http://localhost:8080"  # Ensure this matches the callback URL in X Developer Portal
+        auth.set_access_token(None, None)  # Clear any existing tokens
+        redirect_url = auth.get_authorization_url()
+        print(f"Please go to this URL and authorize the app: {redirect_url}")
+        web_open(redirect_url)  # Opens in default browser
+        
+        # Step 2: Get verifier from callback
+        verifier = input("Enter the verifier PIN from the callback URL: ")
+        
+        # Step 3: Get access token
+        auth.get_access_token(verifier)
+        access_token = auth.access_token
+        access_token_secret = auth.access_token_secret
+        
+        # Update keys.txt with new tokens
+        with open('keys.txt', 'a') as f:
+            f.write(f"\naccess_token={access_token}\naccess_token_secret={access_token_secret}\n")
+        print(f"New access tokens saved to keys.txt: {access_token}, {access_token_secret}")
+        
+        # Step 4: Authenticate client
+        client_oauth1 = tweepy.Client(
+            consumer_key=keys['XAPI_key'],
+            consumer_secret=keys['XAPI_secret'],
+            access_token=access_token,
+            access_token_secret=access_token_secret
+        )
+        user = client_oauth1.get_me()
+        if user.data.username.lower() == 'consenseai':
+            print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully.")
+        else:
+            print(f"Warning: Authenticated as {user.data.username}, not @ConSenseAI.")
+    except tweepy.TweepyException as e:
+        print(f"Error during OAuth flow: {e}")
+        exit(1)
 
     
-    
-# Assuming client_oauth2 is a tweepy.Client object configured with an OAuth 2.0 bearer token
-# Replace with your actual client initialization if different
-# Example: client_oauth2 = tweepy.Client(bearer_token="your_bearer_token")
+    client_oauth2 = None
+    print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
 
 def read_last_tweet_id():
     """
@@ -335,16 +388,13 @@ def write_last_tweet_id(tweet_id):
 # Get the user ID for the specified username
 def getid():
     try:
-        user_info = client_oauth2.get_user(username=username)
+        user_info = client_oauth1.get_user(username=username)
         user_id = user_info.data.id
-        print(f"User ID for {username} (OAuth 2.0): {user_id}")
+        print(f"User ID for {username} (OAuth 1.0a): {user_id}")
         return user_id
     except tweepy.TweepyException as e:
-        print(f"Error fetching {username}'s user ID (OAuth 2.0): {e}")
+        print(f"Error fetching {username}'s user ID (OAuth 1.0a): {e}")
         exit(1)
-
-# Load the last processed tweet ID from the file
-# last_tweet_id = read_last_tweet_id()
 
 def fetch_and_process_tweets(user_id, username):
     global backoff_multiplier
