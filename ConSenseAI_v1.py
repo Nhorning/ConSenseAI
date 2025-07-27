@@ -240,7 +240,7 @@ def post_reply(tweet_id, reply_text):
         if e.response.status_code == 429:
             return 'delay!'
         
-
+'''
 import time
 import datetime
 import tweepy
@@ -282,7 +282,7 @@ LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 
 import tweepy
 from webbrowser import open as web_open
-
+'''
 def authenticate():
     global read_client
     global post_client
@@ -420,6 +420,7 @@ def fetch_and_process_mentions(user_id, username):
                 reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
                 if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
                     print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
+                    
                     continue  # Move to next mention
                     
                 # Pass context to fact_check and reply
@@ -462,7 +463,7 @@ def get_tweet_context(tweet):
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
     
     # Fetch conversation thread
-    if args.fetchthread:
+    if not args.fetchthread:
         try:
             thread_tweets = read_client.search_recent_tweets(
                 query=f"conversation_id:{tweet.conversation_id} -from:{username}",
@@ -514,7 +515,7 @@ args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g.
 if args.username:
     username = args.username.lower()
 else:
-    username = input("X username to factcheck: @").lower()
+    username = "consenseai"
 
 if args.delay:
     delay = int(args.delay)  # Convert minutes to seconds
@@ -530,6 +531,7 @@ if args.accuracy:
     accuracy_threshold = args.accuracy
 else:
     accuracy_threshold = 4
+
 
 
 # File to store the last processed tweet ID
