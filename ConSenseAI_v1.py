@@ -403,7 +403,7 @@ def fetch_and_process_mentions(user_id, username):
         )
         
         if mentions.data:
-            for mention in mentions.data:
+            for mention in mentions.data[::-1]:  # Process in reverse order to handle oldest first
                 print(f"\nMention from {mention.author_id}: {mention.text}")
                 
                 # Fetch conversation context
@@ -421,12 +421,13 @@ def fetch_and_process_mentions(user_id, username):
                 if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
                     print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
                     
-                    continue  # Move to next mention
-                    
+                    success = 'done!'  #So we write the last tweet id and avoid multiple replies.
+
+                else:    
                 # Pass context to fact_check and reply
-                success = fact_check(mention.text, mention.id, context)
+                    success = fact_check(mention.text, mention.id, context)
                 if success == 'done!':
-                    last_tweet_id = mention.id
+                    last_tweet_id = max(last_tweet_id, mention.id)
                     write_last_tweet_id(last_tweet_id)
                     backoff_multiplier = 1
                     time.sleep(30)
