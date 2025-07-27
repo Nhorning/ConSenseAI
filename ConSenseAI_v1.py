@@ -411,8 +411,9 @@ def fetch_and_process_mentions(user_id, username):
                 context_str = ""
                 if context["original_tweet"]:
                     context_str += f"Original tweet: {context['original_tweet'].text}\n"
-                if context["thread_tweets"]:
-                    context_str += "Conversation thread:\n" + "\n".join([f"- {t.text}" for t in context["thread_tweets"]]) + "\n"
+                context_str += "Thread hierarchy:\n"
+                root_id = context["original_tweet"].id if context["original_tweet"] else mention.conversation_id
+                context_str += build_nested_thread(context['reply_graph'], context['tweet_dict'], root_id)
                 if len(context_str) > 1:
                     print(context_str)
                 
@@ -443,7 +444,7 @@ def fetch_and_process_mentions(user_id, username):
         backoff_multiplier += 1
         print(f'Backoff Multiplier:{backoff_multiplier}')
 
-
+from collections import defaultdict
 
 def get_tweet_context(tweet):
     """Fetch context for a tweet, including conversation thread or original tweet."""
@@ -467,29 +468,65 @@ def get_tweet_context(tweet):
     if not args.fetchthread:
         try:
             thread_tweets = read_client.search_recent_tweets(
-                query=f"conversation_id:{tweet.conversation_id} -from:{username}",
-                max_results=10,
-                tweet_fields=["text", "author_id", "created_at"]
+            query=f"conversation_id:{tweet.conversation_id} -from:{username}",
+            max_results=10,
+            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+            expansions=["referenced_tweets.id"]
             )
             if thread_tweets.data:
                 context["thread_tweets"] = thread_tweets.data
         except tweepy.TweepyException as e:
             print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
 
-    # Fetch bot's own replies in this thread to count prior responses
+        # Fetch bot's own replies in this thread to count prior responses
         try:
             bot_replies = read_client.search_recent_tweets(
-                query=f"conversation_id:{tweet.conversation_id} from:{username}",
-                max_results=10,
-                tweet_fields=["text", "author_id", "created_at"]
+            query=f"conversation_id:{tweet.conversation_id} from:{username}",
+            max_results=10,
+            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+            expansions=["referenced_tweets.id"]
             )
             if bot_replies.data:
                 context["bot_replies_in_thread"] = bot_replies.data
         except tweepy.TweepyException as e:
             print(f"Error fetching bot's replies in thread {tweet.conversation_id}: {e}")
-    
+        # Combine into all_tweets (handle includes if expansions returned them)
+        all_tweets = (thread_tweets.data or []) + (bot_replies.data or [])
+        if hasattr(thread_tweets, 'includes') and 'tweets' in thread_tweets.includes:
+            all_tweets += thread_tweets.includes['tweets']
+        if hasattr(bot_replies, 'includes') and 'tweets' in bot_replies.includes:
+            all_tweets += bot_replies.includes['tweets']
+
+        # Build graph: {parent_id: [child_tweets]}
+        reply_graph = defaultdict(list)
+        tweet_dict = {t.id: t for t in all_tweets}  # For quick lookup
+        for t in all_tweets:
+            if hasattr(t, 'referenced_tweets') and t.referenced_tweets:
+                for ref in t.referenced_tweets:
+                    if ref.type == 'replied_to':
+                        parent_id = ref.id
+                        # Ensure parent is in all_tweets; if not, you could fetch it separately
+                        if parent_id in tweet_dict:
+                            reply_graph[parent_id].append(t)
+        
+        context['reply_graph']= reply_graph
+        context['tweet_dict']= tweet_dict
+
+        # For loop detection, keep context["bot_replies_in_thread"] as before
+        context["bot_replies_in_thread"] = bot_replies.data or []
+
+
     return context
 
+def build_nested_thread(reply_graph, tweet_dict, root_id, indent=0):
+    out = ""
+    # Sort children by created_at for chronology
+    children = sorted(reply_graph.get(root_id, []), key=lambda t: t.created_at)
+    for child in children:
+        author = f" (from @{child.author_id})" if child.author_id else ""
+        out += "  " * indent + f"- {child.text}{author}\n"
+        out += build_nested_thread(reply_graph, tweet_dict, child.id, indent + 1)
+    return out
 
 import time
 import datetime
