@@ -79,7 +79,7 @@ def run_model(system_prompt, user_msg, model, verdict):
                         system_prompt,
                         {"role": "user", "content": user_msg}
                     ],
-                    max_tokens=150
+                    max_tokens=250
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "anthropic":
