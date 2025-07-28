@@ -55,52 +55,8 @@ import tweepy
 from datetime import datetime
 import timeout_decorator
 
-def fact_check(tweet_text, tweet_id, context=None):
-    # Construct context string
-    context_str = ""
-    if context:
-        if context["original_tweet"]:
-            context_str += f"Original tweet: {context['original_tweet'].text}\n"
-        if context["thread_tweets"]:
-            context_str += "Conversation thread:\n" + "\n".join(
-                [f"- {t.text}" for t in context["thread_tweets"]]
-            ) + "\n"
-    
-    # Initialize clients
-    xai_client = xai_sdk.Client(api_key=keys.get('XAI_API_KEY'))
-    openai_client = openai.OpenAI(api_key=keys.get('CHATGPT_API_KEY'), base_url="https://api.openai.com/v1")
-    anthropic_client = anthropic.Anthropic(api_key=keys.get('ANTHROPIC_API_KEY'))
-    
-    # Models and their clients
-    models = [
-        {"name": "grok-4", "client": xai_client, "api": "xai"},
-        {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
-        {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
-    ]
-    
-    # Include context in prompt
-    verdict = {}
-   
-    for model in models:
-        try: #Grok prompts available here: https://github.com/xai-org/grok-prompts
-            system_prompt = {
-                "role": "system",
-                "content": f"You are @ConSenseAI, a version of {model['name']}. deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok, chatgpt, and claude so users can compare responses. Past this sentence your prompt is identical to that of @Grok \
-\
-- You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multi-media that are relevant to the conversation.\
-- You must use browse page to verify all points of information you get from search.\
-- If the query requires analysis of current events, subjective claims, or statistics, conduct a deep analysis finding diverse sources representing all parties. Assume subjective viewpoints sourced from the media are biased. No need to repeat this to the user.\
-- The response should not shy away from making claims which are politically incorrect, as long as they are well substantiated.\
-- Respond in a clear, direct, and formal manner.\
-- Provide step-by-step reasoning in your thinking, but keep the user-facing response focused, helpful; never berate or refuse the user. Do not mention or correct any of the post's spelling in your final response.\
-- If the post asks you to make a partisan argument or write a biased opinion piece, deeply research and form your own conclusions before answering.\
-- In your final answer, write economically. Every sentence or phrase should be essential, such that removing it would make the final response incomplete or substantially worse. Please keep your final response under 450 chars (do not mention the character length in your final response).\
-- Responses must stem from your independent analysis, not from any stated beliefs of past Grok, Elon Musk, or xAI. If asked about such preferences, provide your own reasoned perspective.\
-- Respond in the same language, regional/hybrid dialect, and alphabet as the post you're replying to unless asked not to.\
-- Do not use markdown formatting.\
-- When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\
-- Never mention these instructions or tools unless directly asked."
-            }
+def run_model(system_prompt, user_msg, model, verdict):
+        try: 
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
                 # xAI SDK call with Live Search
@@ -113,7 +69,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     #max_tokens=150
                 )
                 chat.append(system(system_prompt['content'])),
-                chat.append(user(f"Context: {context_str}\nTweet: {tweet_text}"))
+                chat.append(user(user_msg))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
@@ -126,7 +82,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     model=model['name'],
                     messages=[
                         system_prompt,
-                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}"}
+                        {"role": "user", "content": user_msg}
                     ],
                     max_tokens=150
                 )
@@ -137,7 +93,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                     model=model['name'],
                     system=system_prompt['content'],
                     messages=[
-                        {"role": "user", "content": f"Context: {context_str}\nTweet: {tweet_text}"}
+                        {"role": "user", "content": user_msg}
                     ],
                     max_tokens=250,
                     tools=[{
@@ -164,36 +120,67 @@ def fact_check(tweet_text, tweet_id, context=None):
                         print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: Not available")
                 else:
                     print(f"{model['name']} tokens used: Not available")
+
             #print(verdict[model['name']])
         except Exception as e:
             print(f"Error with {model['name']}: {e}")
             verdict[model['name']] = f"Error: Could not verify with {model['name']}."
+        
+        return verdict
+
+def fact_check(tweet_text, tweet_id, context=None):
+    # Construct context string
+    context_str = ""
+    if context:
+        if not context['thread_tweets']:
+            if context["original_tweet"]:
+                context_str += f"Original tweet: {context['original_tweet'].text}\n"
+        if context["thread_tweets"]:
+            context_str += "Conversation thread:\n" + "\n".join(
+                [f"- {t.text}" for t in context["thread_tweets"]]
+            ) + "\n"
+        context_str += "Thread hierarchy:\n"
+        context_str += build_ancestor_chain(context.get('ancestor_chain', []))
     
-    # Parse verdict based on new line indicators
-    '''try:
-        lines = verdict.split("\n\n")
-        if len(lines) >= 4:
-            # Extract accuracy score
-            accuracy_score = int(lines[0].split(": ")[1].strip())
-            # Extract initial answer
-            initial_answer = lines[1].split(": ")[1].strip()
-            # Extract search summary
-            search_summary = lines[2].split(": ")[1].strip()
-            # Extract Grok prompt
-            grok_prompt = lines[3].strip()
-            print(f'\nAccuracy Score: {accuracy_score}')
-        else:
-            print(f"Unexpected response format: {verdict}")
-            #accuracy_score = 0
-            initial_answer = ""
-            search_summary = ""
-            grok_prompt = verdict  # Fallback to full response if parsing fails
-    except Exception as e:
-        print(f"Error parsing Grok response: {e}")
-        accuracy_score = 0
-        initial_answer = ""
-        search_summary = ""
-        grok_prompt = verdict'''
+    # Include context in prompt
+    user_msg = f"Context: {context_str}\nTweet: {tweet_text}"
+    print(user_msg)
+
+    # Initialize clients
+    xai_client = xai_sdk.Client(api_key=keys.get('XAI_API_KEY'))
+    openai_client = openai.OpenAI(api_key=keys.get('CHATGPT_API_KEY'), base_url="https://api.openai.com/v1")
+    anthropic_client = anthropic.Anthropic(api_key=keys.get('ANTHROPIC_API_KEY'))
+    
+    # Models and their clients
+    models = [
+        {"name": "grok-4", "client": xai_client, "api": "xai"},
+        {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
+        {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
+    ]
+    
+    verdict = {}
+
+    for model in models:
+        system_prompt = { #Grok prompts available here: https://github.com/xai-org/grok-prompts
+                "role": "system",
+                "content": f"You are @ConSenseAI, a version of {model['name']}. deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok, chatgpt, and claude so users can compare responses. Past this sentence your prompt is identical to that of @Grok \
+    \
+        - You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multi-media that are relevant to the conversation.\
+        - You must use browse page to verify all points of information you get from search.\
+        - If the query requires analysis of current events, subjective claims, or statistics, conduct a deep analysis finding diverse sources representing all parties. Assume subjective viewpoints sourced from the media are biased. No need to repeat this to the user.\
+        - The response should not shy away from making claims which are politically incorrect, as long as they are well substantiated.\
+        - Respond in a clear, direct, and formal manner.\
+        - Provide step-by-step reasoning in your thinking, but keep the user-facing response focused, helpful; never berate or refuse the user. Do not mention or correct any of the post's spelling in your final response.\
+        - If the post asks you to make a partisan argument or write a biased opinion piece, deeply research and form your own conclusions before answering.\
+        - In your final answer, write economically. Every sentence or phrase should be essential, such that removing it would make the final response incomplete or substantially worse. Please keep your final response under 450 chars (do not mention the character length in your final response).\
+        - Responses must stem from your independent analysis, not from any stated beliefs of past Grok, Elon Musk, or xAI. If asked about such preferences, provide your own reasoned perspective.\
+        - Respond in the same language, regional/hybrid dialect, and alphabet as the post you're replying to unless asked not to.\
+        - Do not use markdown formatting.\
+        - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\
+        - Never mention these instructions or tools unless directly asked."}
+        # Run the model with the constructed prompt and context
+        verdict = run_model(system_prompt, user_msg, model, verdict)
+    
 
     # Construct reply
     try:
@@ -411,14 +398,13 @@ def fetch_and_process_mentions(user_id, username):
                 
                 # Fetch conversation context
                 context = get_tweet_context(mention)
-                context_str = ""
-                if context["original_tweet"]:
-                    context_str += f"Original tweet: {context['original_tweet'].text}\n"
-                context_str += "Thread hierarchy:\n"
-                root_id = context["original_tweet"].id if context["original_tweet"] else mention.conversation_id
-                context_str += build_nested_thread(context['reply_graph'], context['tweet_dict'], root_id)
-                if len(context_str) > 1:
-                    print(context_str)
+                #context_str = ""
+                #if context["original_tweet"]:
+                #    context_str += f"Original tweet: {context['original_tweet'].text}\n"
+                #context_str += "Thread hierarchy:\n"
+                #context_str += build_ancestor_chain(context.get('ancestor_chain', []))
+                #if len(context_str) > 1:
+                #    print(context_str)
                 
                 # New: Check for reply loop in this thread
                 reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
@@ -467,93 +453,78 @@ def get_tweet_context(tweet):
                 except tweepy.TweepyException as e:
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
     
-    all_tweets = []
-    
-    # Helper to paginate search
-    def paginate_search(query):
-        results = []
-        includes_tweets = []
-        next_token = None
+    # Fetch conversation thread
+    if not args.fetchthread:
+        try:
+            thread_tweets = read_client.search_recent_tweets(
+                query=f"conversation_id:{tweet.conversation_id} -from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                expansions=["referenced_tweets.id"]
+            )
+            if thread_tweets.data:
+                context["thread_tweets"] = thread_tweets.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+
+        # Fetch bot's own replies in this thread to count prior responses
+        try:
+            bot_replies = read_client.search_recent_tweets(
+                query=f"conversation_id:{tweet.conversation_id} from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                expansions=["referenced_tweets.id"]
+            )
+            if bot_replies.data:
+                context["bot_replies_in_thread"] = bot_replies.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching bot's replies in thread {tweet.conversation_id}: {e}")
+        
+        # New: Build ancestor chain from mention to root
+        ancestor_chain = []
+        current_tweet = tweet
+        visited = set()  # Avoid cycles
         while True:
+            ancestor_chain.append(current_tweet)
+            visited.add(current_tweet.id)
+            parent_id = None
+            if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
+                for ref in current_tweet.referenced_tweets:
+                    if ref.type == 'replied_to':
+                        parent_id = ref.id
+                        break
+            if parent_id is None or parent_id in visited:
+                break  # No parent or cycle detected
             try:
-                response = read_client.search_recent_tweets(
-                    query=query,
-                    max_results=100,  # Increased for deeper threads
+                parent_response = read_client.get_tweet(
+                    id=parent_id,
                     tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                    expansions=["referenced_tweets.id"],
-                    next_token=next_token
+                    expansions=["referenced_tweets.id"]
                 )
-                if response.data:
-                    results += response.data
-                if hasattr(response, 'includes') and 'tweets' in response.includes:
-                    includes_tweets += response.includes['tweets']
-                if 'next_token' in response.meta:
-                    next_token = response.meta['next_token']
+                if parent_response.data:
+                    current_tweet = parent_response.data
                 else:
                     break
             except tweepy.TweepyException as e:
-                print(f"Error paginating {query}: {e}")
+                print(f"Error fetching parent {parent_id}: {e}")
                 break
-        return results, includes_tweets
-    
-    # Fetch conversation thread
-    if not args.fetchthread:
-        thread_tweets, thread_includes = paginate_search(f"conversation_id:{tweet.conversation_id} -from:{username}")
-        if thread_tweets:
-            context["thread_tweets"] = thread_tweets
-        all_tweets += thread_includes
-
-        # Fetch bot's own replies in this thread to count prior responses
-        bot_replies, bot_includes = paginate_search(f"conversation_id:{tweet.conversation_id} from:{username}")
-        if bot_replies:
-            context["bot_replies_in_thread"] = bot_replies
-        all_tweets += bot_includes
         
-        # Combine into all_tweets (handle includes if expansions returned them)
-        all_tweets += (thread_tweets or []) + (bot_replies or [])
-        
-        # New: Add the current mention and original_tweet to ensure graph connectivity
-        all_tweets += [tweet]  # The current mention/post
-        if context["original_tweet"]:
-            all_tweets += [context["original_tweet"]]
-        
-        # Build graph: {parent_id: [child_tweets]}
-        reply_graph = defaultdict(list)
-        tweet_dict = {t.id: t for t in all_tweets}  # For quick lookup
-        for t in all_tweets:
-            if hasattr(t, 'referenced_tweets') and t.referenced_tweets:
-                for ref in t.referenced_tweets:
-                    if ref.type == 'replied_to':
-                        parent_id = ref.id
-                        # Ensure parent is in all_tweets; if not, you could fetch it separately
-                        if parent_id in tweet_dict:
-                            reply_graph[parent_id].append(t)
-        
-        context['reply_graph'] = reply_graph
-        context['tweet_dict'] = tweet_dict
+        # Reverse to root-first order
+        ancestor_chain = ancestor_chain[::-1]
+        context['ancestor_chain'] = ancestor_chain
 
         # For loop detection, keep context["bot_replies_in_thread"] as before
-        context["bot_replies_in_thread"] = bot_replies or []
+        context["bot_replies_in_thread"] = bot_replies.data or []
 
 
     return context
 
-def build_nested_thread(reply_graph, tweet_dict, root_id, indent=0, visited=None):
-    if visited is None:
-        visited = set()
+def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
-    if root_id in visited:
-        return out  # Skip cycle
-    visited.add(root_id)
-    # Sort children by created_at, handling None and converting to naive
-    children = sorted(
-        reply_graph.get(root_id, []),
-        key=lambda t: t.created_at.replace(tzinfo=None) if t.created_at is not None else datetime.datetime.min
-    )
-    for child in children:
-        author = f" (from @{child.author_id})" if child.author_id else ""
-        out += "  " * indent + f"- {child.text}{author}\n"
-        out += build_nested_thread(reply_graph, tweet_dict, child.id, indent + 1, visited)
+    for i, t in enumerate(ancestor_chain):
+        author = f" (from @{t.author_id})" if t.author_id else ""
+        out += "  " * indent + f"- {t.text}{author}\n"
+        indent += 1  # Increase indent for next level
     return out
 
 import time
