@@ -158,7 +158,10 @@ def fact_check(tweet_text, tweet_id, context=None):
                 if verdict[model['name']] in [".", "", "No results"]:
                     verdict[model['name']] = "Search yielded no useful results. Unable to verify."
                 if hasattr(response, 'usage') and response.usage is not None:
-                    print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: {response.usage.server_tool_use.web_search_requests}")
+                    if hasattr(response.usage, 'server_tool_use') and response.usage.server_tool_use is not None:
+                        print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: {response.usage.server_tool_use.web_search_requests}")
+                    else:
+                        print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: Not available")
                 else:
                     print(f"{model['name']} tokens used: Not available")
             #print(verdict[model['name']])
@@ -464,39 +467,56 @@ def get_tweet_context(tweet):
                 except tweepy.TweepyException as e:
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
     
+    all_tweets = []
+    
+    # Helper to paginate search
+    def paginate_search(query):
+        results = []
+        includes_tweets = []
+        next_token = None
+        while True:
+            try:
+                response = read_client.search_recent_tweets(
+                    query=query,
+                    max_results=100,  # Increased for deeper threads
+                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                    expansions=["referenced_tweets.id"],
+                    next_token=next_token
+                )
+                if response.data:
+                    results += response.data
+                if hasattr(response, 'includes') and 'tweets' in response.includes:
+                    includes_tweets += response.includes['tweets']
+                if 'next_token' in response.meta:
+                    next_token = response.meta['next_token']
+                else:
+                    break
+            except tweepy.TweepyException as e:
+                print(f"Error paginating {query}: {e}")
+                break
+        return results, includes_tweets
+    
     # Fetch conversation thread
     if not args.fetchthread:
-        try:
-            thread_tweets = read_client.search_recent_tweets(
-            query=f"conversation_id:{tweet.conversation_id} -from:{username}",
-            max_results=10,
-            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-            expansions=["referenced_tweets.id"]
-            )
-            if thread_tweets.data:
-                context["thread_tweets"] = thread_tweets.data
-        except tweepy.TweepyException as e:
-            print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+        thread_tweets, thread_includes = paginate_search(f"conversation_id:{tweet.conversation_id} -from:{username}")
+        if thread_tweets:
+            context["thread_tweets"] = thread_tweets
+        all_tweets += thread_includes
 
         # Fetch bot's own replies in this thread to count prior responses
-        try:
-            bot_replies = read_client.search_recent_tweets(
-            query=f"conversation_id:{tweet.conversation_id} from:{username}",
-            max_results=10,
-            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-            expansions=["referenced_tweets.id"]
-            )
-            if bot_replies.data:
-                context["bot_replies_in_thread"] = bot_replies.data
-        except tweepy.TweepyException as e:
-            print(f"Error fetching bot's replies in thread {tweet.conversation_id}: {e}")
+        bot_replies, bot_includes = paginate_search(f"conversation_id:{tweet.conversation_id} from:{username}")
+        if bot_replies:
+            context["bot_replies_in_thread"] = bot_replies
+        all_tweets += bot_includes
+        
         # Combine into all_tweets (handle includes if expansions returned them)
-        all_tweets = (thread_tweets.data or []) + (bot_replies.data or [])
-        if hasattr(thread_tweets, 'includes') and 'tweets' in thread_tweets.includes:
-            all_tweets += thread_tweets.includes['tweets']
-        if hasattr(bot_replies, 'includes') and 'tweets' in bot_replies.includes:
-            all_tweets += bot_replies.includes['tweets']
-
+        all_tweets += (thread_tweets or []) + (bot_replies or [])
+        
+        # New: Add the current mention and original_tweet to ensure graph connectivity
+        all_tweets += [tweet]  # The current mention/post
+        if context["original_tweet"]:
+            all_tweets += [context["original_tweet"]]
+        
         # Build graph: {parent_id: [child_tweets]}
         reply_graph = defaultdict(list)
         tweet_dict = {t.id: t for t in all_tweets}  # For quick lookup
@@ -509,23 +529,31 @@ def get_tweet_context(tweet):
                         if parent_id in tweet_dict:
                             reply_graph[parent_id].append(t)
         
-        context['reply_graph']= reply_graph
-        context['tweet_dict']= tweet_dict
+        context['reply_graph'] = reply_graph
+        context['tweet_dict'] = tweet_dict
 
         # For loop detection, keep context["bot_replies_in_thread"] as before
-        context["bot_replies_in_thread"] = bot_replies.data or []
+        context["bot_replies_in_thread"] = bot_replies or []
 
 
     return context
 
-def build_nested_thread(reply_graph, tweet_dict, root_id, indent=0):
+def build_nested_thread(reply_graph, tweet_dict, root_id, indent=0, visited=None):
+    if visited is None:
+        visited = set()
     out = ""
-    # Sort children by created_at for chronology
-    children = sorted(reply_graph.get(root_id, []), key=lambda t: t.created_at)
+    if root_id in visited:
+        return out  # Skip cycle
+    visited.add(root_id)
+    # Sort children by created_at, handling None and converting to naive
+    children = sorted(
+        reply_graph.get(root_id, []),
+        key=lambda t: t.created_at.replace(tzinfo=None) if t.created_at is not None else datetime.datetime.min
+    )
     for child in children:
         author = f" (from @{child.author_id})" if child.author_id else ""
         out += "  " * indent + f"- {child.text}{author}\n"
-        out += build_nested_thread(reply_graph, tweet_dict, child.id, indent + 1)
+        out += build_nested_thread(reply_graph, tweet_dict, child.id, indent + 1, visited)
     return out
 
 import time
