@@ -127,7 +127,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
     context_str = ""
     if context:
-        if not context['thread_tweets']:
+        if not context['ancestor_chain']:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {context['original_tweet'].text}\n"
         if context["thread_tweets"]:
@@ -201,7 +201,7 @@ def fact_check(tweet_text, tweet_id, context=None):
         version = ""
     
     # Then, use it in a simpler f-string
-    reply = f"ConSenseAI{version}\n: {models_verdicts}"
+    reply = f"ConSenseAI{version}:\n {models_verdicts}"
     #if len(reply) > 280:  # Twitter’s character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
