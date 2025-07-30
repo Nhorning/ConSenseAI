@@ -368,20 +368,20 @@ def fetch_and_process_mentions(user_id, username):
                 
                 # Fetch conversation context
                 context = get_tweet_context(mention)
-                #context_str = ""
-                #if context["original_tweet"]:
-                #    context_str += f"Original tweet: {context['original_tweet'].text}\n"
-                #context_str += "Thread hierarchy:\n"
-                #context_str += build_ancestor_chain(context.get('ancestor_chain', []))
-                #if len(context_str) > 1:
-                #    print(context_str)
+           
                 
                 # New: Check for reply loop in this thread
                 reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
                 if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
                     print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
-                    
-                    success = 'done!'  #So we write the last tweet id and avoid multiple replies.
+                    if args.dryrun == False:
+                        success = 'done!'  #So we write the last tweet id and avoid multiple replies.
+                
+                #skip mentions from the bot itself
+                elif mention.author_id == user_id:
+                    print(f"Skipping mention from self: {mention.text}")
+                    if args.dryrun== False:
+                        success = 'done!'
 
                 else:    
                 # Pass context to fact_check and reply
