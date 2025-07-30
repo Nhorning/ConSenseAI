@@ -359,7 +359,7 @@ def fetch_and_process_mentions(user_id, username):
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
-            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets"]
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets","note_tweet"]
         )
         
         if mentions.data:
@@ -442,7 +442,7 @@ def get_tweet_context(tweet):
             bot_replies = read_client.search_recent_tweets(
                 query=f"conversation_id:{tweet.conversation_id} from:{username}",
                 max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id","note_tweet"],
                 expansions=["referenced_tweets.id"]
             )
             if bot_replies.data:
