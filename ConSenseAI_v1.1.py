@@ -374,14 +374,12 @@ def fetch_and_process_mentions(user_id, username):
                 reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
                 if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
                     print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
-                    if args.dryrun == False:
-                        success = 'done!'  #So we write the last tweet id and avoid multiple replies.
+                    success = dryruncheck()  #So we write the last tweet id and avoid multipe lookups
                 
                 #skip mentions from the bot itself
                 elif mention.author_id == user_id:
                     print(f"Skipping mention from self: {mention.text}")
-                    if args.dryrun== False:
-                        success = 'done!'
+                    success = dryruncheck()  #So we write the last tweet id and avoid multipe lookups
 
                 else:    
                 # Pass context to fact_check and reply
