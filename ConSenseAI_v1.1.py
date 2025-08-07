@@ -79,7 +79,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250):
                         system_prompt,
                         {"role": "user", "content": user_msg}
                     ],
-                    max_tokens=max_tokens,
+                    #max_tokens=max_tokens,
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "anthropic":
@@ -127,15 +127,16 @@ def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
     context_str = ""
     if context:
-        if not context['ancestor_chain']:
+        if len(context['ancestor_chain']) <= 1:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {context['original_tweet'].text}\n"
         if context["thread_tweets"]:
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {t.text}" for t in context["thread_tweets"]]
             ) + "\n"
-        context_str += "Thread hierarchy:\n"
-        context_str += build_ancestor_chain(context.get('ancestor_chain', []))
+        if len(context['ancestor_chain']) > 1:
+               context_str += "Thread hierarchy:\n"
+               context_str += build_ancestor_chain(context.get('ancestor_chain', []))
     
     # Include context in prompt
     user_msg = f"Context: {context_str}\nTweet: {tweet_text}"
@@ -149,7 +150,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     # Models and their clients
     models = [
         {"name": "grok-4", "client": xai_client, "api": "xai"},
-        {"name": "gpt-4o-search-preview", "client": openai_client, "api": "openai"},
+        {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
     ]
     randomized_models = models.copy()
