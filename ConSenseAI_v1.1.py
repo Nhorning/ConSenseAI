@@ -140,7 +140,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Include context in prompt
     user_msg = f"Context: {context_str}\nTweet: {tweet_text}"
-    print(user_msg)
+    #print(user_msg)
 
     # Initialize clients
     xai_client = xai_sdk.Client(api_key=keys.get('XAI_API_KEY'))
@@ -149,8 +149,8 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Models and their clients
     models = [
-        {"name": "grok-4", "client": xai_client, "api": "xai"},
-        {"name": "gpt-5", "client": openai_client, "api": "openai"},
+        {"name": "grok-4-mini", "client": xai_client, "api": "xai"},
+        {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
     ]
     randomized_models = models.copy()
@@ -188,6 +188,7 @@ def fact_check(tweet_text, tweet_id, context=None):
         user_msg += f"Combine the following responses that you just generated into a consise coherent whole :\n{models_verdicts}\n\n Provide a sense of the overall consensus,\
             highlighting key points and any significant differences in the models' responses while still responding in the first person as if you are one entity.\
             Don't do any additional searches or analysis, just combine the responses you have already generated."
+        print(user_msg)
         model = randomized_models[2] #random.choice(randomized_models)  # choses the third model to combine the verdicts
         verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500)
         models_verdicts = verdict[randomized_models[0]['name']].strip()
