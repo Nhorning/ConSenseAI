@@ -151,7 +151,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     models = [
         {"name": "grok-3-mini", "client": xai_client, "api": "xai"},
         {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
-        {"name": "claude-3-5-haiku", "client": anthropic_client, "api": "anthropic"}
+        {"name": "claude-3-5-haiku", "client": anthropic_client, "api": "anthropic"},
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-0", "client": anthropic_client, "api": "anthropic"}
