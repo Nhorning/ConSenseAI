@@ -188,7 +188,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Combine the verdicts by one of the models
     try:   
-        user_msg += f"\nCombine the following responses that you just generated into a consise coherent whole :\n{models_verdicts}\n\n Provide a sense of the overall consensus,\
+        user_msg += f"\n\nPrompt: Combine the following responses that you just generated into a consise coherent whole :\n{models_verdicts}\n\n Provide a sense of the overall consensus,\
             highlighting key points and any significant differences in the models' responses while still responding in the first person as if you are one entity.\
             Don't do any additional searches or analysis, just combine the responses you have already generated."
         print(user_msg)
