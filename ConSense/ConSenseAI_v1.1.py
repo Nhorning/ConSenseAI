@@ -1,8 +1,46 @@
 # Cell 1: Fact-check and reply functions
 from openai import OpenAI
-
+import json
+import os
+import webbrowser as web_open
 
 KEY_FILE = 'keys.txt'
+TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
+
+def load_bot_tweets():
+    """Load stored bot tweets from JSON file"""
+    if os.path.exists(TWEETS_FILE):
+        try:
+            with open(TWEETS_FILE, 'r') as f:
+                tweets = json.load(f)
+                print(f"[Tweet Storage] Loaded {len(tweets)} stored tweets from {TWEETS_FILE}")
+                return tweets
+        except json.JSONDecodeError:
+            print(f"[Tweet Storage] Error reading {TWEETS_FILE}, starting fresh")
+    else:
+        print(f"[Tweet Storage] No existing {TWEETS_FILE} found, starting fresh")
+    return {}
+
+def save_bot_tweet(tweet_id, full_content):
+    """Save bot tweet content to JSON file"""
+    tweets = load_bot_tweets()
+    tweets[str(tweet_id)] = full_content
+    try:
+        with open(TWEETS_FILE, 'w') as f:
+            json.dump(tweets, f, indent=2)
+            print(f"[Tweet Storage] Successfully saved tweet {tweet_id} (content length: {len(full_content)})")
+    except IOError as e:
+        print(f"[Tweet Storage] Error saving tweet to {TWEETS_FILE}: {e}")
+
+def get_bot_tweet_content(tweet_id):
+    """Retrieve full content of a bot tweet if available"""
+    tweets = load_bot_tweets()
+    content = tweets.get(str(tweet_id))
+    if content:
+        print(f"[Tweet Storage] Retrieved stored content for tweet {tweet_id} (length: {len(content)})")
+    else:
+        print(f"[Tweet Storage] No stored content found for tweet {tweet_id}")
+    return content
 
 def load_keys():
     """Load keys from the key file. Format:
@@ -240,8 +278,16 @@ def dryruncheck():
     
 def post_reply(tweet_id, reply_text):
     try:
-        print(f"attempting reply to tweet {tweet_id}: {reply_text}\n")
-        post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
+        print(f"\nattempting reply to tweet {tweet_id}: {reply_text}\n")
+        response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
+        # Store the full tweet content
+        if hasattr(response, 'data') and isinstance(response.data, dict) and 'id' in response.data:
+            tweet_id = response.data['id']
+            print(f"[Tweet Storage] Storing new tweet {tweet_id}")
+            save_bot_tweet(tweet_id, reply_text)
+        else:
+            print("[Tweet Storage] Warning: Could not get tweet ID from response")
+            print(f"[Tweet Storage] Response data: {response}")
         print('done!')
         return 'done!'
     except tweepy.TweepyException as e:
@@ -498,8 +544,22 @@ def get_tweet_context(tweet):
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
     for i, t in enumerate(ancestor_chain):
-        # Use note_tweet.text if available, else fall back to text
-        tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
+        # Check if this is a bot tweet and we have stored content
+        is_bot_tweet = hasattr(t, 'author_id') and str(t.author_id) == str(getid())
+        if is_bot_tweet:
+            print(f"[Tweet Storage] Found bot tweet {t.id} in ancestor chain")
+            stored_content = get_bot_tweet_content(t.id)
+            if stored_content:
+                tweet_text = stored_content
+                print(f"[Tweet Storage] Using stored content for tweet {t.id}")
+            else:
+                # Use note_tweet.text if available, else fall back to text
+                tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
+                print(f"[Tweet Storage] Using API content for bot tweet {t.id} (no stored version found)")
+        else:
+            # For non-bot tweets, use standard text extraction
+            tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
+        
         author = f" (from @{t.author_id})" if t.author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         indent += 1  # Increase indent for next level
