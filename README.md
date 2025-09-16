@@ -12,12 +12,8 @@ To Run:
 $python autogrok_v1.5 --help for list of arguments
 
 At Basic Tier X API the script can check for more tweets 5 times every 15 minutes and post 100 tweets every 24 hours. 
-It can be run in multiple terminals for an arbitrary amount of users according to these limits. 
+It can be run in multiple terminals for an arbitrary amount of users according to these limits.
 
-<<<<<<< HEAD:README.md
-Update: Apparently X clasifies following various users to fact check each tweet that falls below a certain truthfulness threshold is reply spam. This bot will be modifed to...
-=======
-Update: Apparently X clasifies following various users to fact check each tweet that falls below a certain truthfulness threshold as reply spam. To address that, this bot is now modifed to...
->>>>>>> ConSenseAI:ConSense/README.md
+Update: Apparently X classifies following various users to fact check each tweet that falls below a certain truthfulness threshold as reply spam. To address that, this bot was modified to:
 1. Only reply in threads where it's tagged.
 2. Provide a comparison of responses from several AI models in order to better spot any introduced bias.
