@@ -8,7 +8,7 @@ To Run:
 4. Run script: $ python ConSenseAI_v1.2.py (change version as necissary)
 5. Specify X user name and minutes between checking for more tweets from the user. This can also be done with the --username and --delay arguments
 
-$python autogrok_v1.5 --help for list of arguments
+$python ConSenseAI_v1.2 --help for list of arguments
 
 At Basic Tier X API the script can check for more tweets 5 times every 15 minutes and post 100 tweets every 24 hours. 
 It can be run in multiple terminals for an arbitrary amount of users according to these limits.
