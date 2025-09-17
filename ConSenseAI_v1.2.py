@@ -240,7 +240,7 @@ and any significant differences in the models' responses\n\
         
         # append model responses to the context
         user_msg += f"\n\n Model Responses:\n\n{models_verdicts}\n\n" 
-        print(f'\n\nSystem Prompt:\n{system_prompt['content']}\n\n') #diagnostic
+        print(f"\n\nSystem Prompt:\n{system_prompt['content']}\n\n") #diagnostic
         print(user_msg)  #diagnostic 
         
         #choose the combining model
