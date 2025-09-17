@@ -492,7 +492,7 @@ def get_tweet_context(tweet):
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
     
     # Fetch conversation thread
-    if not args.fetchthread:
+    if args.fetchthread == True:
         try:
             thread_tweets = read_client.search_recent_tweets(
                 query=f"conversation_id:{tweet.conversation_id} -from:{username}",
@@ -595,19 +595,17 @@ import argparse
 
 # Parse command-line arguments
 parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
-parser.add_argument('--username', type=str, help='X username to fact-check (e.g., StephenM)')
+parser.add_argument('--username', type=str, help='X username of the bot', default='ConSenseAI')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
-parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
-parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
-parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry')
+parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them', default=False)
+#parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
+parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
 if args.username:
     username = args.username.lower()
-else:
-    username = "consenseai"
 
 if args.delay:
     delay = int(args.delay)  # Convert minutes to seconds
@@ -615,14 +613,12 @@ else:
     delay = int(float(input('Delay in minutes between checks: ')))
     
 if args.dryrun:
-    dryrun=True
-else:
-    dryrun=False
+    dryrun=args.dryrun
 
-if args.accuracy:
-    accuracy_threshold = args.accuracy
-else:
-    accuracy_threshold = 4
+#if args.accuracy:
+#    accuracy_threshold = args.accuracy
+#else:
+#    accuracy_threshold = 4
 
 if args.reply_threshold:
     reply_threshold = args.reply_threshold
