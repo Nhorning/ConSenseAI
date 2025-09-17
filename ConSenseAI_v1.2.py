@@ -482,6 +482,7 @@ def get_tweet_context(tweet):
     
     # Check if tweet is a reply
     def collect_quoted(refs):
+        quoted = []
         for ref_tweet in refs or []:
             if ref_tweet.type == "quoted":
                 try:
@@ -489,12 +490,13 @@ def get_tweet_context(tweet):
                         id=ref_tweet.id,
                         tweet_fields=["text", "author_id", "created_at"]
                     )
-                    context["quoted_tweets"].append(quoted_tweet.data)
+                    quoted.append(quoted_tweet.data)
                 except tweepy.TweepyException as e:
                     print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
+        return quoted
 
     # Always collect quoted tweets in the mention
-    collect_quoted(getattr(tweet, 'referenced_tweets', None))
+    context["quoted_tweets"].extend(collect_quoted(getattr(tweet, 'referenced_tweets', None)))
 
     # If this is a reply, fetch the original tweet and collect its quoted tweets
     original_tweet_obj = None
@@ -509,7 +511,7 @@ def get_tweet_context(tweet):
                     original_tweet_obj = original_tweet.data
                     context["original_tweet"] = original_tweet_obj
                     # Collect quoted tweets from the original tweet
-                    collect_quoted(getattr(original_tweet_obj, 'referenced_tweets', None))
+                    context["quoted_tweets"].extend(collect_quoted(getattr(original_tweet_obj, 'referenced_tweets', None)))
                 except tweepy.TweepyException as e:
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
 
@@ -519,9 +521,9 @@ def get_tweet_context(tweet):
     visited = set()
     try:
         while True:
-            ancestor_chain.append(current_tweet)
+            quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
+            ancestor_chain.append({"tweet": current_tweet, "quoted_tweets": quoted})
             visited.add(current_tweet.id)
-            collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
             parent_id = None
             if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
                 for ref in current_tweet.referenced_tweets:
@@ -576,9 +578,11 @@ def get_tweet_context(tweet):
         current_tweet = tweet
         visited = set()  # Avoid cycles
         while True:
-            ancestor_chain.append(current_tweet)
+            quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
+            ancestor_chain.append({"tweet": current_tweet, "quoted_tweets": quoted})
             visited.add(current_tweet.id)
             parent_id = None
+    # ...existing code...
             if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
                 for ref in current_tweet.referenced_tweets:
                     if ref.type == 'replied_to':
@@ -612,8 +616,9 @@ def get_tweet_context(tweet):
 
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
-    for i, t in enumerate(ancestor_chain):
-        # Check if this is a bot tweet and we have stored content
+    for i, entry in enumerate(ancestor_chain):
+        t = entry["tweet"]
+        quoted_tweets = entry["quoted_tweets"]
         is_bot_tweet = hasattr(t, 'author_id') and str(t.author_id) == str(getid())
         if is_bot_tweet:
             print(f"[Tweet Storage] Found bot tweet {t.id} in ancestor chain")
@@ -622,16 +627,18 @@ def build_ancestor_chain(ancestor_chain, indent=0):
                 tweet_text = stored_content
                 print(f"[Tweet Storage] Using stored content for tweet {t.id}")
             else:
-                # Use note_tweet.text if available, else fall back to text
                 tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
                 print(f"[Tweet Storage] Using API content for bot tweet {t.id} (no stored version found)")
         else:
-            # For non-bot tweets, use standard text extraction
             tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
-        
         author = f" (from @{t.author_id})" if t.author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
-        indent += 1  # Increase indent for next level
+        # Show quoted tweets indented under their parent
+        for qt in quoted_tweets:
+            qt_author = f" (quoted @{qt.author_id})" if hasattr(qt, 'author_id') else ""
+            qt_text = qt.text if hasattr(qt, 'text') else str(qt)
+            out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
+        indent += 1
     return out
 
 import time
