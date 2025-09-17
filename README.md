@@ -8,7 +8,7 @@ To Run:
 4. Create key file according to format in Load_keys() function.
 5. Run script: $ python ConSenseAI_v1.2.py (change version as necissary)
 6. Specify X user name and minutes between checking for more tweets from the user. This can also be done with the --username and --delay arguments
-7. On the first run you will be taken though three-legged 0Ath flow before the key is stored in keys.txt 
+7. On the first run you will be taken though a three-legged 0Ath flow before the key is stored in keys.txt 
 
 $python ConSenseAI_v1.2 --help for list of arguments
 
