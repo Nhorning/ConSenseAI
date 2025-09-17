@@ -3,11 +3,12 @@ A multi-model Grok Alternative for X
 It combines answers from ChatGPT, Grok, and Claude to respond to messages it is tagged in. 
 
 To Run:
-1. Purchase X API and OpenAI, XAI API, and Grok keys.
-2. Download Script or clone repo.
-3. Create key file according to format in Load_keys() function.
-4. Run script: $ python ConSenseAI_v1.2.py (change version as necissary)
-5. Specify X user name and minutes between checking for more tweets from the user. This can also be done with the --username and --delay arguments
+1. Purchase X API for your organization account, a second account for the bot, and OpenAI, XAI API, and Grok keys.
+3. Download Script or clone repo.
+4. Create key file according to format in Load_keys() function.
+5. Run script: $ python ConSenseAI_v1.2.py (change version as necissary)
+6. Specify X user name and minutes between checking for more tweets from the user. This can also be done with the --username and --delay arguments
+7. On the first run you will be taken though three-legged 0Ath flow before the key is stored in keys.txt 
 
 $python ConSenseAI_v1.2 --help for list of arguments
 
