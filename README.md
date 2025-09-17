@@ -1,3 +1,4 @@
+[@ConSenseAI](https://x.com/ConSenseAI)
 A multi-model Grok Alternative for X  
 It combines answers from ChatGPT, Grok, and Claude to respond to messages it is tagged in. 
 
