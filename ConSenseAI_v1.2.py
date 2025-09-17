@@ -227,14 +227,14 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Combine the verdicts by one of the models
     try:   
-        combine_msg = f"\n- You will be given responses from your previous runs of muiltiple models\n\
-            -Combine the responses that you generated into a consise coherent whole. Provide a sense of the overall consensus, highlighting key points \
-and any significant differences in the models' responses\n\ 
-            -Still respond in the first person as if you are one entity.\n\ 
+        combine_msg = "\n- You will be given responses from your previous runs of muiltiple models\n\
+            -Combine the responses that you generated into a consise coherent whole. Provide a sense of the overall consensus, highlighting key points\
+            and any significant differences in the models' responses\n\
+            -Still respond in the first person as if you are one entity.\n\
             -If the models disagree you can perform and additional search to resolve the disagreement."
-        system_prompt += combine_msg
+        system_prompt['content'] += combine_msg
         user_msg += f"\n\n Model Responses:\n\n{models_verdicts}\n\n" 
-        print(system_prompt)
+        print(system_prompt['content']) 
         print(user_msg)        #print(user_msg)
         model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
         verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500)
