@@ -1,5 +1,5 @@
 A multi-model Grok Alternative for X  
-It combines answers from ChatGPT, Grok, and Claude to respond to message it is tagged in. 
+It combines answers from ChatGPT, Grok, and Claude to respond to messages it is tagged in. 
 
 To Run:
 1. Purchase X API and OpenAI, XAI API, and Grok keys.
