@@ -441,7 +441,7 @@ def fetch_and_process_mentions(user_id, username):
            
                 
                 # New: Check for reply loop in this thread
-                reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
+                #reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
                 if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
                     print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
                     success = dryruncheck()  #So we write the last tweet id and avoid multipe lookups
@@ -600,6 +600,7 @@ parser.add_argument('--delay', type=float, help='Delay between checks in minutes
 parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them')
 parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
 parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry')
+parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -623,6 +624,8 @@ if args.accuracy:
 else:
     accuracy_threshold = 4
 
+if args.reply_threshold:
+    reply_threshold = args.reply_threshold
 
 
 # File to store the last processed tweet ID
