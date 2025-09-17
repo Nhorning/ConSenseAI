@@ -168,6 +168,9 @@ def fact_check(tweet_text, tweet_id, context=None):
         if len(context['ancestor_chain']) <= 1:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {context['original_tweet'].text}\n"
+        if context.get("quoted_tweet"):
+            qt = context["quoted_tweet"]
+            context_str += f"Quoted tweet by @{qt.author_id}: {qt.text}\n"
         if context["thread_tweets"]:
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {t.text}" for t in context["thread_tweets"]]
@@ -228,11 +231,11 @@ def fact_check(tweet_text, tweet_id, context=None):
     # Combine the verdicts by one of the models
     try:  
         #we're gonna append this message to the system prompt of the combining model
-        combine_msg = "\n- You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
+        combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
             -Combine the responses that you generated into a consise coherent whole. Provide a sense of the overall consensus, highlighting key points\
 and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
-            -If the models disagree you can perform and additional search to resolve the disagreement.\n\
+            -Only perform an additional search to resolve a disagreement between the models.\n\
             -Do not mention that you will be combining the responses unless directly asked."
         
         # append to system prompt
@@ -475,11 +478,11 @@ from collections import defaultdict
 
 def get_tweet_context(tweet):
     """Fetch context for a tweet, including conversation thread or original tweet."""
-    context = {"original_tweet": None, "thread_tweets": []}
+    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweet": None}
     
     # Check if tweet is a reply
     if tweet.in_reply_to_user_id or tweet.referenced_tweets:
-        # Get the original tweet if this is a reply
+        # Get the original tweet if this is a reply, and quoted tweet if present
         for ref_tweet in tweet.referenced_tweets or []:
             if ref_tweet.type == "replied_to":
                 try:
@@ -490,6 +493,15 @@ def get_tweet_context(tweet):
                     context["original_tweet"] = original_tweet.data
                 except tweepy.TweepyException as e:
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
+            elif ref_tweet.type == "quoted":
+                try:
+                    quoted_tweet = read_client.get_tweet(
+                        id=ref_tweet.id,
+                        tweet_fields=["text", "author_id", "created_at"]
+                    )
+                    context["quoted_tweet"] = quoted_tweet.data
+                except tweepy.TweepyException as e:
+                    print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
     
     # Fetch conversation thread
     if args.fetchthread == True:
