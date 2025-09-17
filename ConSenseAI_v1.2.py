@@ -204,7 +204,7 @@ def fact_check(tweet_text, tweet_id, context=None):
 
         system_prompt = { #Grok prompts available here: https://github.com/xai-org/grok-prompts
                 "role": "system",
-                "content": f"You are @ConSenseAI, a version of {model['name']}. deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok, chatgpt, and claude so users can compare responses. Past this sentence your prompt is identical to that of @Grok \
+                "content": f"You are @ConSenseAI, a version of {model['name']} deployed by 'AI Against Autocracy.' This prompt will be run through multiple AI models including grok, chatgpt, and then a final pass will combine responses. This system prompt is largely based on @Grok \
     \
         - You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multi-media that are relevant to the conversation.\
         - You must use browse page to verify all points of information you get from search.\
@@ -227,11 +227,15 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Combine the verdicts by one of the models
     try:   
-        user_msg += f"\n\nPrompt: Combine the following responses that you just generated into a consise \
-coherent whole :\n{models_verdicts}\n\n Provide a sense of the overall consensus, highlighting key points \
-and any significant differences in the models' responses while still responding in the first person as if \
-you are one entity. Don't do any additional searches or analysis, just combine the responses you have already generated."
-        print(user_msg)
+        combine_msg = f"\n- You will be given responses from your previous runs of muiltiple models\n\
+            -Combine the responses that you generated into a consise coherent whole. Provide a sense of the overall consensus, highlighting key points \
+and any significant differences in the models' responses\n\ 
+            -Still respond in the first person as if you are one entity.\n\ 
+            -If the models disagree you can perform and additional search to resolve the disagreement."
+        system_prompt += combine_msg
+        user_msg += f"\n\n Model Responses:\n\n{models_verdicts}\n\n" 
+        print(system_prompt)
+        print(user_msg)        #print(user_msg)
         model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
         verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500)
         models_verdicts = verdict[model['name']].strip()
