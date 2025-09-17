@@ -168,9 +168,9 @@ def fact_check(tweet_text, tweet_id, context=None):
         if len(context['ancestor_chain']) <= 1:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {context['original_tweet'].text}\n"
-        if context.get("quoted_tweet"):
-            qt = context["quoted_tweet"]
-            context_str += f"Quoted tweet by @{qt.author_id}: {qt.text}\n"
+        if context.get("quoted_tweets"):
+            for qt in context["quoted_tweets"]:
+                context_str += f"Quoted tweet by @{qt.author_id}: {qt.text}\n"
         if context["thread_tweets"]:
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {t.text}" for t in context["thread_tweets"]]
@@ -180,7 +180,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
     
     # Include context in prompt
-    user_msg = f"Context: {context_str}\nTweet: {tweet_text}"
+    user_msg = f"Context:\n {context_str}\nTweet: {tweet_text}"
     #print(user_msg)
 
     # Initialize clients
@@ -478,30 +478,71 @@ from collections import defaultdict
 
 def get_tweet_context(tweet):
     """Fetch context for a tweet, including conversation thread or original tweet."""
-    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweet": None}
+    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweets": []}
     
     # Check if tweet is a reply
-    if tweet.in_reply_to_user_id or tweet.referenced_tweets:
-        # Get the original tweet if this is a reply, and quoted tweet if present
-        for ref_tweet in tweet.referenced_tweets or []:
-            if ref_tweet.type == "replied_to":
-                try:
-                    original_tweet = read_client.get_tweet(
-                        id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at"]
-                    )
-                    context["original_tweet"] = original_tweet.data
-                except tweepy.TweepyException as e:
-                    print(f"Error fetching original tweet {ref_tweet.id}: {e}")
-            elif ref_tweet.type == "quoted":
+    def collect_quoted(refs):
+        for ref_tweet in refs or []:
+            if ref_tweet.type == "quoted":
                 try:
                     quoted_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
                         tweet_fields=["text", "author_id", "created_at"]
                     )
-                    context["quoted_tweet"] = quoted_tweet.data
+                    context["quoted_tweets"].append(quoted_tweet.data)
                 except tweepy.TweepyException as e:
                     print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
+
+    # Always collect quoted tweets in the mention
+    collect_quoted(getattr(tweet, 'referenced_tweets', None))
+
+    # If this is a reply, fetch the original tweet and collect its quoted tweets
+    original_tweet_obj = None
+    if tweet.in_reply_to_user_id or tweet.referenced_tweets:
+        for ref_tweet in tweet.referenced_tweets or []:
+            if ref_tweet.type == "replied_to":
+                try:
+                    original_tweet = read_client.get_tweet(
+                        id=ref_tweet.id,
+                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets"]
+                    )
+                    original_tweet_obj = original_tweet.data
+                    context["original_tweet"] = original_tweet_obj
+                    # Collect quoted tweets from the original tweet
+                    collect_quoted(getattr(original_tweet_obj, 'referenced_tweets', None))
+                except tweepy.TweepyException as e:
+                    print(f"Error fetching original tweet {ref_tweet.id}: {e}")
+
+    # Try to build ancestor chain and collect quoted tweets, but don't block above
+    ancestor_chain = []
+    current_tweet = tweet
+    visited = set()
+    try:
+        while True:
+            ancestor_chain.append(current_tweet)
+            visited.add(current_tweet.id)
+            collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
+            parent_id = None
+            if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
+                for ref in current_tweet.referenced_tweets:
+                    if ref.type == 'replied_to':
+                        parent_id = ref.id
+                        break
+            if parent_id is None or parent_id in visited:
+                break
+            parent_response = read_client.get_tweet(
+                id=parent_id,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id","note_tweet"],
+                expansions=["referenced_tweets.id"]
+            )
+            if parent_response.data:
+                current_tweet = parent_response.data
+            else:
+                break
+        ancestor_chain = ancestor_chain[::-1]
+    except tweepy.TweepyException as e:
+        print(f"Error building ancestor chain: {e}")
+    context['ancestor_chain'] = ancestor_chain
     
     # Fetch conversation thread
     if args.fetchthread == True:
