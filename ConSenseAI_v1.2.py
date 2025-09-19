@@ -164,24 +164,33 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250):
 
 def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
+    def get_full_text(t):
+        # Prefer note_tweet.text if available
+        if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text'):
+            return t.note_tweet.text
+        elif isinstance(t, dict) and 'note_tweet' in t and t['note_tweet'] and 'text' in t['note_tweet']:
+            return t['note_tweet']['text']
+        return t.text if hasattr(t, 'text') else t.get('text', '')
+
     context_str = ""
     if context:
         if len(context['ancestor_chain']) <= 1:
             if context["original_tweet"]:
-                context_str += f"Original tweet: {context['original_tweet'].text}\n"
+                context_str += f"Original tweet: {get_full_text(context['original_tweet'])}\n"
         if context.get("quoted_tweets"):
             for qt in context["quoted_tweets"]:
-                context_str += f"Quoted tweet by @{qt.author_id}: {qt.text}\n"
+                context_str += f"Quoted tweet by @{qt.author_id}: {get_full_text(qt)}\n"
         if context["thread_tweets"]:
             context_str += "Conversation thread:\n" + "\n".join(
-                [f"- {t.text}" for t in context["thread_tweets"]]
+                [f"- {get_full_text(t)}" for t in context["thread_tweets"]]
             ) + "\n"
         if len(context['ancestor_chain']) > 1:
-               context_str += "\nThread hierarchy:\n"
+               context_str += "Thread hierarchy:\n"
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
-    
-    # Include context in prompt
-    user_msg = f"Context:\n {context_str}\nTweet: {tweet_text}"
+
+    # Use full text for the mention
+    full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
+    user_msg = f"Context:\n {context_str}\nTweet: {full_mention_text}"
     #print(user_msg)
 
     # Initialize clients
