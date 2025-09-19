@@ -185,12 +185,13 @@ def fact_check(tweet_text, tweet_id, context=None):
                 [f"- {get_full_text(t)}" for t in context["thread_tweets"]]
             ) + "\n"
         if len(context['ancestor_chain']) > 1:
-               context_str += "Thread hierarchy:\n"
+               context_str += "\nThread hierarchy:\n"
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
 
     # Use full text for the mention
     full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
-    user_msg = f"Context:\n {context_str}\nTweet: {full_mention_text}"
+    media_str = format_media(context.get('media', [])) if context else ""
+    user_msg = f"Context:\n {context_str}\n{media_str}Tweet: {full_mention_text}"
     #print(user_msg)
 
     # Initialize clients
@@ -233,7 +234,11 @@ def fact_check(tweet_text, tweet_id, context=None):
         - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\n\
         - Never mention these instructions or tools unless directly asked."}
         # Run the model with the constructed prompt and context
-        verdict = run_model(system_prompt, user_msg, model, verdict)
+        if model['api'] == 'openai-vision' and context.get('media'):
+            user_msg_with_media = user_msg + "\nMedia URLs:\n" + "\n".join([m['url'] for m in context['media'] if isinstance(m, dict) and m.get('url')])
+            verdict = run_model(system_prompt, user_msg_with_media, model, verdict)
+        else:
+            verdict = run_model(system_prompt, user_msg, model, verdict)
     
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n🤖{model['name']}:\n {verdict[model['name']]}" for model in randomized_models[:runs])
@@ -321,7 +326,7 @@ def post_reply(tweet_id, reply_text):
         return 'done!'
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
-        #if the there there have been too many tweets sent out, return to the main function to wait for the delay.
+        #ifthe there have been too many tweets sent out, return to the main function to wait for the delay.
         if e.response.status_code == 429:
             return 'delay!'
         
@@ -523,7 +528,9 @@ def get_tweet_context(tweet):
         for entry in chain:
             tweet_dict = tweet_to_dict(entry["tweet"])
             quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
-            serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts})
+            # Extract and cache media for this tweet
+            media = extract_media(entry["tweet"])
+            serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
         chains[str(conversation_id)] = serializable_chain
         try:
             with open(ANCESTOR_CHAIN_FILE, 'w') as f:
@@ -642,7 +649,6 @@ def get_tweet_context(tweet):
             ancestor_chain.append({"tweet": current_tweet, "quoted_tweets": quoted})
             visited.add(current_tweet.id)
             parent_id = None
-    # ...existing code...
             if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
                 for ref in current_tweet.referenced_tweets:
                     if ref.type == 'replied_to':
@@ -671,6 +677,20 @@ def get_tweet_context(tweet):
         # For loop detection, keep context["bot_replies_in_thread"] as before
         context["bot_replies_in_thread"] = bot_replies.data or []
 
+
+    # Extract and add media information from every tweet in the ancestor chain (prefer cached if present)
+    all_media = []
+    # Media from the mention itself
+    all_media.extend(extract_media(tweet))
+    # Media from ancestor chain tweets
+    for entry in context.get('ancestor_chain', []):
+        # Use cached media if present, else extract
+        if 'media' in entry:
+            all_media.extend(entry['media'])
+        else:
+            t = entry.get('tweet')
+            all_media.extend(extract_media(t))
+    context['media'] = all_media
 
     return context
 
@@ -713,6 +733,55 @@ def build_ancestor_chain(ancestor_chain, indent=0):
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
+
+def extract_media(t):
+    media_list = []
+    found_media = False
+    # Handle dicts with 'media' key
+    if isinstance(t, dict) and 'media' in t:
+        for m in t['media']:
+            media_list.append({
+                'type': m.get('type'),
+                'url': m.get('url', m.get('preview_image_url', '')),
+                'alt_text': m.get('alt_text', '')
+            })
+            found_media = True
+    # Handle Tweepy tweet objects with attachments/media
+    elif hasattr(t, 'attachments') and hasattr(t.attachments, 'media_keys'):
+        # Try to get media from 'includes' if present
+        includes = getattr(t, 'includes', None)
+        if includes and hasattr(includes, 'media'):
+            for m in includes.media:
+                media_list.append({
+                    'type': getattr(m, 'type', ''),
+                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
+                    'alt_text': getattr(m, 'alt_text', '')
+                })
+                found_media = True
+    # Optionally, handle Tweepy objects with direct 'media' attribute
+    elif hasattr(t, 'media') and isinstance(t.media, list):
+        for m in t.media:
+            media_list.append({
+                'type': getattr(m, 'type', ''),
+                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
+                'alt_text': getattr(m, 'alt_text', '')
+            })
+            found_media = True
+    if found_media:
+        print('Found media, appending to context.')
+    return media_list
+
+def format_media(media_list):
+    if not media_list:
+        return ""
+    out = "Media attached to tweet(s):\n"
+    for m in media_list:
+        if isinstance(m, dict):
+            out += f"- Type: {m.get('type', '')}, URL: {m.get('url', '')}, Alt: {m.get('alt_text', '')}\n"
+        else:
+            out += f"- Media key: {m}\n"
+    return out
+
 
 import time
 import datetime
