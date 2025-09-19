@@ -177,7 +177,7 @@ def fact_check(tweet_text, tweet_id, context=None):
                 [f"- {t.text}" for t in context["thread_tweets"]]
             ) + "\n"
         if len(context['ancestor_chain']) > 1:
-               context_str += "Thread hierarchy:\n"
+               context_str += "\nThread hierarchy:\n"
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
     
     # Include context in prompt
@@ -670,24 +670,37 @@ def build_ancestor_chain(ancestor_chain, indent=0):
     for i, entry in enumerate(ancestor_chain):
         t = entry["tweet"]
         quoted_tweets = entry["quoted_tweets"]
-        is_bot_tweet = hasattr(t, 'author_id') and str(t.author_id) == str(getid())
-        if is_bot_tweet:
-            print(f"[Tweet Storage] Found bot tweet {t.id} in ancestor chain")
-            stored_content = get_bot_tweet_content(t.id)
+        # Support Tweepy objects and cached dicts
+        if isinstance(t, dict):
+            tweet_id = t.get("id")
+            tweet_text = t.get("text", "")
+            author_id = t.get("author_id", "")
+            note_tweet = t.get("note_tweet", {})
+            if note_tweet and isinstance(note_tweet, dict):
+                tweet_text = note_tweet.get("text", tweet_text)
+        else:
+            tweet_id = getattr(t, "id", None)
+            tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
+            author_id = getattr(t, "author_id", "")
+        is_bot_tweet = str(author_id) == str(getid())
+        if is_bot_tweet and tweet_id:
+            print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
+            stored_content = get_bot_tweet_content(tweet_id)
             if stored_content:
                 tweet_text = stored_content
-                print(f"[Tweet Storage] Using stored content for tweet {t.id}")
+                print(f"[Tweet Storage] Using stored content for tweet {tweet_id}")
             else:
-                tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
-                print(f"[Tweet Storage] Using API content for bot tweet {t.id} (no stored version found)")
-        else:
-            tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
-        author = f" (from @{t.author_id})" if t.author_id else ""
+                print(f"[Tweet Storage] Using API content for bot tweet {tweet_id} (no stored version found)")
+        author = f" (from @{author_id})" if author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
         for qt in quoted_tweets:
-            qt_author = f" (quoted @{qt.author_id})" if hasattr(qt, 'author_id') else ""
-            qt_text = qt.text if hasattr(qt, 'text') else str(qt)
+            if isinstance(qt, dict):
+                qt_author = f" (quoted @{qt.get('author_id', '')})" if qt.get('author_id') else ""
+                qt_text = qt.get('text', str(qt))
+            else:
+                qt_author = f" (quoted @{getattr(qt, 'author_id', '')})" if hasattr(qt, 'author_id') else ""
+                qt_text = getattr(qt, 'text', str(qt))
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
