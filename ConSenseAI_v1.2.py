@@ -696,21 +696,20 @@ def get_tweet_context(tweet):
 
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
+    def get_full_text(t):
+        if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text'):
+            return t.note_tweet.text
+        elif isinstance(t, dict) and 'note_tweet' in t and t['note_tweet'] and 'text' in t['note_tweet']:
+            return t['note_tweet']['text']
+        return t.text if hasattr(t, 'text') else t.get('text', '')
+
     for i, entry in enumerate(ancestor_chain):
         t = entry["tweet"]
         quoted_tweets = entry["quoted_tweets"]
         # Support Tweepy objects and cached dicts
-        if isinstance(t, dict):
-            tweet_id = t.get("id")
-            tweet_text = t.get("text", "")
-            author_id = t.get("author_id", "")
-            note_tweet = t.get("note_tweet", {})
-            if note_tweet and isinstance(note_tweet, dict):
-                tweet_text = note_tweet.get("text", tweet_text)
-        else:
-            tweet_id = getattr(t, "id", None)
-            tweet_text = t.note_tweet.text if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text') else t.text
-            author_id = getattr(t, "author_id", "")
+        tweet_id = t.get("id") if isinstance(t, dict) else getattr(t, "id", None)
+        author_id = t.get("author_id", "") if isinstance(t, dict) else getattr(t, "author_id", "")
+        tweet_text = get_full_text(t)
         is_bot_tweet = str(author_id) == str(getid())
         if is_bot_tweet and tweet_id:
             print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
@@ -724,12 +723,9 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
         for qt in quoted_tweets:
-            if isinstance(qt, dict):
-                qt_author = f" (quoted @{qt.get('author_id', '')})" if qt.get('author_id') else ""
-                qt_text = qt.get('text', str(qt))
-            else:
-                qt_author = f" (quoted @{getattr(qt, 'author_id', '')})" if hasattr(qt, 'author_id') else ""
-                qt_text = getattr(qt, 'text', str(qt))
+            qt_author_id = qt.get('author_id') if isinstance(qt, dict) else getattr(qt, 'author_id', '')
+            qt_author = f" (quoted @{qt_author_id})" if qt_author_id else ""
+            qt_text = get_full_text(qt)
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
