@@ -7,6 +7,7 @@ import webbrowser as web_open
 
 KEY_FILE = 'keys.txt'
 TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
+ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
 
 def load_bot_tweets():
     """Load stored bot tweets from JSON file"""
@@ -21,6 +22,61 @@ def load_bot_tweets():
     else:
         print(f"[Tweet Storage] No existing {TWEETS_FILE} found, starting fresh")
     return {}
+
+def load_ancestor_chains():
+    """Load the ancestor chain cache if present and return as a dict.
+    Keys are conversation_id (as strings) -> list of entries saved by save_ancestor_chain().
+    """
+    if os.path.exists(ANCESTOR_CHAIN_FILE):
+        try:
+            with open(ANCESTOR_CHAIN_FILE, 'r') as f:
+                chains = json.load(f)
+                # ensure keys are strings
+                return {str(k): v for k, v in chains.items()}
+        except Exception as e:
+            print(f"[Ancestor Cache] Error loading {ANCESTOR_CHAIN_FILE}: {e}")
+    return {}
+
+def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_replies=None):
+    """Count prior bot replies for a conversation using existing JSON caches and optional API results.
+
+    - conversation_id: the conversation id (may be int/str)
+    - bot_user_id: the bot's numeric id (int or str)
+    - api_bot_replies: optional list of Tweepy tweet objects from API (context['bot_replies_in_thread'])
+    Returns integer count.
+    """
+    if not conversation_id:
+        return 0
+    cid = str(conversation_id)
+    count = 0
+    bot_tweets = load_bot_tweets()  # keys are tweet ids (strings)
+
+    # Check ancestor chain cache
+    chains = load_ancestor_chains()
+    chain = chains.get(cid)
+    if chain:
+        for entry in chain:
+            # entry was saved as {'tweet': tweet_dict, 'quoted_tweets': [...], 'media': [...]}
+            t = entry.get('tweet', {})
+            tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+            author = str(t.get('author_id')) if isinstance(t, dict) and t.get('author_id') is not None else None
+            if tid and tid in bot_tweets:
+                count += 1
+            elif author and bot_user_id and str(author) == str(bot_user_id):
+                count += 1
+
+    # Fallback: check API-provided bot replies (if any)
+    if api_bot_replies:
+        for br in api_bot_replies:
+            # br may be a Tweepy object or dict
+            br_id = br.get('id') if isinstance(br, dict) else getattr(br, 'id', None)
+            br_author = br.get('author_id') if isinstance(br, dict) else getattr(br, 'author_id', None)
+            if br_id and str(br_id) in bot_tweets:
+                count += 1
+            elif br_author and str(br_author) == str(bot_user_id):
+                count += 1
+
+    return count
 
 def save_bot_tweet(tweet_id, full_content):
     """Save bot tweet content to JSON file"""
@@ -297,7 +353,8 @@ def fact_check(tweet_text, tweet_id, context=None):
         print(f'Satire detected, not tweeting:\n{reply}')
         success = dryruncheck()'''
     if dryruncheck() == 'done!':
-        success = post_reply(tweet_id, reply)
+        conv_id = context.get('conversation_id') if context else None
+        success = post_reply(tweet_id, reply, conversation_id=conv_id)
     else:
         print(f'Not tweeting:\n{reply}')
         success = 'fail'
@@ -310,15 +367,26 @@ def dryruncheck():
     else:
         return 'done!'
     
-def post_reply(tweet_id, reply_text):
+def post_reply(parent_tweet_id, reply_text, conversation_id=None):
     try:
-        print(f"\nattempting reply to tweet {tweet_id}: {reply_text}\n")
-        response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=tweet_id)
+        print(f"\nattempting reply to tweet {parent_tweet_id}: {reply_text}\n")
+        response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
         # Store the full tweet content
+        created_id = None
         if hasattr(response, 'data') and isinstance(response.data, dict) and 'id' in response.data:
-            tweet_id = response.data['id']
-            print(f"[Tweet Storage] Storing new tweet {tweet_id}")
-            save_bot_tweet(tweet_id, reply_text)
+            created_id = response.data['id']
+        elif hasattr(response, 'id'):
+            created_id = getattr(response, 'id')
+
+        if created_id:
+            print(f"[Tweet Storage] Storing new tweet {created_id}")
+            save_bot_tweet(created_id, reply_text)
+            # If caller supplied a conversation_id, record the reply in the ancestor cache
+            if conversation_id:
+                try:
+                    append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                except Exception as e:
+                    print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
         else:
             print("[Tweet Storage] Warning: Could not get tweet ID from response")
             print(f"[Tweet Storage] Response data: {response}")
@@ -329,6 +397,28 @@ def post_reply(tweet_id, reply_text):
         #ifthe there have been too many tweets sent out, return to the main function to wait for the delay.
         if e.response.status_code == 429:
             return 'delay!'
+
+
+def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
+    """Append a simple entry for a reply to the ancestor_chains cache so future checks detect the bot reply."""
+    try:
+        chains = {}
+        if os.path.exists(ANCESTOR_CHAIN_FILE):
+            with open(ANCESTOR_CHAIN_FILE, 'r') as f:
+                chains = json.load(f)
+    except Exception as e:
+        print(f"[Ancestor Cache] Error reading {ANCESTOR_CHAIN_FILE}: {e}")
+        chains = {}
+    cid = str(conversation_id)
+    entry = {'tweet': {'id': str(reply_id), 'author_id': None, 'text': reply_text}, 'quoted_tweets': [], 'media': []}
+    chain = chains.get(cid, [])
+    chain.append(entry)
+    chains[cid] = chain
+    try:
+        with open(ANCESTOR_CHAIN_FILE, 'w') as f:
+            json.dump(chains, f, indent=2)
+    except Exception as e:
+        print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
         
 
 def authenticate():
@@ -458,20 +548,25 @@ def fetch_and_process_mentions(user_id, username):
                 context = get_tweet_context(mention)
            
                 
-                # New: Check for reply loop in this thread
-                #reply_threshold = 5  # Skip if bot has replied this many times or more (e.g., allow 1 reply per thread)
-                if len(context.get("bot_replies_in_thread", [])) >= reply_threshold:
-                    print(f"Skipping reply to thread {mention.conversation_id}: Bot has already replied {len(context['bot_replies_in_thread'])} times - potential loop.")
-                    success = dryruncheck()  #So we write the last tweet id and avoid multipe lookups
-                
-                #skip mentions from the bot itself
-                elif mention.author_id == user_id:
-                    print(f"Skipping mention from self: {mention.text}")
-                    success = dryruncheck()  #So we write the last tweet id and avoid multipe lookups
+                # Safety checks using persisted caches + API results
+                conv_id = str(getattr(mention, 'conversation_id', ''))
+                bot_user_id = user_id
 
-                else:    
-                # Pass context to fact_check and reply
-                    success = fact_check(mention.text, mention.id, context)
+                # 1) If the mention is authored by the bot, skip (normalize types)
+                if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
+                    print(f"Skipping mention from self: {mention.text}")
+                    success = dryruncheck()
+
+                else:
+                    # 2) Count prior bot replies using ancestor cache + API-provided bot replies
+                    api_bot_replies = context.get('bot_replies_in_thread')
+                    prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
+                    if prior_replies >= reply_threshold:
+                        print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
+                        success = dryruncheck()
+                    else:
+                        # Pass context to fact_check and reply
+                        success = fact_check(mention.text, mention.id, context)
                 if success == 'done!':
                     last_tweet_id = max(last_tweet_id, mention.id)
                     write_last_tweet_id(last_tweet_id)
@@ -538,7 +633,7 @@ def get_tweet_context(tweet):
         except Exception as e:
             print(f"Error saving ancestor chain cache: {e}")
     """Fetch context for a tweet, including conversation thread or original tweet."""
-    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweets": []}
+    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweets": [], "conversation_id": getattr(tweet, 'conversation_id', None)}
     
     # Check if tweet is a reply
     def collect_quoted(refs):
@@ -548,7 +643,7 @@ def get_tweet_context(tweet):
                 try:
                     quoted_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at"]
+                        tweet_fields=["text", "author_id", "created_at", "note_tweet"]
                     )
                     quoted.append(quoted_tweet.data)
                 except tweepy.TweepyException as e:
@@ -566,7 +661,7 @@ def get_tweet_context(tweet):
                 try:
                     original_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets"]
+                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "note_tweet"]
                     )
                     original_tweet_obj = original_tweet.data
                     context["original_tweet"] = original_tweet_obj
@@ -674,8 +769,8 @@ def get_tweet_context(tweet):
         ancestor_chain = ancestor_chain[::-1]
         context['ancestor_chain'] = ancestor_chain
 
-        # For loop detection, keep context["bot_replies_in_thread"] as before
-        context["bot_replies_in_thread"] = bot_replies.data or []
+    # For loop detection, keep context["bot_replies_in_thread"] as before
+    context["bot_replies_in_thread"] = bot_replies.data or []
 
 
     # Extract and add media information from every tweet in the ancestor chain (prefer cached if present)
