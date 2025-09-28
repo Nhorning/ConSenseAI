@@ -22,6 +22,9 @@ class LoggerWriter:
 
 sys.stdout = LoggerWriter('output.log')
 
+# Also redirect stderr for error logging
+sys.stderr = LoggerWriter('output.log')
+
 KEY_FILE = 'keys.txt'
 TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
@@ -549,6 +552,7 @@ def fetch_and_process_mentions(user_id, username):
     global backoff_multiplier
     last_tweet_id = read_last_tweet_id()
     print(f"Checking for mentions of {username} at {datetime.datetime.now()}")
+    sys.stdout.flush()  # Force immediate log update
     try:
         mentions = read_client.get_users_mentions(
             id=user_id,
