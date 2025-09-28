@@ -5,6 +5,23 @@ import json
 import os
 import webbrowser as web_open
 
+import sys
+
+class LoggerWriter:
+    def __init__(self, filename):
+        self.filename = filename
+        self.file = open(filename, 'a')  # Append mode for continuous logging
+
+    def write(self, text):
+        self.file.write(text)
+        sys.__stdout__.write(text)  # Mirror to console
+
+    def flush(self):
+        self.file.flush()
+        sys.__stdout__.flush()
+
+sys.stdout = LoggerWriter('output.log')
+
 KEY_FILE = 'keys.txt'
 TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
@@ -944,3 +961,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
