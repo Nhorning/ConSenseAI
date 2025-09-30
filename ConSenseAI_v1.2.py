@@ -12,7 +12,22 @@ class LoggerWriter:
         self.filename = filename
         self.file = open(filename, 'a')  # Append mode for continuous logging
 
+    def _rotate_log(self):
+        '''Rotate log file if it exceeds size limit.'''
+        if os.path.exists(self.filename):
+            size_mb = os.path.getsize(self.filename) / (1024 * 1024)
+            if size_mb > LOG_MAX_SIZE_MB:
+                for i in range(LOG_MAX_ROTATIONS - 1, 0, -1):
+                    old_name = f"{self.filename}.{i}"
+                    new_name = f"{self.filename}.{i+1}"
+                    if os.path.exists(old_name):
+                        os.rename(old_name, new_name)
+                if os.path.exists(self.filename):
+                    os.rename(self.filename, f"{self.filename}.1")
+                print(f"[Log Rotation] Rotated {self.filename} due to size > {LOG_MAX_SIZE_MB}MB")
+
     def write(self, text):
+        self._rotate_log()  # Check rotation before writing
         self.file.write(text)
         sys.__stdout__.write(text)  # Mirror to console
 
@@ -25,7 +40,12 @@ sys.stdout = LoggerWriter('output.log')
 # Also redirect stderr for error logging
 sys.stderr = LoggerWriter('output.log')
 
+
 KEY_FILE = 'keys.txt'
+LOG_MAX_SIZE_MB = 10  # Rotate log if larger than this (MB)
+LOG_MAX_ROTATIONS = 5  # Keep this many rotated log files
+MAX_BOT_TWEETS = 1000  # Max entries in bot_tweets.json
+MAX_ANCESTOR_CHAINS = 500  # Max conversations in ancestor_chains.json"
 TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
 
@@ -102,6 +122,10 @@ def save_bot_tweet(tweet_id, full_content):
     """Save bot tweet content to JSON file"""
     tweets = load_bot_tweets()
     tweets[str(tweet_id)] = full_content
+    if len(tweets) > MAX_BOT_TWEETS:
+        # Remove oldest entries (keep most recent)
+        sorted_tweets = sorted(tweets.items(), key=lambda x: x[0], reverse=True)
+        tweets = dict(sorted_tweets[:MAX_BOT_TWEETS])
     try:
         with open(TWEETS_FILE, 'w') as f:
             json.dump(tweets, f, indent=2)
@@ -648,11 +672,17 @@ def get_tweet_context(tweet):
             media = extract_media(entry["tweet"])
             serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
         chains[str(conversation_id)] = serializable_chain
+        if len(chains) > MAX_ANCESTOR_CHAINS:
+            # Remove oldest conversations (keep most recent)
+            sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
+            chains = dict(sorted_chains[:MAX_ANCESTOR_CHAINS])
         try:
             with open(ANCESTOR_CHAIN_FILE, 'w') as f:
                 json.dump(chains, f, indent=2)
         except Exception as e:
             print(f"Error saving ancestor chain cache: {e}")
+
+def get_tweet_context(tweet):
     """Fetch context for a tweet, including conversation thread or original tweet."""
     context = {"original_tweet": None, "thread_tweets": [], "quoted_tweets": [], "conversation_id": getattr(tweet, 'conversation_id', None)}
     
