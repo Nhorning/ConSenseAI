@@ -722,7 +722,7 @@ def get_tweet_context(tweet):
                     print(f"Error fetching original tweet {ref_tweet.id}: {e}")
 
     # Try to build ancestor chain and collect quoted tweets, but don't block above
-    ancestor_chain = load_ancestor_chain(getattr(tweet, 'conversation_id', None))
+    ancestor_chain = load_ancestor_chains().get(str(getattr(tweet, 'conversation_id', None)), [])  # Use plural function and get chain for this ID
     if ancestor_chain:
         print(f"Loaded ancestor chain from cache for conversation {getattr(tweet, 'conversation_id', None)}")
         context['ancestor_chain'] = ancestor_chain
