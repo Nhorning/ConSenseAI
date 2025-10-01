@@ -77,6 +77,27 @@ def load_ancestor_chains():
             print(f"[Ancestor Cache] Error loading {ANCESTOR_CHAIN_FILE}: {e}")
     return {}
 
+def save_ancestor_chain(conversation_id, chain):
+    chains = load_ancestor_chains()
+    # Convert chain to serializable format
+    serializable_chain = []
+    for entry in chain:
+        tweet_dict = tweet_to_dict(entry["tweet"])
+        quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
+        # Extract and cache media for this tweet
+        media = extract_media(entry["tweet"])
+        serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
+    chains[str(conversation_id)] = serializable_chain
+    if len(chains) > MAX_ANCESTOR_CHAINS:
+        # Remove oldest conversations (keep most recent)
+        sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
+        chains = dict(sorted_chains[:MAX_ANCESTOR_CHAINS])
+    try:
+        with open(ANCESTOR_CHAIN_FILE, 'w') as f:
+            json.dump(chains, f, indent=2)
+    except Exception as e:
+        print(f"Error saving ancestor chain cache: {e}")
+
 def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_replies=None):
     """Count prior bot replies for a conversation using existing JSON caches and optional API results.
 
@@ -631,6 +652,16 @@ def fetch_and_process_mentions(user_id, username):
 
 from collections import defaultdict
 
+def tweet_to_dict(t):
+    # Use .data if available, else fallback to __dict__
+    if hasattr(t, 'data') and isinstance(t.data, dict):
+        return t.data
+    elif hasattr(t, '__dict__'):
+        # Only keep serializable fields
+        return {k: v for k, v in t.__dict__.items() if isinstance(v, (str, int, float, dict, list, type(None)))}
+    else:
+        return str(t)
+
 def get_tweet_context(tweet):
     # Ancestor chain cache file
     ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
@@ -644,16 +675,6 @@ def get_tweet_context(tweet):
             except Exception as e:
                 print(f"Error loading ancestor chain cache: {e}")
         return None
-
-    def tweet_to_dict(t):
-        # Use .data if available, else fallback to __dict__
-        if hasattr(t, 'data') and isinstance(t.data, dict):
-            return t.data
-        elif hasattr(t, '__dict__'):
-            # Only keep serializable fields
-            return {k: v for k, v in t.__dict__.items() if isinstance(v, (str, int, float, dict, list, type(None)))}
-        else:
-            return str(t)
 
     def save_ancestor_chain(conversation_id, chain):
         chains = {}
