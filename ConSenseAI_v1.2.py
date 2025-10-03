@@ -368,6 +368,10 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Combine the verdicts by one of the models
     try:  
+        #choose the combining model
+        #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
+        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
+
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
             -Combine those responses into a consise coherent whole.\n\
@@ -375,19 +379,17 @@ def fact_check(tweet_text, tweet_id, context=None):
             -Still respond in the first person as if you are one entity.\n\
             -Do not perform additional searches.\n\
             -Do not mention that you will be combining the responses unless directly asked."
-        
+       
         # append to system prompt
-        system_prompt['content'] += combine_msg 
+        system_prompt['content'] += combine_msg
+        system_prompt['content'] = re.sub(r'a version of (.*?) deployed by', f'a version of {model["name"]} deployed by', system_prompt['content'])
         
         # append model responses to the context
         user_msg += f"\n\n Model Responses:\n{models_verdicts}\n\n" 
         print(f"\n\nSystem Prompt:\n{system_prompt['content']}\n\n") #diagnostic
         print(user_msg)  #diagnostic 
         
-        #choose the combining model
-        #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
-
+        
         # Run the combining model
         verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500)
         
