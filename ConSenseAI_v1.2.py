@@ -322,9 +322,11 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Models and their clients
     models = [
-        {"name": "grok-3-mini", "client": xai_client, "api": "xai"},
+        #lower tier
+        {"name": "grok-4-fast-reasoning", "client": xai_client, "api": "xai"},
         {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
         {"name": "claude-3-5-haiku-latest", "client": anthropic_client, "api": "anthropic"},
+        #higher tier
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
