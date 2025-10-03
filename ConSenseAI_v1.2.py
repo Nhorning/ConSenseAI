@@ -322,16 +322,16 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Models and their clients
     models = [
-        #lower tier
+        #lower tier (index 0-2)
         {"name": "grok-4-fast-reasoning", "client": xai_client, "api": "xai"},
         {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
         {"name": "claude-3-5-haiku-latest", "client": anthropic_client, "api": "anthropic"},
-        #higher tier
+        #higher tier (index 3-5)
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
     ]
-    randomized_models = models.copy()
+    randomized_models = models[:3].copy() # slice is to only use lower tier for first pass
     random.shuffle(randomized_models)  # Shuffle models to randomize order of execution
 
     verdict = {}
@@ -385,8 +385,9 @@ def fact_check(tweet_text, tweet_id, context=None):
         print(user_msg)  #diagnostic 
         
         #choose the combining model
-        model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        
+        #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
+        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
+
         # Run the combining model
         verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500)
         
