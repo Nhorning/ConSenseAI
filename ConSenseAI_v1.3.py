@@ -288,14 +288,9 @@ def fact_check(tweet_text, tweet_id, context=None):
     def get_full_text(t):
         # Return the full text directly from the 'text' field (API v2 standard)
         if hasattr(t, 'text'):
-            text = t.text
-            print(f"[DEBUG get_full_text] Retrieved {len(text)} chars from object.text")
-            return text
+            return t.text
         elif isinstance(t, dict) and 'text' in t:
-            text = t['text']
-            print(f"[DEBUG get_full_text] Retrieved {len(text)} chars from dict['text']")
-            return text
-        print(f"[DEBUG get_full_text] No text found, returning empty string. Type: {type(t)}")
+            return t['text']
         return ''  # Fallback for invalid/missing tweet
 
     context_str = ""
@@ -507,6 +502,8 @@ def authenticate():
     # Always use bearer for read_client (app-only, basic-tier app)
     read_client = tweepy.Client(bearer_token=keys['bearer_token'])
     print("Read client authenticated with Bearer Token (app-only, basic tier).")
+    print(f"[DEBUG] Bearer token (first 20 chars): {keys['bearer_token'][:20]}...")
+    print("[DEBUG] Please verify this bearer token matches your Basic tier app in the Twitter Developer Portal")
     
     # Check if access_token and access_token_secret are already present for post_client
     if 'access_token' in keys and 'access_token_secret' in keys and keys['access_token'] and keys['access_token_secret']:
@@ -620,10 +617,16 @@ def fetch_and_process_mentions(user_id, username):
         
         if mentions.data:
             for mention in mentions.data[::-1]:  # Process in reverse order to newest first
-                print(f"\n[DEBUG] Mention from {mention.author_id}")
-                print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
-                print(f"[DEBUG] Full mention text: {mention.text}")
-                print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
+                # print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
+                # print(f"[DEBUG] Mention ID: {mention.id}")
+                # print(f"[DEBUG] Mention from: {mention.author_id}")
+                # print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
+                # print(f"[DEBUG] Full mention text: {mention.text}")
+                # print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
+                # print(f"[DEBUG] Mention object type: {type(mention)}")
+                # print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
+                # print(f"[DEBUG] All mention attributes: {dir(mention)}")
+                # print(f"[DEBUG] ===================================")
                 
                 # Fetch conversation context
                 context = get_tweet_context(mention)
@@ -733,6 +736,7 @@ def get_tweet_context(tweet):
                         id=ref_tweet.id,
                         tweet_fields=["text", "author_id", "created_at"]
                     )
+                    print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_tweet.data.text)} chars")
                     quoted.append(quoted_tweet.data)
                 except tweepy.TweepyException as e:
                     print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
@@ -752,6 +756,7 @@ def get_tweet_context(tweet):
                         tweet_fields=["text", "author_id", "created_at", "referenced_tweets"]
                     )
                     original_tweet_obj = original_tweet.data
+                    print(f"[DEBUG] Original tweet {ref_tweet.id} text length: {len(original_tweet_obj.text)} chars")
                     context["original_tweet"] = original_tweet_obj
                     # Collect quoted tweets from the original tweet
                     context["quoted_tweets"].extend(collect_quoted(getattr(original_tweet_obj, 'referenced_tweets', None)))
