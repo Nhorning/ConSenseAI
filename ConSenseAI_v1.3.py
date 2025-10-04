@@ -65,7 +65,7 @@ def load_bot_tweets():
 
 def load_ancestor_chains():
     """Load the ancestor chain cache if present and return as a dict.
-    Keys are conversation_id (as strings) -> list of entries saved by save_ancestor_chain().
+    Keys are conversation_id (as strings) -> dict with 'chain': list of entries, and optionally other context like 'thread_tweets', 'bot_replies'.
     """
     if os.path.exists(ANCESTOR_CHAIN_FILE):
         try:
@@ -77,17 +77,20 @@ def load_ancestor_chains():
             print(f"[Ancestor Cache] Error loading {ANCESTOR_CHAIN_FILE}: {e}")
     return {}
 
-def save_ancestor_chain(conversation_id, chain):
+def save_ancestor_chain(conversation_id, chain, additional_context=None):
     chains = load_ancestor_chains()
     # Convert chain to serializable format
     serializable_chain = []
     for entry in chain:
         tweet_dict = tweet_to_dict(entry["tweet"])
         quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
-        # Extract and cache media for this tweet
         media = extract_media(entry["tweet"])
         serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
-    chains[str(conversation_id)] = serializable_chain
+    cache_entry = {"chain": serializable_chain}
+    if additional_context:
+        cache_entry.update(additional_context)
+
+    chains[str(conversation_id)] = cache_entry
     if len(chains) > MAX_ANCESTOR_CHAINS:
         # Remove oldest conversations (keep most recent)
         sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
@@ -114,8 +117,10 @@ def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_repl
 
     # Check ancestor chain cache
     chains = load_ancestor_chains()
-    chain = chains.get(cid)
-    if chain:
+    cached_data = chains.get(cid)
+    if cached_data:
+        # Handle both old format (direct list) and new format (dict with 'chain')
+        chain = cached_data.get('chain', cached_data) if isinstance(cached_data, dict) else cached_data
         for entry in chain:
             # entry was saved as {'tweet': tweet_dict, 'quoted_tweets': [...], 'media': [...]}
             t = entry.get('tweet', {})
@@ -124,6 +129,16 @@ def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_repl
             if tid and tid in bot_tweets:
                 count += 1
             elif author and bot_user_id and str(author) == str(bot_user_id):
+                count += 1
+
+        # Check cached bot replies if available
+        if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
+            for br in cached_data['bot_replies']:
+                br_id = str(br.get('id')) if br.get('id') is not None else None
+                br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
+                if br_id and br_id in bot_tweets:
+                count += 1
+            elif br_author and str(br_author) == str(bot_user_id):
                 count += 1
 
     # Fallback: check API-provided bot replies (if any)
@@ -411,7 +426,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     
     # Then, use it in a simpler f-string
     reply = f"ConSenseAI{version}:\n {models_verdicts}"
-    #if len(reply) > 280:  # Twitter’s character limit
+    #if len(reply) > 280:  # Twitter's character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
     # Post reply checks are passed
@@ -483,15 +498,28 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
         chains = {}
     cid = str(conversation_id)
     entry = {'tweet': {'id': str(reply_id), 'author_id': None, 'text': reply_text}, 'quoted_tweets': [], 'media': []}
-    chain = chains.get(cid, [])
+
+    # Handle both old format (direct list) and new format (dict with 'chain')
+    cached_data = chains.get(cid, {})
+    if isinstance(cached_data, list):
+        # Old format - convert to new format
+        chain = cached_data
+        chains[cid] = {"chain": chain + [entry]}
+    elif isinstance(cached_data, dict):
+        # New format
+        chain = cached_data.get('chain', [])
     chain.append(entry)
-    chains[cid] = chain
-    try:
-        with open(ANCESTOR_CHAIN_FILE, 'w') as f:
-            json.dump(chains, f, indent=2)
-    except Exception as e:
+        cached_data['chain'] = chain
+        chains[cid] = cached_data
+    else:
+        # No existing data
+        chains[cid] = {"chain": [entry]}
+        try:
+            with open(ANCESTOR_CHAIN_FILE, 'w') as f:
+                json.dump(chains, f, indent=2)
+        except Exception as e:
         print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
-        
+
 
 def authenticate():
     global read_client
@@ -521,14 +549,13 @@ def authenticate():
                 print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
                 return  # Exit early if authentication succeeds
             else:
-                print(f"Warning: Existing tokens authenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
+                print(f"Warning: Existing tokens auYou thenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
         except tweepy.TweepyException as e:
             print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
     
     # If no valid tokens or authentication failed, perform three-legged OAuth flow for @ConSenseAI
     print("No valid access tokens found or authentication failed. Initiating three-legged OAuth flow...")
     auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'])
-    
     try:
         # Step 1: Get request token
         redirect_url = "http://127.0.0.1:3000/"  # Ensure this matches the callback URL in X Developer Portal
@@ -631,8 +658,8 @@ def fetch_and_process_mentions(user_id, username):
                 # Fetch conversation context
                 context = get_tweet_context(mention)
                 context['mention'] = mention  # Store the mention in context
-           
                 
+
                 # Safety checks using persisted caches + API results
                 conv_id = str(getattr(mention, 'conversation_id', ''))
                 bot_user_id = user_id
@@ -681,172 +708,138 @@ def tweet_to_dict(t):
     else:
         return str(t)
 
-def get_tweet_context(tweet):
-    # Ancestor chain cache file
-    ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
-
-    def load_ancestor_chain(conversation_id):
-        if os.path.exists(ANCESTOR_CHAIN_FILE):
+def collect_quoted(refs):
+    quoted = []
+    for ref_tweet in refs or []:
+        if ref_tweet.type == "quoted":
             try:
-                with open(ANCESTOR_CHAIN_FILE, 'r') as f:
-                    chains = json.load(f)
-                    return chains.get(str(conversation_id))
-            except Exception as e:
-                print(f"Error loading ancestor chain cache: {e}")
-        return None
-
-    def save_ancestor_chain(conversation_id, chain):
-        chains = {}
-        if os.path.exists(ANCESTOR_CHAIN_FILE):
-            try:
-                with open(ANCESTOR_CHAIN_FILE, 'r') as f:
-                    chains = json.load(f)
-            except Exception as e:
-                print(f"Error reading ancestor chain cache: {e}")
-        # Convert chain to serializable format
-        serializable_chain = []
-        for entry in chain:
-            tweet_dict = tweet_to_dict(entry["tweet"])
-            quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
-            # Extract and cache media for this tweet
-            media = extract_media(entry["tweet"])
-            serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
-        chains[str(conversation_id)] = serializable_chain
-        if len(chains) > MAX_ANCESTOR_CHAINS:
-            # Remove oldest conversations (keep most recent)
-            sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
-            chains = dict(sorted_chains[:MAX_ANCESTOR_CHAINS])
-        try:
-            with open(ANCESTOR_CHAIN_FILE, 'w') as f:
-                json.dump(chains, f, indent=2)
-        except Exception as e:
-            print(f"Error saving ancestor chain cache: {e}")
-
-def get_tweet_context(tweet):
-    """Fetch context for a tweet, including conversation thread or original tweet."""
-    context = {"original_tweet": None, "thread_tweets": [], "quoted_tweets": [], "conversation_id": getattr(tweet, 'conversation_id', None)}
-    
-    # Check if tweet is a reply
-    def collect_quoted(refs):
-        quoted = []
-        for ref_tweet in refs or []:
-            if ref_tweet.type == "quoted":
-                try:
-                    quoted_tweet = read_client.get_tweet(
-                        id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at"]
-                    )
-                    print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_tweet.data.text)} chars")
-                    quoted.append(quoted_tweet.data)
-                except tweepy.TweepyException as e:
-                    print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
-        return quoted
-
-    # Always collect quoted tweets in the mention
-    context["quoted_tweets"].extend(collect_quoted(getattr(tweet, 'referenced_tweets', None)))
-
-    # If this is a reply, fetch the original tweet and collect its quoted tweets
-    original_tweet_obj = None
-    if tweet.in_reply_to_user_id or tweet.referenced_tweets:
-        for ref_tweet in tweet.referenced_tweets or []:
-            if ref_tweet.type == "replied_to":
-                try:
-                    original_tweet = read_client.get_tweet(
-                        id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets"]
-                    )
-                    original_tweet_obj = original_tweet.data
-                    print(f"[DEBUG] Original tweet {ref_tweet.id} text length: {len(original_tweet_obj.text)} chars")
-                    context["original_tweet"] = original_tweet_obj
-                    # Collect quoted tweets from the original tweet
-                    context["quoted_tweets"].extend(collect_quoted(getattr(original_tweet_obj, 'referenced_tweets', None)))
-                except tweepy.TweepyException as e:
-                    print(f"Error fetching original tweet {ref_tweet.id}: {e}")
-
-    # Try to build ancestor chain and collect quoted tweets, but don't block above
-    ancestor_chain = load_ancestor_chains().get(str(getattr(tweet, 'conversation_id', None)), [])  # Use plural function and get chain for this ID
-    if ancestor_chain:
-        print(f"Loaded ancestor chain from cache for conversation {getattr(tweet, 'conversation_id', None)}")
-        context['ancestor_chain'] = ancestor_chain
-    else:
-        ancestor_chain = []
-        current_tweet = tweet
-        visited = set()
-        try:
-            while True:
-                quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
-                ancestor_chain.append({"tweet": current_tweet, "quoted_tweets": quoted})
-                visited.add(current_tweet.id)
-                parent_id = None
-                if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
-                    for ref in current_tweet.referenced_tweets:
-                        if ref.type == 'replied_to':
-                            parent_id = ref.id
-                            break
-                if parent_id is None or parent_id in visited:
-                    break
-                parent_response = read_client.get_tweet(
-                    id=parent_id,
-                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                    expansions=["referenced_tweets.id"]
+                quoted_tweet = read_client.get_tweet(
+                    id=ref_tweet.id,
+                    tweet_fields=["text", "author_id", "created_at"]
                 )
-                if parent_response.data:
-                    current_tweet = parent_response.data
-                else:
-                    break
-            ancestor_chain = ancestor_chain[::-1]
-        except tweepy.TweepyException as e:
-            print(f"Error building ancestor chain: {e}")
-        context['ancestor_chain'] = ancestor_chain
-        # Save to cache
-        save_ancestor_chain(getattr(tweet, 'conversation_id', None), ancestor_chain)
-    
-    # Fetch conversation thread
-    if args.fetchthread == True:
-        try:
-            thread_tweets = read_client.search_recent_tweets(
-                query=f"conversation_id:{tweet.conversation_id} -from:{username}",
-                max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                expansions=["referenced_tweets.id"]
-            )
-            if thread_tweets.data:
-                context["thread_tweets"] = thread_tweets.data
+                print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_tweet.data.text)} chars")
+                quoted.append(quoted_tweet.data)
+            except tweepy.TweepyException as e:
+                print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
+    return quoted
 
-                # New: Concatenate full thread text (only from original author to avoid noise)
-                original_author_id = getattr(tweet, 'author_id', None)  # Or from context["original_tweet"]
-                thread_texts = []
-                # Sort by created_at to maintain order (oldest first)
-                sorted_tweets = sorted(thread_tweets.data, key=lambda t: t.created_at)
-                for tt in sorted_tweets:
-                    if str(tt.author_id) == str(original_author_id):  # Only include original author's tweets
-                        thread_texts.append(tt.text)
-                context["full_thread_text"] = " ".join(thread_texts)  # Concatenated full text
+def get_tweet_context(tweet):
+    """Fetch context for a tweet, prioritizing cache before API calls."""
+    context = {
+        "original_tweet": None,
+        "thread_tweets": [],
+        "quoted_tweets": [],
+        "conversation_id": getattr(tweet, 'conversation_id', None),
+        "ancestor_chain": [],
+        "bot_replies_in_thread": [],
+        "media": []
+    }
+
+    conv_id = str(context["conversation_id"])
+    cached_data = load_ancestor_chains().get(conv_id)
+
+    if cached_data:
+        print(f"[Context Cache] Loaded cached data for conversation {conv_id}")
+
+        # Handle both old format (direct list) and new format (dict with 'chain')
+        if isinstance(cached_data, list):
+            # Old format - just the chain
+            context['ancestor_chain'] = cached_data
+        else:
+            # New format - dict with 'chain' and other context
+            context['ancestor_chain'] = cached_data.get('chain', [])
+
+            # Load thread tweets if cached
+            if 'thread_tweets' in cached_data:
+                context['thread_tweets'] = [t for t in cached_data['thread_tweets']]
+                print(f"[Context Cache] Using cached thread tweets ({len(context['thread_tweets'])})")
             else:
-                context["full_thread_text"] = get_full_text(tweet)  # Fallback to single tweet
-        except tweepy.TweepyException as e:
-            print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
+                # Fetch if not cached and args.fetchthread
+                if args.fetchthread:
+                    try:
+                        thread_response = read_client.search_recent_tweets(
+                            query=f"conversation_id:{conv_id} -from:{username}",
+                            max_results=10,
+                            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                            expansions=["referenced_tweets.id"]
+                        )
+                        if thread_response.data:
+                            context["thread_tweets"] = thread_response.data
+                            print(f"[API] Fetched {len(context['thread_tweets'])} thread tweets")
+                        else:
+                            print("[API] No thread tweets found")
+                    except tweepy.TweepyException as e:
+                        print(f"Error fetching thread tweets: {e}")
 
-        # Fetch bot's own replies in this thread to count prior responses
-        try:
-            bot_replies = read_client.search_recent_tweets(
-                query=f"conversation_id:{tweet.conversation_id} from:{username}",
-                max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                expansions=["referenced_tweets.id"]
-            )
-            if bot_replies.data:
-                context["bot_replies_in_thread"] = bot_replies.data
-        except tweepy.TweepyException as e:
-            print(f"Error fetching bot's replies in thread {tweet.conversation_id}: {e}")
-        
-        # New: Build ancestor chain from mention to root
-        ancestor_chain = []
-        current_tweet = tweet
-        visited = set()  # Avoid cycles
+            # Load bot replies if cached
+            if 'bot_replies' in cached_data:
+                context["bot_replies_in_thread"] = [t for t in cached_data['bot_replies']]
+                print(f"[Context Cache] Using cached bot replies ({len(context['bot_replies_in_thread'])})")
+            else:
+                # Fetch bot replies
+                try:
+                    bot_replies_response = read_client.search_recent_tweets(
+                        query=f"conversation_id:{conv_id} from:{username}",
+                        max_results=10,
+                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                        expansions=["referenced_tweets.id"]
+                    )
+                    if bot_replies_response.data:
+                        context["bot_replies_in_thread"] = bot_replies_response.data
+                        print(f"[API] Fetched {len(context['bot_replies_in_thread'])} bot replies")
+                    else:
+                        print("[API] No bot replies found")
+                except tweepy.TweepyException as e:
+                    print(f"Error fetching bot replies: {e}")
+
+        # Extract quoted tweets and media from cached chain
+        for entry in context['ancestor_chain']:
+            context['quoted_tweets'].extend(entry.get('quoted_tweets', []))
+            context['media'].extend(entry.get('media', []))
+
+        # Attempt to derive original_tweet from chain if not fetching separately
+        if context['ancestor_chain']:
+            context["original_tweet"] = context['ancestor_chain'][0]['tweet']  # Root is original
+
+        # If we have everything from cache, return early
+        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
+            print("[Context Cache] All context loaded from cache - skipping API calls")
+            # Still collect media from mention if not in chain
+            context['media'].extend(extract_media(tweet))
+
+            # Generate full_thread_text from cached data
+            if context["thread_tweets"]:
+                original_author_id = getattr(tweet, 'author_id', None)
+                thread_texts = []
+                sorted_tweets = sorted([t for t in context["thread_tweets"] if hasattr(t, 'created_at') or (isinstance(t, dict) and 'created_at' in t)],
+                                     key=lambda t: t.created_at if hasattr(t, 'created_at') else t['created_at'])
+                for tt in sorted_tweets:
+                    tt_author = getattr(tt, 'author_id', None) if hasattr(tt, 'author_id') else tt.get('author_id')
+                    if str(tt_author) == str(original_author_id):
+                        tt_text = getattr(tt, 'text', '') if hasattr(tt, 'text') else tt.get('text', '')
+                        thread_texts.append(tt_text)
+                context["full_thread_text"] = " ".join(thread_texts)
+            else:
+                context["full_thread_text"] = get_full_text(tweet)
+
+            return context
+
+    # If not fully cached, build ancestor chain
+    print(f"[Context Cache] Incomplete cache for {conv_id} - building with API")
+    ancestor_chain = []
+    current_tweet = tweet
+    visited = set()
+    quoted_from_api = []  # Collect any newly fetched quoted tweets
+    try:
         while True:
             quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
-            ancestor_chain.append({"tweet": current_tweet, "quoted_tweets": quoted})
+            quoted_from_api.extend(quoted)
+            media = extract_media(current_tweet)
+            ancestor_chain.append({
+                "tweet": current_tweet,
+                "quoted_tweets": quoted,
+                "media": media
+            })
             visited.add(current_tweet.id)
             parent_id = None
             if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
@@ -855,49 +848,96 @@ def get_tweet_context(tweet):
                         parent_id = ref.id
                         break
             if parent_id is None or parent_id in visited:
-                break  # No parent or cycle detected
-            try:
-                parent_response = read_client.get_tweet(
-                    id=parent_id,
-                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                    expansions=["referenced_tweets.id"]
-                )
-                if parent_response.data:
-                    current_tweet = parent_response.data
-                else:
-                    break
-            except tweepy.TweepyException as e:
-                print(f"Error fetching parent {parent_id}: {e}")
                 break
-        
-        # Reverse to root-first order
-        ancestor_chain = ancestor_chain[::-1]
-        context['ancestor_chain'] = ancestor_chain
+            parent_response = read_client.get_tweet(
+                id=parent_id,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                expansions=["referenced_tweets.id"]
+            )
+            if parent_response.data:
+                current_tweet = parent_response.data
+            else:
+                break
+    except tweepy.TweepyException as e:
+        print(f"Error building ancestor chain: {e}")
 
-    # For loop detection, keep context["bot_replies_in_thread"] as before
-    context["bot_replies_in_thread"] = bot_replies.data or []
+    ancestor_chain = ancestor_chain[::-1]  # Root first
+    context['ancestor_chain'] = ancestor_chain
 
+    # Fetch thread if not cached and enabled
+    if args.fetchthread and not context["thread_tweets"]:
+        # Fetch as above (code duplicated for clarity, but could refactor)
+        try:
+            thread_response = read_client.search_recent_tweets(
+                query=f"conversation_id:{conv_id} -from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                expansions=["referenced_tweets.id"]
+            )
+            if thread_response.data:
+                context["thread_tweets"] = thread_response.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching thread tweets: {e}")
 
-    # Extract and add media information from every tweet in the ancestor chain (prefer cached if present)
-    all_media = []
-    # Media from the mention itself
-    all_media.extend(extract_media(tweet))
-    # Media from ancestor chain tweets
-    for entry in context.get('ancestor_chain', []):
-        # Use cached media if present, else extract
-        if 'media' in entry:
-            all_media.extend(entry['media'])
-        else:
-            t = entry.get('tweet')
-            all_media.extend(extract_media(t))
-    context['media'] = all_media
+    # Fetch bot replies if not cached
+    if not context["bot_replies_in_thread"]:
+        try:
+            bot_replies_response = read_client.search_recent_tweets(
+                query=f"conversation_id:{conv_id} from:{username}",
+                max_results=10,
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
+                expansions=["referenced_tweets.id"]
+            )
+            if bot_replies_response.data:
+                context["bot_replies_in_thread"] = bot_replies_response.data
+        except tweepy.TweepyException as e:
+            print(f"Error fetching bot replies: {e}")
+
+    # Collect quoted tweets (from chain and any additional)
+    for entry in context['ancestor_chain']:
+        context['quoted_tweets'].extend(entry.get('quoted_tweets', []))
+    context['quoted_tweets'].extend(quoted_from_api)  # Any extras
+
+    # Set original tweet if available
+    if context['ancestor_chain']:
+        context["original_tweet"] = context['ancestor_chain'][0]['tweet']
+
+    # Collect media
+    context['media'].extend(extract_media(tweet))
+    for entry in context['ancestor_chain']:
+        context['media'].extend(entry.get('media', []))
+
+    # Save updated cache with additional context
+    additional_context = {
+        "thread_tweets": [tweet_to_dict(t) for t in context["thread_tweets"]],
+        "bot_replies": [tweet_to_dict(t) for t in context["bot_replies_in_thread"]]
+    }
+    save_ancestor_chain(conv_id, ancestor_chain, additional_context)
+
+    # New: Concatenate full thread text (only from original author to avoid noise)
+    if context["thread_tweets"]:
+        original_author_id = getattr(tweet, 'author_id', None)
+        thread_texts = []
+        sorted_tweets = sorted(context["thread_tweets"], key=lambda t: t.created_at)
+        for tt in sorted_tweets:
+            if str(tt.author_id) == str(original_author_id):
+                thread_texts.append(tt.text)
+        context["full_thread_text"] = " ".join(thread_texts)
+    else:
+        context["full_thread_text"] = get_full_text(tweet)
 
     return context
 
+def get_full_text(t):
+    # Return the full text directly from the 'text' field (API v2 standard)
+    if hasattr(t, 'text'):
+        return t.text
+    elif isinstance(t, dict) and 'text' in t:
+        return t['text']
+    return ''  # Fallback for invalid/missing tweet
+
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
-    def get_full_text(t):
-        return t.text if hasattr(t, 'text') else t.get('text', '')
 
     for i, entry in enumerate(ancestor_chain):
         t = entry["tweet"]
@@ -1045,7 +1085,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
 
