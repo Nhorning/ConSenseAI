@@ -137,9 +137,9 @@ def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_repl
                 br_id = str(br.get('id')) if br.get('id') is not None else None
                 br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
                 if br_id and br_id in bot_tweets:
-                count += 1
-            elif br_author and str(br_author) == str(bot_user_id):
-                count += 1
+                    count += 1
+        elif br_author and str(br_author) == str(bot_user_id):
+            count += 1
 
     # Fallback: check API-provided bot replies (if any)
     if api_bot_replies:
@@ -508,7 +508,7 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
     elif isinstance(cached_data, dict):
         # New format
         chain = cached_data.get('chain', [])
-    chain.append(entry)
+        chain.append(entry)
         cached_data['chain'] = chain
         chains[cid] = cached_data
     else:
@@ -518,7 +518,7 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
             with open(ANCESTOR_CHAIN_FILE, 'w') as f:
                 json.dump(chains, f, indent=2)
         except Exception as e:
-        print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
+            print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
 
 
 def authenticate():
