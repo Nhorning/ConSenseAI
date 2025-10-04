@@ -833,6 +833,8 @@ def get_tweet_context(tweet):
     quoted_from_api = []  # Collect any newly fetched quoted tweets
     try:
         while True:
+            current_text = get_full_text(current_tweet)
+            print(f"[Ancestor Build] Processing tweet {current_tweet.id}, text length: {len(current_text)} chars")
             quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
             quoted_from_api.extend(quoted)
             media = extract_media(current_tweet)
@@ -857,6 +859,9 @@ def get_tweet_context(tweet):
             )
             if parent_response.data:
                 current_tweet = parent_response.data
+                print(f"[API Debug] Fetched parent tweet {parent_id}, text length: {len(current_tweet.text)} chars")
+                print(f"[API Debug] First 100 chars: {current_tweet.text[:100]}")
+                print(f"[API Debug] Last 100 chars: {current_tweet.text[-100:]}")
             else:
                 break
     except tweepy.TweepyException as e:
@@ -951,9 +956,10 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         t = entry["tweet"]
         quoted_tweets = entry["quoted_tweets"]
         # Support Tweepy objects and cached dicts
-        tweet_id = t.get("id") if isinstance(t, dict) else getattr(t, "id", None)
-        author_id = t.get("author_id", "") if isinstance(t, dict) else getattr(t, "author_id", "")
+        tweet_id = get_attr(t, "id")
+        author_id = get_attr(t, "author_id", "")
         tweet_text = get_full_text(t)
+        print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
         is_bot_tweet = str(author_id) == str(getid())
         if is_bot_tweet and tweet_id:
             print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
