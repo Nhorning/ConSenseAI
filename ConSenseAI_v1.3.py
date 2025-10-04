@@ -315,7 +315,8 @@ def fact_check(tweet_text, tweet_id, context=None):
                 context_str += f"Original tweet: {get_full_text(context['original_tweet'])}\n"
         if context.get("quoted_tweets"):
             for qt in context["quoted_tweets"]:
-                context_str += f"Quoted tweet by @{qt.author_id}: {get_full_text(qt)}\n"
+                qt_author = get_attr(qt, 'author_id', 'unknown')
+                context_str += f"Quoted tweet by @{qt_author}: {get_full_text(qt)}\n"
         if context["thread_tweets"]:
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {get_full_text(t)}" for t in context["thread_tweets"]]
@@ -809,14 +810,14 @@ def get_tweet_context(tweet):
 
             # Generate full_thread_text from cached data
             if context["thread_tweets"]:
-                original_author_id = getattr(tweet, 'author_id', None)
+                original_author_id = get_attr(tweet, 'author_id')
                 thread_texts = []
-                sorted_tweets = sorted([t for t in context["thread_tweets"] if hasattr(t, 'created_at') or (isinstance(t, dict) and 'created_at' in t)],
-                                     key=lambda t: t.created_at if hasattr(t, 'created_at') else t['created_at'])
+                sorted_tweets = sorted([t for t in context["thread_tweets"] if get_attr(t, 'created_at') is not None],
+                                     key=lambda t: get_attr(t, 'created_at'))
                 for tt in sorted_tweets:
-                    tt_author = getattr(tt, 'author_id', None) if hasattr(tt, 'author_id') else tt.get('author_id')
+                    tt_author = get_attr(tt, 'author_id')
                     if str(tt_author) == str(original_author_id):
-                        tt_text = getattr(tt, 'text', '') if hasattr(tt, 'text') else tt.get('text', '')
+                        tt_text = get_full_text(tt)
                         thread_texts.append(tt_text)
                 context["full_thread_text"] = " ".join(thread_texts)
             else:
@@ -916,12 +917,12 @@ def get_tweet_context(tweet):
 
     # New: Concatenate full thread text (only from original author to avoid noise)
     if context["thread_tweets"]:
-        original_author_id = getattr(tweet, 'author_id', None)
+        original_author_id = get_attr(tweet, 'author_id')
         thread_texts = []
-        sorted_tweets = sorted(context["thread_tweets"], key=lambda t: t.created_at)
+        sorted_tweets = sorted(context["thread_tweets"], key=lambda t: get_attr(t, 'created_at'))
         for tt in sorted_tweets:
-            if str(tt.author_id) == str(original_author_id):
-                thread_texts.append(tt.text)
+            if str(get_attr(tt, 'author_id')) == str(original_author_id):
+                thread_texts.append(get_full_text(tt))
         context["full_thread_text"] = " ".join(thread_texts)
     else:
         context["full_thread_text"] = get_full_text(tweet)
@@ -935,6 +936,13 @@ def get_full_text(t):
     elif isinstance(t, dict) and 'text' in t:
         return t['text']
     return ''  # Fallback for invalid/missing tweet
+
+def get_attr(obj, attr, default=None):
+    """Safely get attribute from either dict or object"""
+    if isinstance(obj, dict):
+        return obj.get(attr, default)
+    else:
+        return getattr(obj, attr, default)
 
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
