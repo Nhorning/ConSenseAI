@@ -286,12 +286,17 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250):
 def fact_check(tweet_text, tweet_id, context=None):
     # Construct context string
     def get_full_text(t):
-        # Prefer note_tweet.text if available
-        if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text'):
-            return t.note_tweet.text
-        elif isinstance(t, dict) and 'note_tweet' in t and t['note_tweet'] and 'text' in t['note_tweet']:
-            return t['note_tweet']['text']
-        return t.text if hasattr(t, 'text') else t.get('text', '')
+        # Return the full text directly from the 'text' field (API v2 standard)
+        if hasattr(t, 'text'):
+            text = t.text
+            print(f"[DEBUG get_full_text] Retrieved {len(text)} chars from object.text")
+            return text
+        elif isinstance(t, dict) and 'text' in t:
+            text = t['text']
+            print(f"[DEBUG get_full_text] Retrieved {len(text)} chars from dict['text']")
+            return text
+        print(f"[DEBUG get_full_text] No text found, returning empty string. Type: {type(t)}")
+        return ''  # Fallback for invalid/missing tweet
 
     context_str = ""
     if context:
@@ -311,6 +316,8 @@ def fact_check(tweet_text, tweet_id, context=None):
 
     # Use full text for the mention
     full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
+    print(f"[DEBUG] Full mention text length in fact_check: {len(full_mention_text)} chars")
+    print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
     media_str = format_media(context.get('media', [])) if context else ""
     user_msg = f"Context:\n {context_str}\n{media_str}Tweet: {full_mention_text}"
     #print(user_msg)
@@ -608,15 +615,19 @@ def fetch_and_process_mentions(user_id, username):
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
-            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets","note_tweet"]
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets"]
         )
         
         if mentions.data:
             for mention in mentions.data[::-1]:  # Process in reverse order to newest first
-                print(f"\nMention from {mention.author_id}: {mention.text}")
+                print(f"\n[DEBUG] Mention from {mention.author_id}")
+                print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
+                print(f"[DEBUG] Full mention text: {mention.text}")
+                print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
                 
                 # Fetch conversation context
                 context = get_tweet_context(mention)
+                context['mention'] = mention  # Store the mention in context
            
                 
                 # Safety checks using persisted caches + API results
@@ -720,7 +731,7 @@ def get_tweet_context(tweet):
                 try:
                     quoted_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at", "note_tweet"]
+                        tweet_fields=["text", "author_id", "created_at"]
                     )
                     quoted.append(quoted_tweet.data)
                 except tweepy.TweepyException as e:
@@ -738,7 +749,7 @@ def get_tweet_context(tweet):
                 try:
                     original_tweet = read_client.get_tweet(
                         id=ref_tweet.id,
-                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "note_tweet"]
+                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets"]
                     )
                     original_tweet_obj = original_tweet.data
                     context["original_tweet"] = original_tweet_obj
@@ -771,7 +782,7 @@ def get_tweet_context(tweet):
                     break
                 parent_response = read_client.get_tweet(
                     id=parent_id,
-                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id","note_tweet"],
+                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
                     expansions=["referenced_tweets.id"]
                 )
                 if parent_response.data:
@@ -796,6 +807,18 @@ def get_tweet_context(tweet):
             )
             if thread_tweets.data:
                 context["thread_tweets"] = thread_tweets.data
+
+                # New: Concatenate full thread text (only from original author to avoid noise)
+                original_author_id = getattr(tweet, 'author_id', None)  # Or from context["original_tweet"]
+                thread_texts = []
+                # Sort by created_at to maintain order (oldest first)
+                sorted_tweets = sorted(thread_tweets.data, key=lambda t: t.created_at)
+                for tt in sorted_tweets:
+                    if str(tt.author_id) == str(original_author_id):  # Only include original author's tweets
+                        thread_texts.append(tt.text)
+                context["full_thread_text"] = " ".join(thread_texts)  # Concatenated full text
+            else:
+                context["full_thread_text"] = get_full_text(tweet)  # Fallback to single tweet
         except tweepy.TweepyException as e:
             print(f"Error fetching conversation thread {tweet.conversation_id}: {e}")
 
@@ -804,7 +827,7 @@ def get_tweet_context(tweet):
             bot_replies = read_client.search_recent_tweets(
                 query=f"conversation_id:{tweet.conversation_id} from:{username}",
                 max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id","note_tweet"],
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
                 expansions=["referenced_tweets.id"]
             )
             if bot_replies.data:
@@ -831,7 +854,7 @@ def get_tweet_context(tweet):
             try:
                 parent_response = read_client.get_tweet(
                     id=parent_id,
-                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id","note_tweet"],
+                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
                     expansions=["referenced_tweets.id"]
                 )
                 if parent_response.data:
@@ -869,10 +892,6 @@ def get_tweet_context(tweet):
 def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
     def get_full_text(t):
-        if hasattr(t, 'note_tweet') and t.note_tweet and hasattr(t.note_tweet, 'text'):
-            return t.note_tweet.text
-        elif isinstance(t, dict) and 'note_tweet' in t and t['note_tweet'] and 'text' in t['note_tweet']:
-            return t['note_tweet']['text']
         return t.text if hasattr(t, 'text') else t.get('text', '')
 
     for i, entry in enumerate(ancestor_chain):
