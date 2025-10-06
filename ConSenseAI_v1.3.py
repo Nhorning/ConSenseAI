@@ -299,12 +299,29 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "anthropic":
                 # Anthropic SDK call
+                messages=[
+                        {"role": "user", "content": user_msg}
+                    ]
+                if context and context.get('media'):
+                    image_messages = []
+                    for m in context['media']:
+                        if m.get('type') == 'photo' and m.get('url'):
+                            image_messages.append({
+                                "type": "image","source": {
+                                    "type": "url",
+                                    "url": m['url'],
+                                }
+                            })
+                    if image_messages:
+                        print(f"Appending Images:\n{image_messages}")
+                        messages.append({
+                            "role": "user",
+                            "content": [*image_messages]
+                        })
                 response = model['client'].messages.create(
                     model=model['name'],
                     system=system_prompt['content'],
-                    messages=[
-                        {"role": "user", "content": user_msg}
-                    ],
+                    messages=messages,
                     max_tokens=max_tokens,
                     tools=[{
                         "type": "web_search_20250305",
