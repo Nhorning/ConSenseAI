@@ -573,11 +573,13 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
     else:
         # No existing data
         chains[cid] = {"chain": [entry]}
-        try:
-            with open(ANCESTOR_CHAIN_FILE, 'w') as f:
-                json.dump(chains, f, indent=2)
-        except Exception as e:
-            print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
+
+    # Moved: Always save after modification
+    try:
+        with open(ANCESTOR_CHAIN_FILE, 'w') as f:
+            json.dump(chains, f, indent=2)
+    except Exception as e:
+        print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
 
 
 def authenticate():
