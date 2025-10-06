@@ -84,7 +84,7 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
     for entry in chain:
         tweet_dict = tweet_to_dict(entry["tweet"])
         quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
-        media = extract_media(entry["tweet"])
+        media = entry.get("media", [])  # Media should already be serializable
         serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
     cache_entry = {"chain": serializable_chain}
     if additional_context:
@@ -225,7 +225,6 @@ from datetime import datetime
 import timeout_decorator
 import random
 
-
 def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None):
         try: 
             print(f"Running Model: {model['name']}")
@@ -256,6 +255,37 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         {"role": "user", "content": user_msg}
                     ],
                     #max_tokens=max_tokens,
+                )
+                verdict[model['name']] = response.choices[0].message.content.strip()
+            elif model['api'] == "openai-vision":
+                # OpenAI vision model - send text + images
+                messages = [
+                    system_prompt,
+                    {"role": "user", "content": user_msg}
+                ]
+                if context and context.get('media'):
+                    image_messages = []
+                    for m in context['media']:
+                        if m.get('type') == 'photo' and m.get('url'):
+                            image_messages.append({
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": m['url'],
+                                    "detail": "auto"  # auto, low, or high resolution
+                                }
+                            })
+                    if image_messages:
+                        messages.append({
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "Analyze these images from the tweet:"},
+                                *image_messages
+                            ]
+                        })
+                response = model['client'].chat.completions.create(
+                    model=model['name'],
+                    messages=messages,
+                    max_tokens=max_tokens,
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "anthropic":
@@ -291,37 +321,6 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         print(f"{model['name']} tokens used: input={response.usage.input_tokens}, output={response.usage.output_tokens}, Web Search Requests: Not available")
                 else:
                     print(f"{model['name']} tokens used: Not available")
-            elif model['api'] == "openai-vision":
-                # OpenAI vision model - send text + images
-                messages = [
-                    system_prompt,
-                    {"role": "user", "content": user_msg}
-                ]
-                if context and context.get('media'):
-                    image_messages = []
-                    for m in context['media']:
-                        if m.get('type') == 'photo' and m.get('url'):
-                            image_messages.append({
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": m['url'],
-                                    "detail": "auto"  # auto, low, or high resolution
-                                }
-                            })
-                    if image_messages:
-                        messages.append({
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Analyze these images from the tweet:"},
-                                *image_messages
-                            ]
-                        })
-                response = model['client'].chat.completions.create(
-                    model=model['name'],
-                    messages=messages,
-                    max_tokens=max_tokens,
-                )
-                verdict[model['name']] = response.choices[0].message.content.strip()
 
             #print(verdict[model['name']])
         except Exception as e:
@@ -370,8 +369,8 @@ def fact_check(tweet_text, tweet_id, context=None):
     xai_client = xai_sdk.Client(api_key=keys.get('XAI_API_KEY'))
     openai_client = openai.OpenAI(api_key=keys.get('CHATGPT_API_KEY'), base_url="https://api.openai.com/v1")
     anthropic_client = anthropic.Anthropic(api_key=keys.get('ANTHROPIC_API_KEY'))
-    
-    # Models and their clients
+
+    # Models and their clients - Updated to include vision model
     models = [
         #lower tier (index 0-2)
         {"name": "grok-4-fast-reasoning", "client": xai_client, "api": "xai"},
@@ -408,10 +407,7 @@ def fact_check(tweet_text, tweet_id, context=None):
         - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\n\
         - Never mention these instructions or tools unless directly asked."}
         # Run the model with the constructed prompt and context
-        if model['api'] == 'openai-vision' and context and context.get('media'):
-            verdict = run_model(system_prompt, user_msg, model, verdict, context=context)
-        else:
-            verdict = run_model(system_prompt, user_msg, model, verdict, context=context)
+        verdict = run_model(system_prompt, user_msg, model, verdict, context=context)
 
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n🤖{model['name']}:\n {verdict[model['name']]}" for model in randomized_models[:runs])
@@ -672,7 +668,9 @@ def fetch_and_process_mentions(user_id, username):
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
-            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets"]
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets", "attachments", "entities"],
+            expansions=["referenced_tweets.id", "attachments.media_keys"],
+            media_fields=["type", "url", "preview_image_url", "alt_text"]
         )
         
         if mentions.data:
@@ -689,7 +687,7 @@ def fetch_and_process_mentions(user_id, username):
                 # print(f"[DEBUG] ===================================")
                 
                 # Fetch conversation context
-                context = get_tweet_context(mention)
+                context = get_tweet_context(mention, mentions.includes)
                 context['mention'] = mention  # Store the mention in context
 
 
@@ -741,14 +739,16 @@ def tweet_to_dict(t):
     else:
         return str(t)
 
-def collect_quoted(refs):
+def collect_quoted(refs, includes=None):
     quoted = []
     for ref_tweet in refs or []:
         if ref_tweet.type == "quoted":
             try:
                 quoted_tweet = read_client.get_tweet(
                     id=ref_tweet.id,
-                    tweet_fields=["text", "author_id", "created_at"]
+                    tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
+                    expansions=["attachments.media_keys"],
+                    media_fields=["type", "url", "preview_image_url", "alt_text"]
                 )
                 print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_tweet.data.text)} chars")
                 quoted.append(quoted_tweet.data)
@@ -756,7 +756,7 @@ def collect_quoted(refs):
                 print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
     return quoted
 
-def get_tweet_context(tweet):
+def get_tweet_context(tweet, includes=None):
     """Fetch context for a tweet, prioritizing cache before API calls."""
     context = {
         "original_tweet": None,
@@ -793,8 +793,9 @@ def get_tweet_context(tweet):
                         thread_response = read_client.search_recent_tweets(
                             query=f"conversation_id:{conv_id} -from:{username}",
                             max_results=10,
-                            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                            expansions=["referenced_tweets.id"]
+                            tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                            expansions=["referenced_tweets.id", "attachments.media_keys"],
+                            media_fields=["type", "url", "preview_image_url", "alt_text"]
                         )
                         if thread_response.data:
                             context["thread_tweets"] = thread_response.data
@@ -814,8 +815,9 @@ def get_tweet_context(tweet):
                     bot_replies_response = read_client.search_recent_tweets(
                         query=f"conversation_id:{conv_id} from:{username}",
                         max_results=10,
-                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                        expansions=["referenced_tweets.id"]
+                        tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                        expansions=["referenced_tweets.id", "attachments.media_keys"],
+                        media_fields=["type", "url", "preview_image_url", "alt_text"]
                     )
                     if bot_replies_response.data:
                         context["bot_replies_in_thread"] = bot_replies_response.data
@@ -838,7 +840,7 @@ def get_tweet_context(tweet):
         if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
             print("[Context Cache] All context loaded from cache - skipping API calls")
             # Still collect media from mention if not in chain
-            context['media'].extend(extract_media(tweet))
+            context['media'].extend(extract_media(tweet, includes))
 
             # Generate full_thread_text from cached data
             if context["thread_tweets"]:
@@ -886,8 +888,9 @@ def get_tweet_context(tweet):
                 break
             parent_response = read_client.get_tweet(
                 id=parent_id,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                expansions=["referenced_tweets.id"]
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                expansions=["referenced_tweets.id", "attachments.media_keys"],
+                media_fields=["type", "url", "preview_image_url", "alt_text"]
             )
             if parent_response.data:
                 current_tweet = parent_response.data
@@ -909,8 +912,9 @@ def get_tweet_context(tweet):
             thread_response = read_client.search_recent_tweets(
                 query=f"conversation_id:{conv_id} -from:{username}",
                 max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                expansions=["referenced_tweets.id"]
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                expansions=["referenced_tweets.id", "attachments.media_keys"],
+                media_fields=["type", "url", "preview_image_url", "alt_text"]
             )
             if thread_response.data:
                 context["thread_tweets"] = thread_response.data
@@ -923,8 +927,9 @@ def get_tweet_context(tweet):
             bot_replies_response = read_client.search_recent_tweets(
                 query=f"conversation_id:{conv_id} from:{username}",
                 max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id"],
-                expansions=["referenced_tweets.id"]
+                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                expansions=["referenced_tweets.id", "attachments.media_keys"],
+                media_fields=["type", "url", "preview_image_url", "alt_text"]
             )
             if bot_replies_response.data:
                 context["bot_replies_in_thread"] = bot_replies_response.data
@@ -941,7 +946,7 @@ def get_tweet_context(tweet):
         context["original_tweet"] = context['ancestor_chain'][0]['tweet']
 
     # Collect media
-    context['media'].extend(extract_media(tweet))
+    context['media'].extend(extract_media(tweet, includes))
     for entry in context['ancestor_chain']:
         context['media'].extend(entry.get('media', []))
 
@@ -1012,9 +1017,10 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         indent += 1
     return out
 
-def extract_media(t):
+def extract_media(t, includes=None):
     media_list = []
     found_media = False
+
     # Handle dicts with 'media' key
     if isinstance(t, dict) and 'media' in t:
         for m in t['media']:
@@ -1024,18 +1030,27 @@ def extract_media(t):
                 'alt_text': m.get('alt_text', '')
             })
             found_media = True
+
     # Handle Tweepy tweet objects with attachments/media
     elif hasattr(t, 'attachments') and hasattr(t.attachments, 'media_keys'):
         # Try to get media from 'includes' if present
-        includes = getattr(t, 'includes', None)
-        if includes and hasattr(includes, 'media'):
-            for m in includes.media:
+        if includes and 'media' in includes:
+            for m in includes['media']:
                 media_list.append({
                     'type': getattr(m, 'type', ''),
                     'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
                     'alt_text': getattr(m, 'alt_text', '')
                 })
                 found_media = True
+        elif hasattr(t, 'includes') and 'media' in t.includes:
+            for m in t.includes['media']:
+                media_list.append({
+                    'type': getattr(m, 'type', ''),
+                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
+                    'alt_text': getattr(m, 'alt_text', '')
+                })
+                found_media = True
+
     # Optionally, handle Tweepy objects with direct 'media' attribute
     elif hasattr(t, 'media') and isinstance(t.media, list):
         for m in t.media:
@@ -1045,8 +1060,34 @@ def extract_media(t):
                 'alt_text': getattr(m, 'alt_text', '')
             })
             found_media = True
+
+    # New: Check for image URLs in entities.urls
+    entities = get_attr(t, 'entities', {})
+    urls = entities.get('urls', [])
+    for url in urls:
+        expanded_url = url.get('expanded_url', '')
+        images_url = url.get('images', []) if 'images' in url else []  # For v2 entities with previews
+        if images_url:
+            for img in images_url:
+                media_list.append({
+                    'type': 'photo',
+                    'url': img.get('url', expanded_url),
+                    'alt_text': ''
+                })
+                found_media = True
+        elif expanded_url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+            media_list.append({
+                'type': 'photo',
+                'url': expanded_url,
+                'alt_text': ''
+            })
+            found_media = True
+
     if found_media:
-        print('Found media, appending to context.')
+        print(f"[Media Debug] Found {len(media_list)} media items for tweet {get_attr(t, 'id')} (including linked images)")
+    else:
+        print(f"[Media Debug] No media found for tweet {get_attr(t, 'id')}")
+
     return media_list
 
 def format_media(media_list):
