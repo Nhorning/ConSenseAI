@@ -242,7 +242,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 
                 if context and context.get('media'):
                     images=""
-                    for m in context['media']:
+                    for m in reversed(context['media']):
                         if m.get('type') == 'photo' and m.get('url'):
                             image=m['url']
                             images += f'image(image_url={image}, detail="auto")' #auto, low, or high resolution                            
@@ -276,7 +276,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 ]
                 if context and context.get('media'):
                     image_messages = []
-                    for m in context['media']:
+                    for m in reversed(context['media']):
                         if m.get('type') == 'photo' and m.get('url'):
                             image_messages.append({
                                 "type": "image_url",
@@ -304,7 +304,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     ]
                 if context and context.get('media'):
                     image_messages = []
-                    for m in context['media']:
+                    for m in reversed(context['media']):
                         if m.get('type') == 'photo' and m.get('url'):
                             image_messages.append({
                                 "type": "image","source": {
