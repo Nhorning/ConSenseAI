@@ -216,8 +216,8 @@ def load_keys():
 import openai
 import xai_sdk
 from xai_sdk.search import SearchParameters
-from xai_sdk.chat import system, user
-from xai_sdk.chat import system, user, SearchParameters
+#from xai_sdk.chat import system, user
+from xai_sdk.chat import system, user, SearchParameters, image
 import anthropic
 import re
 import tweepy
@@ -239,25 +239,35 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     #max_tokens=150
                 )
                 chat.append(system(system_prompt['content'])),
-                chat.append(user(user_msg))
+                
+                if context and context.get('media'):
+                    images=""
+                    for m in context['media']:
+                        if m.get('type') == 'photo' and m.get('url'):
+                            image=m['url']
+                            images += f'image(image_url={image}, detail="auto")' #auto, low, or high resolution                            
+                    chat.append(user(user_msg,images))
+                        
+                else:
+                    chat.append(user(user_msg))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
                 if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
                     print(f"{model['name']} sources used: {response.usage.num_sources_used}")
                 else:
                     print(f"{model['name']} sources used: Not available")
-            elif model['api'] == "openai":
+            #elif model['api'] == "openai":
                 # OpenAI SDK call
-                response = model['client'].chat.completions.create(
-                    model=model['name'],
-                    messages=[
-                        system_prompt,
-                        {"role": "user", "content": user_msg}
-                    ],
-                    #max_tokens=max_tokens,
-                )
-                verdict[model['name']] = response.choices[0].message.content.strip()
-            elif model['api'] == "openai-vision":
+            #    response = model['client'].chat.completions.create(
+            #        model=model['name'],
+            #        messages=[
+            #            system_prompt,
+            #            {"role": "user", "content": user_msg}
+            #        ],
+            #        #max_tokens=max_tokens,
+            #    )
+            #    verdict[model['name']] = response.choices[0].message.content.strip()
+            elif model['api'] == "openai":
                 # OpenAI vision model - send text + images
                 messages = [
                     system_prompt,
@@ -277,15 +287,12 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     if image_messages:
                         messages.append({
                             "role": "user",
-                            "content": [
-                                {"type": "text", "text": "Analyze these images from the tweet:"},
-                                *image_messages
-                            ]
+                            "content": [*image_messages]
                         })
                 response = model['client'].chat.completions.create(
                     model=model['name'],
                     messages=messages,
-                    max_tokens=max_tokens,
+                    #max_tokens=max_tokens,
                 )
                 verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "anthropic":
@@ -380,13 +387,17 @@ def fact_check(tweet_text, tweet_id, context=None):
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
+        #vision models (index 6)
+        #{"name": "gpt-5", "client": openai_client, "api": "openai-vision"}
     ]
-    randomized_models = models[:3].copy() # slice is to only use lower tier for first pass
-    random.shuffle(randomized_models)  # Shuffle models to randomize order of execution
+    
+    randomized_models = models[:3].copy()
+    random.shuffle(randomized_models)
 
-    verdict = {}
-
+    # Then proceed with runs = 1 or  to keep it efficient
     runs = 3
+    
+    verdict = {}
     for model in randomized_models[:runs]:  # putting it back to 3 for now
 
         system_prompt = { #Grok prompts available here: https://github.com/xai-org/grok-prompts
@@ -416,7 +427,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     try:  
         #choose the combining model
         #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
+        model = random.choice(models[3:5])  # chooses one of the higher tier models to combine the verdicts
 
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
