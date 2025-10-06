@@ -246,6 +246,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         if m.get('type') == 'photo' and m.get('url'):
                             image=m['url']
                             images += f'image(image_url={image}, detail="auto")' #auto, low, or high resolution                            
+                    print(f"Appending Images:\n{images}")
                     chat.append(user(user_msg,images))
                         
                 else:
@@ -285,6 +286,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                                 }
                             })
                     if image_messages:
+                        print(f"Appending Images:\n{image_messages}")
                         messages.append({
                             "role": "user",
                             "content": [*image_messages]
