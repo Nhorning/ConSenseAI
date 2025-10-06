@@ -871,7 +871,9 @@ def get_tweet_context(tweet, includes=None):
             print(f"[Ancestor Build] Processing tweet {current_tweet.id}, text length: {len(current_text)} chars")
             quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
             quoted_from_api.extend(quoted)
-            media = extract_media(current_tweet)
+            # Extract media, passing includes if available
+            current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
+            media = extract_media(current_tweet, current_includes)
             ancestor_chain.append({
                 "tweet": current_tweet,
                 "quoted_tweets": quoted,
@@ -1021,6 +1023,24 @@ def extract_media(t, includes=None):
     media_list = []
     found_media = False
 
+    # Added debug logging for includes
+    print(f"[Media Debug] Extracting media for tweet {get_attr(t, 'id')} - includes provided: {includes is not None}")
+    if includes:
+        print(f"[Media Debug] Includes keys: {list(includes.keys()) if isinstance(includes, dict) else 'Not dict'}")
+        if 'media' in includes:
+            print(f"[Media Debug] Found 'media' in includes with {len(includes['media'])} items")
+
+    # FIRST: Check includes for media (most reliable source from API responses)
+    if includes and 'media' in includes:
+        for m in includes['media']:
+            media_list.append({
+                'type': getattr(m, 'type', '') if hasattr(m, 'type') else m.get('type', ''),
+                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else m.get('url', m.get('preview_image_url', '')),
+                'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else m.get('alt_text', '')
+            })
+            found_media = True
+        print(f"[Media Debug] Extracted {len(media_list)} media items from includes['media']")
+
     # Handle dicts with 'media' key
     if isinstance(t, dict) and 'media' in t:
         for m in t['media']:
@@ -1032,24 +1052,16 @@ def extract_media(t, includes=None):
             found_media = True
 
     # Handle Tweepy tweet objects with attachments/media
-    elif hasattr(t, 'attachments') and hasattr(t.attachments, 'media_keys'):
-        # Try to get media from 'includes' if present
-        if includes and 'media' in includes:
-            for m in includes['media']:
-                media_list.append({
-                    'type': getattr(m, 'type', ''),
-                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
-                    'alt_text': getattr(m, 'alt_text', '')
-                })
-                found_media = True
-        elif hasattr(t, 'includes') and 'media' in t.includes:
-            for m in t.includes['media']:
-                media_list.append({
-                    'type': getattr(m, 'type', ''),
-                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
-                    'alt_text': getattr(m, 'alt_text', '')
-                })
-                found_media = True
+    #elif hasattr(t, 'attachments') and hasattr(t.attachments, 'media_keys'):
+    # Already checked includes above, so skip it here
+    elif hasattr(t, 'includes') and 'media' in t.includes:
+        for m in t.includes['media']:
+            media_list.append({
+                'type': getattr(m, 'type', ''),
+                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
+                'alt_text': getattr(m, 'alt_text', '')
+            })
+            found_media = True
 
     # Optionally, handle Tweepy objects with direct 'media' attribute
     elif hasattr(t, 'media') and isinstance(t.media, list):
@@ -1061,11 +1073,13 @@ def extract_media(t, includes=None):
             })
             found_media = True
 
-    # New: Check for image URLs in entities.urls
+    # Updated: Check for image URLs in entities.urls with enhanced debug logging and Twitter media pattern detection
     entities = get_attr(t, 'entities', {})
     urls = entities.get('urls', [])
+    print(f"[Media Debug] Found {len(urls)} URLs in entities for tweet {get_attr(t, 'id')}")
     for url in urls:
         expanded_url = url.get('expanded_url', '')
+        print(f"[Media Debug] Expanded URL: {expanded_url}")
         images_url = url.get('images', []) if 'images' in url else []  # For v2 entities with previews
         if images_url:
             for img in images_url:
@@ -1075,7 +1089,8 @@ def extract_media(t, includes=None):
                     'alt_text': ''
                 })
                 found_media = True
-        elif expanded_url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+        # Check for Twitter media patterns and common image extensions
+        elif 'pbs.twimg.com/media/' in expanded_url or expanded_url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
             media_list.append({
                 'type': 'photo',
                 'url': expanded_url,
