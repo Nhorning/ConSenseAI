@@ -943,6 +943,15 @@ def get_tweet_context(tweet, includes=None):
     ancestor_chain = ancestor_chain[::-1]  # Root first
     context['ancestor_chain'] = ancestor_chain
 
+    # NEW: Ensure the current mention is appended as the final entry with its media
+    if ancestor_chain and ancestor_chain[-1]['tweet'].id != tweet.id:
+        mention_media = extract_media(tweet, includes)
+        ancestor_chain.append({
+            "tweet": tweet,
+            "quoted_tweets": [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))],  # Fetch any quoted in mention
+            "media": mention_media
+        })
+
     # Fetch thread if not cached and enabled
     if args.fetchthread and not context["thread_tweets"]:
         # Fetch as above (code duplicated for clarity, but could refactor)
