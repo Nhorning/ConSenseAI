@@ -242,7 +242,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 
                 if context and context.get('media'):
                     images=""
-                    for m in reversed(context['media']):
+                    for m in context['media']:
                         if m.get('type') == 'photo' and m.get('url'):
                             image=m['url']
                             images += f'image(image_url={image}, detail="auto")' #auto, low, or high resolution                            
@@ -276,7 +276,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 ]
                 if context and context.get('media'):
                     image_messages = []
-                    for m in reversed(context['media']):
+                    for m in context['media']:
                         if m.get('type') == 'photo' and m.get('url'):
                             image_messages.append({
                                 "type": "image_url",
@@ -304,7 +304,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     ]
                 if context and context.get('media'):
                     image_messages = []
-                    for m in reversed(context['media']):
+                    for m in context['media']:
                         if m.get('type') == 'photo' and m.get('url'):
                             image_messages.append({
                                 "type": "image","source": {
@@ -386,7 +386,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
     print(f"[DEBUG] Full mention text length in fact_check: {len(full_mention_text)} chars")
     print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
-    media_str = format_media(context.get('media', [])) if context else ""
+    media_str = format_media(context.get('media', []), context.get('ancestor_chain', [])) if context else ""
     print(f"[Vision Debug] Found {len(context.get('media', []))} media items for vision analysis")
     user_msg = f"Context:\n {context_str}\n{media_str}Tweet: {full_mention_text}"
     #print(user_msg)
@@ -772,21 +772,21 @@ def tweet_to_dict(t):
         return str(t)
 
 def collect_quoted(refs, includes=None):
-    quoted = []
+    quoted_responses = []  # Store full responses for media extraction
     for ref_tweet in refs or []:
         if ref_tweet.type == "quoted":
             try:
-                quoted_tweet = read_client.get_tweet(
+                quoted_response = read_client.get_tweet(
                     id=ref_tweet.id,
                     tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
                     expansions=["attachments.media_keys"],
                     media_fields=["type", "url", "preview_image_url", "alt_text"]
                 )
-                print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_tweet.data.text)} chars")
-                quoted.append(quoted_tweet.data)
+                print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_response.data.text)} chars")
+                quoted_responses.append(quoted_response)
             except tweepy.TweepyException as e:
                 print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
-    return quoted
+    return quoted_responses
 
 def get_tweet_context(tweet, includes=None):
     """Fetch context for a tweet, prioritizing cache before API calls."""
@@ -901,11 +901,15 @@ def get_tweet_context(tweet, includes=None):
         while True:
             current_text = get_full_text(current_tweet)
             print(f"[Ancestor Build] Processing tweet {current_tweet.id}, text length: {len(current_text)} chars")
-            quoted = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
+            quoted_responses = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
+            quoted = [qr.data for qr in quoted_responses]  # Extract data for storage
             quoted_from_api.extend(quoted)
             # Extract media, passing includes if available
             current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
             media = extract_media(current_tweet, current_includes)
+            # Extract media from quoted tweets
+            for qr in quoted_responses:
+                media.extend(extract_media(qr.data, qr.includes))
             ancestor_chain.append({
                 "tweet": current_tweet,
                 "quoted_tweets": quoted,
@@ -1137,15 +1141,35 @@ def extract_media(t, includes=None):
 
     return media_list
 
-def format_media(media_list):
+def format_media(media_list, ancestor_chain=None):
     if not media_list:
         return ""
-    out = "Media attached to tweet(s):\n"
-    for m in media_list:
-        if isinstance(m, dict):
-            out += f"- Type: {m.get('type', '')}, URL: {m.get('url', '')}, Alt: {m.get('alt_text', '')}\n"
-        else:
-            out += f"- Media key: {m}\n"
+    out = "Media attached to tweet(s) in the thread (with associations):\n"
+
+    # If chain provided, group media by tweet for better context
+    if ancestor_chain:
+        for entry in ancestor_chain:
+            tweet_id = get_attr(entry["tweet"], "id", "unknown")
+            tweet_snippet = get_full_text(entry["tweet"])[:50] + "..."  # Brief text for context
+            entry_media = entry.get("media", [])
+            if entry_media:
+                out += f"- From tweet {tweet_id} ('{tweet_snippet}'): \n"
+                for m in entry_media:
+                    out += f"  - Type: {m.get('type', '')}, URL: {m.get('url', '')}, Alt: {m.get('alt_text', '')}\n"
+
+            # Handle quoted tweets in this entry
+            for qt in entry.get("quoted_tweets", []):
+                qt_id = get_attr(qt, "id", "unknown")
+                qt_snippet = get_full_text(qt)[:50] + "..."
+                # Assume quoted media is already in entry["media"] (from your recent edit), or extract if needed
+                out += f"  - Quoted in {tweet_id}: From tweet {qt_id} ('{qt_snippet}'): (media URLs as above)\n"
+    else:
+        # Fallback to flat list
+        for m in media_list:
+            if isinstance(m, dict):
+                out += f"- Type: {m.get('type', '')}, URL: {m.get('url', '')}, Alt: {m.get('alt_text', '')}\n"
+            else:
+                out += f"- Media key: {m}\n"
     return out
 
 
@@ -1174,7 +1198,6 @@ args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g.
 # Set username and delay, prompting if not provided
 if args.username:
     username = args.username.lower()
-
 if args.delay:
     delay = int(args.delay)  # Convert minutes to seconds
 else:
