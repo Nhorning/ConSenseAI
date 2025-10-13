@@ -388,7 +388,7 @@ def fact_check(tweet_text, tweet_id, context=None):
     print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
     media_str = format_media(context.get('media', []), context.get('ancestor_chain', [])) if context else ""
     print(f"[Vision Debug] Found {len(context.get('media', []))} media items for vision analysis")
-    user_msg = f"Context:\n {context_str}\n{media_str}Tweet: {full_mention_text}"
+    user_msg = f"Context:\n {context_str}\n{media_str}\nTweet: {full_mention_text}"
     #print(user_msg)
 
     # Initialize clients
@@ -872,6 +872,32 @@ def get_tweet_context(tweet, includes=None):
         if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
             print("[Context Cache] All context loaded from cache - skipping API calls")
             # Still collect media from mention if not in chain
+            # Ensure the current mention is present as the final entry in the ancestor_chain
+            try:
+                last_entry = context['ancestor_chain'][-1] if context['ancestor_chain'] else None
+                # last_entry may be a dict with key 'tweet' (cached format) or a structure with a 'tweet' key
+                if isinstance(last_entry, dict):
+                    last_tweet_obj = last_entry.get('tweet')
+                else:
+                    # fallback: assume entry itself is a tweet-like object
+                    last_tweet_obj = last_entry
+                last_id = get_attr(last_tweet_obj, 'id', None)
+            except Exception:
+                last_id = None
+            mention_id = get_attr(tweet, 'id', None)
+            if mention_id and str(last_id) != str(mention_id):
+                # Collect media and quoted tweets for the mention and append to the in-memory chain
+                mention_media = extract_media(tweet, includes)
+                quoted_in_mention = [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))]
+                context['ancestor_chain'].append({
+                    'tweet': tweet,
+                    'quoted_tweets': quoted_in_mention,
+                    'media': mention_media
+                })
+                # Also expose mention media in the top-level context media list
+                context['media'].extend(mention_media)
+                print(f"[Context Cache] Appended current mention {mention_id} to ancestor_chain (cached path)")
+
             context['media'].extend(extract_media(tweet, includes))
 
             # Generate full_thread_text from cached data
