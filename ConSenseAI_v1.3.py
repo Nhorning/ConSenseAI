@@ -646,7 +646,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     try:  
         #choose the combining model
         #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        model = random.choice(models[3:5])  # chooses one of the higher tier models to combine the verdicts
+        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
 
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
