@@ -1,53 +1,253 @@
-import json
-# Cell 1: Fact-check and reply functions
-from openai import OpenAI
+
 import json
 import os
+import time
+import datetime
+import sys
+import re
 import webbrowser as web_open
 
-import sys
 
-class LoggerWriter:
-    def __init__(self, filename):
-        self.filename = filename
-        self.file = open(filename, 'a')  # Append mode for continuous logging
-
-    def _rotate_log(self):
-        '''Rotate log file if it exceeds size limit.'''
-        if os.path.exists(self.filename):
-            size_mb = os.path.getsize(self.filename) / (1024 * 1024)
-            if size_mb > LOG_MAX_SIZE_MB:
-                for i in range(LOG_MAX_ROTATIONS - 1, 0, -1):
-                    old_name = f"{self.filename}.{i}"
-                    new_name = f"{self.filename}.{i+1}"
-                    if os.path.exists(old_name):
-                        os.rename(old_name, new_name)
-                if os.path.exists(self.filename):
-                    os.rename(self.filename, f"{self.filename}.1")
-                print(f"[Log Rotation] Rotated {self.filename} due to size > {LOG_MAX_SIZE_MB}MB")
-
-    def write(self, text):
-        self._rotate_log()  # Check rotation before writing
-        self.file.write(text)
-        sys.__stdout__.write(text)  # Mirror to console
-
-    def flush(self):
-        self.file.flush()
-        sys.__stdout__.flush()
-
-sys.stdout = LoggerWriter('output.log')
-
-# Also redirect stderr for error logging
-sys.stderr = LoggerWriter('output.log')
+def _search_last_filename(search_term: str):
+    safe = re.sub(r'[^a-zA-Z0-9_-]', '_', search_term)[:64]
+    return SEARCH_LAST_FILE_PREFIX + safe + '.txt'
 
 
+# Core constants (restored)
 KEY_FILE = 'keys.txt'
 LOG_MAX_SIZE_MB = 10  # Rotate log if larger than this (MB)
 LOG_MAX_ROTATIONS = 5  # Keep this many rotated log files
 MAX_BOT_TWEETS = 1000  # Max entries in bot_tweets.json
-MAX_ANCESTOR_CHAINS = 500  # Max conversations in ancestor_chains.json"
+MAX_ANCESTOR_CHAINS = 500  # Max conversations in ancestor_chains.json
 TWEETS_FILE = 'bot_tweets.json'  # File to store bot's tweets
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
+
+
+class LoggerWriter:
+    def __init__(self, filename):
+        self.filename = filename
+        try:
+            self.file = open(filename, 'a')
+        except Exception:
+            self.file = None
+
+    def _rotate_log(self):
+        if os.path.exists(self.filename):
+            try:
+                size_mb = os.path.getsize(self.filename) / (1024 * 1024)
+                if size_mb > LOG_MAX_SIZE_MB:
+                    for i in range(LOG_MAX_ROTATIONS - 1, 0, -1):
+                        old_name = f"{self.filename}.{i}"
+                        new_name = f"{self.filename}.{i+1}"
+                        if os.path.exists(old_name):
+                            os.rename(old_name, new_name)
+                    if os.path.exists(self.filename):
+                        os.rename(self.filename, f"{self.filename}.1")
+            except Exception:
+                pass
+
+    def write(self, text):
+        try:
+            self._rotate_log()
+            if self.file:
+                self.file.write(text)
+            sys.__stdout__.write(text)
+        except Exception:
+            pass
+
+    def flush(self):
+        try:
+            if self.file:
+                self.file.flush()
+            sys.__stdout__.flush()
+        except Exception:
+            pass
+
+
+# Redirect stdout/stderr to log file if possible
+sys.stdout = LoggerWriter('output.log')
+sys.stderr = LoggerWriter('output.log')
+
+def read_last_search_id(search_term: str):
+    fn = _search_last_filename(search_term)
+    if os.path.exists(fn):
+        try:
+            with open(fn, 'r') as f:
+                v = f.read().strip()
+                if v:
+                    return int(v)
+        except Exception:
+            pass
+    return None
+
+def write_last_search_id(search_term: str, tweet_id):
+    fn = _search_last_filename(search_term)
+    try:
+        with open(fn, 'w') as f:
+            f.write(str(tweet_id))
+    except Exception as e:
+        print(f"Error writing last search id to {fn}: {e}")
+
+def _load_json_file(path, default):
+    try:
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading {path}: {e}")
+    return default
+
+def _save_json_file(path, data):
+    try:
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Error saving {path}: {e}")
+
+def _increment_daily_count():
+    data = _load_json_file(SEARCH_REPLY_COUNT_FILE, {})
+    today = datetime.date.today().isoformat()
+    data.setdefault(today, 0)
+    data[today] += 1
+    _save_json_file(SEARCH_REPLY_COUNT_FILE, data)
+
+def _get_today_count():
+    data = _load_json_file(SEARCH_REPLY_COUNT_FILE, {})
+    today = datetime.date.today().isoformat()
+    return int(data.get(today, 0))
+
+def _add_sent_hash(reply_text: str):
+    # store hash keyed by timestamp
+    data = _load_json_file(SENT_HASHES_FILE, {})
+    h = str(abs(hash(reply_text)))
+    data[h] = int(time.time())
+    # prune old entries beyond dedupe window
+    window = int(float(args.dedupe_window_hours) * 3600)
+    cutoff = int(time.time()) - window
+    for k, v in list(data.items()):
+        if v < cutoff:
+            del data[k]
+    _save_json_file(SENT_HASHES_FILE, data)
+
+def _is_duplicate(reply_text: str):
+    data = _load_json_file(SENT_HASHES_FILE, {})
+    h = str(abs(hash(reply_text)))
+    return h in data
+
+def queue_for_approval(item: dict):
+    queue = _load_json_file(APPROVAL_QUEUE_FILE, [])
+    queue.append(item)
+    _save_json_file(APPROVAL_QUEUE_FILE, queue)
+
+
+# Removed generate_reply_text_for_tweet to avoid duplicate model orchestration.
+# fetch_and_process_search now calls fact_check(..., generate_only=True) to obtain generated reply text.
+
+def fetch_and_process_search(search_term: str, user_id=None):
+    """Search and run pipeline with safeguards: daily cap, dedupe, optional human approval."""
+    global backoff_multiplier
+    last_id = read_last_search_id(search_term)
+    print(f"[Search] Query='{search_term}' since_id={last_id}")
+    try:
+        resp = read_client.search_recent_tweets(
+            query=search_term,
+            since_id=last_id,
+            max_results=min(args.search_max_results, 100),
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
+            expansions=["referenced_tweets.id", "attachments.media_keys"],
+            media_fields=["type", "url", "preview_image_url", "alt_text"]
+        )
+    except tweepy.TweepyException as e:
+        print(f"[Search] API error: {e}")
+        backoff_multiplier += 1
+        return
+
+    if not resp or not getattr(resp, 'data', None):
+        print(f"[Search] No results for '{search_term}'")
+        return
+
+    # Respect daily cap
+    today_count = _get_today_count()
+    if today_count >= int(args.search_daily_cap):
+        print(f"[Search] Daily cap reached ({today_count}/{args.search_daily_cap}), skipping processing")
+        return
+
+    me = None
+    try:
+        me = read_client.get_user(username=username)
+        bot_id = me.data.id
+    except Exception:
+        bot_id = None
+
+    # Process older -> newer
+    for t in resp.data[::-1]:
+        # basic guard: don't reply to ourselves
+        if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
+            print(f"[Search] Skipping self tweet {t.id}")
+            continue
+
+        # build context
+        context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
+        context['mention'] = t
+
+        # skip if bot already replied in conversation
+        conv_id = str(getattr(t, 'conversation_id', ''))
+        prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
+        if prior >= reply_threshold:
+            print(f"[Search] Skipping {t.id}: bot already replied {prior} times")
+            continue
+        # Run models and obtain a generated reply (fact_check can return generated text when generate_only=True)
+        try:
+            reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
+        except Exception as e:
+            print(f"[Search] Error generating reply: {e}")
+            continue
+
+        if not isinstance(reply_text, str) or not reply_text:
+            print(f"[Search] No reply generated for {t.id}; skipping")
+            continue
+
+        # simple content safety heuristics (on the generated reply)
+        lowered = reply_text.lower()
+        if any(x in lowered for x in ["doxx", "address", "phone", "ssn", "private"]):
+            print(f"[Search] Reply contains potential sensitive content; queuing for review")
+            queue_for_approval({"tweet_id": t.id, "text": reply_text, "reason": "sensitive"})
+            continue
+
+        # dedupe check
+        if _is_duplicate(reply_text):
+            print(f"[Search] Duplicate reply detected; skipping")
+            continue
+
+        # daily cap check again per candidate
+        today_count = _get_today_count()
+        if today_count >= int(args.search_daily_cap):
+            print(f"[Search] Daily cap reached during processing; stopping")
+            break
+
+        # If human approval enabled, queue and continue
+        if args.enable_human_approval:
+            queue_for_approval({"tweet_id": t.id, "text": reply_text, "context_summary": get_full_text(t)[:300]})
+            print(f"[Search] Queued reply for human approval: tweet {t.id}")
+            continue
+
+        # Post reply (respect dryrun)
+        if args.dryrun:
+            print(f"[Search dryrun] Would reply to {t.id}: {reply_text[:200]}")
+        else:
+            # post and track
+            posted = post_reply(t.id, reply_text, conversation_id=conv_id)
+            if posted == 'done!':
+                _add_sent_hash(reply_text)
+                _increment_daily_count()
+                write_last_search_id(search_term, t.id)
+                # brief pause between posts
+                time.sleep(5)
+            elif posted == 'delay!':
+                backoff_multiplier *= 2
+                print(f"[Search] Post rate-limited, backing off")
+                return
+
 
 def load_bot_tweets():
     """Load stored bot tweets from JSON file"""
@@ -355,7 +555,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
         
         return verdict
 
-def fact_check(tweet_text, tweet_id, context=None):
+def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     # Construct context string
     def get_full_text(t):
         # Return the full text directly from the 'text' field (API v2 standard)
@@ -488,16 +688,11 @@ def fact_check(tweet_text, tweet_id, context=None):
     #if len(reply) > 280:  # Twitter's character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
+    # If caller only wants the generated text, return it directly
+    if generate_only:
+        return models_verdicts.strip()
+
     # Post reply checks are passed
-    '''if 'not a factual claim' in reply.lower() or accuracy_score == 'N/A':
-        print(f'No claim detected. Not tweeting:\n{reply}')
-        success = dryruncheck()
-    elif accuracy_score > accuracy_threshold:
-        print(f'Accuracy above threshold ({accuracy_threshold}), Not Tweeting:\n {reply} ')
-        success = dryruncheck()
-    elif 'satire' in verdict.lower():
-        print(f'Satire detected, not tweeting:\n{reply}')
-        success = dryruncheck()'''
     if dryruncheck() == 'done!':
         conv_id = context.get('conversation_id') if context else None
         success = post_reply(tweet_id, reply, conversation_id=conv_id)
@@ -1228,6 +1423,11 @@ parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t twee
 #parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
 parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
+parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets', default=None)
+parser.add_argument('--search_max_results', type=int, help='Max results to fetch per search (default 10)', default=10)
+parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches (default 5)', default=5)
+parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
+parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -1253,6 +1453,12 @@ if args.reply_threshold:
 # File to store the last processed tweet ID
 LAST_TWEET_FILE = f'last_tweet_id_{username}.txt'
 
+# Files and prefixes for search feature
+SEARCH_LAST_FILE_PREFIX = f'last_search_id_{username}_'
+SEARCH_REPLY_COUNT_FILE = f'search_reply_count_{username}.json'
+SENT_HASHES_FILE = f'sent_reply_hashes_{username}.json'
+APPROVAL_QUEUE_FILE = f'approval_queue_{username}.json'
+
 RESTART_DELAY = 10
 backoff_multiplier = 1
 
@@ -1261,9 +1467,32 @@ def main():
     while True:
         authenticate()
         user_id = getid()
+        # Initialize search safety stores
+        try:
+            if not os.path.exists(SENT_HASHES_FILE):
+                with open(SENT_HASHES_FILE, 'w') as f:
+                    json.dump({}, f)
+            if not os.path.exists(SEARCH_REPLY_COUNT_FILE):
+                with open(SEARCH_REPLY_COUNT_FILE, 'w') as f:
+                    json.dump({}, f)
+            if not os.path.exists(APPROVAL_QUEUE_FILE):
+                with open(APPROVAL_QUEUE_FILE, 'w') as f:
+                    json.dump([], f)
+        except Exception as e:
+            print(f"[SearchInit] Warning initializing search state files: {e}")
         try:
             while True:
                 fetch_and_process_mentions(user_id, username)  # Changed from fetch_and_process_tweets
+
+                # If a search term was provided on the CLI, run the search pipeline each cycle.
+                # The search pipeline honors dry-run, human approval, dedupe and daily caps.
+                if getattr(args, 'search_term', None):
+                    try:
+                        print(f"[Main] Running search for term: {args.search_term}")
+                        fetch_and_process_search(args.search_term, user_id=user_id)
+                    except Exception as e:
+                        print(f"[Main] Search error: {e}")
+
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
