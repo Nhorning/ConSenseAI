@@ -181,6 +181,27 @@ def fetch_and_process_search(search_term: str, user_id=None):
 
     # Process older -> newer
     for t in resp.data[::-1]:
+        # Debug: check whether the tweet text is already truncated when returned from the search API
+        try:
+            fetched_text = get_full_text(t)
+        except Exception:
+            fetched_text = getattr(t, 'text', '') if hasattr(t, 'text') else ''
+        print(f"[Search Debug] Fetched tweet {getattr(t, 'id', 'unknown')} - type={type(t)} - text_len={len(fetched_text)}")
+        print(f"[Search Debug] Preview: {fetched_text[:500]}")
+        # If the returned text looks short, try re-fetching the tweet via get_tweet to compare
+        if len(fetched_text) < 200:
+            try:
+                full = read_client.get_tweet(
+                    id=getattr(t, 'id', None),
+                    tweet_fields=["text", "entities", "referenced_tweets"],
+                    expansions=["referenced_tweets.id"]
+                )
+                if getattr(full, 'data', None):
+                    ref_text = full.data.get('text') if isinstance(full.data, dict) else getattr(full.data, 'text', '')
+                    print(f"[Search Debug] Re-fetched tweet {getattr(t, 'id', 'unknown')} - refetch_len={len(ref_text)}")
+                    print(f"[Search Debug] Re-fetch preview: {ref_text[:500]}")
+            except Exception as e:
+                print(f"[Search Debug] Re-fetch failed for {getattr(t, 'id', 'unknown')}: {e}")
         # basic guard: don't reply to ourselves
         if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
