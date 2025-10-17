@@ -213,10 +213,19 @@ def fetch_and_process_search(search_term: str, user_id=None):
 
         # skip if bot already replied in conversation
         conv_id = str(getattr(t, 'conversation_id', ''))
-        prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
-        if prior >= reply_threshold:
-            print(f"[Search] Skipping {t.id}: bot already replied {prior} times")
-            continue
+        # Enforce reply threshold. If per_user_threshold is True, limit replies per unique author in the thread;
+        # otherwise, fallback to limiting total bot replies in the thread.
+        if per_user_threshold:
+            target_author = getattr(t, 'author_id', None)
+            prior_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_id, target_author, context.get('bot_replies_in_thread'))
+            if prior_to_user >= reply_threshold:
+                print(f"[Search] Skipping {t.id}: bot already replied to user {target_author} {prior_to_user} times (threshold={reply_threshold})")
+                continue
+        else:
+            prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
+            if prior >= reply_threshold:
+                print(f"[Search] Skipping {t.id}: bot already replied {prior} times in thread (threshold={reply_threshold})")
+                continue
         # Run models and obtain a generated reply (fact_check can return generated text when generate_only=True)
         try:
             reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
@@ -372,6 +381,64 @@ def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_repl
                 count += 1
             elif br_author and str(br_author) == str(bot_user_id):
                 count += 1
+
+    return count
+
+
+def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, target_user_id, api_bot_replies=None):
+    """Count how many times the bot has replied to a specific user inside a conversation.
+
+    This inspects the ancestor_chain cache, any cached bot_replies, and optional API-provided
+    bot replies. It counts bot-authored tweets whose in_reply_to_user_id (or referenced parent)
+    equals the target_user_id.
+    """
+    if not conversation_id or not target_user_id:
+        return 0
+    cid = str(conversation_id)
+    count = 0
+    bot_tweets = load_bot_tweets()
+
+    # Check ancestor chain cache
+    chains = load_ancestor_chains()
+    cached_data = chains.get(cid)
+    if cached_data:
+        chain = cached_data.get('chain', cached_data) if isinstance(cached_data, dict) else cached_data
+        for entry in chain:
+            t = entry.get('tweet', {})
+            # t may be a dict saved by tweet_to_dict
+            t_author = str(t.get('author_id')) if isinstance(t, dict) and t.get('author_id') is not None else None
+            t_in_reply_to = str(t.get('in_reply_to_user_id')) if isinstance(t, dict) and t.get('in_reply_to_user_id') is not None else None
+            # If this tweet is authored by the bot and was in reply to the target user, count it
+            if t_author and bot_user_id and str(t_author) == str(bot_user_id) and t_in_reply_to and str(t_in_reply_to) == str(target_user_id):
+                # If we also stored the tweet id in bot_tweets, prefer that as authoritative
+                tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+                if tid is None or tid in bot_tweets:
+                    count += 1
+
+        # Also inspect cached bot_replies list if present
+        if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
+            for br in cached_data['bot_replies']:
+                br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
+                br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
+                if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
+                    br_id = str(br.get('id')) if br.get('id') is not None else None
+                    if br_id is None or br_id in bot_tweets:
+                        count += 1
+
+    # Check API-provided bot replies if any
+    if api_bot_replies:
+        for br in api_bot_replies:
+            # br may be a Tweepy object or dict
+            br_author = br.get('author_id') if isinstance(br, dict) else getattr(br, 'author_id', None)
+            br_in_reply_to = None
+            if isinstance(br, dict):
+                br_in_reply_to = br.get('in_reply_to_user_id')
+            else:
+                br_in_reply_to = getattr(br, 'in_reply_to_user_id', None)
+            if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
+                br_id = br.get('id') if isinstance(br, dict) else getattr(br, 'id', None)
+                if br_id is None or str(br_id) in bot_tweets:
+                    count += 1
 
     return count
 
@@ -951,13 +1018,21 @@ def fetch_and_process_mentions(user_id, username):
                 else:
                     # 2) Count prior bot replies using ancestor cache + API-provided bot replies
                     api_bot_replies = context.get('bot_replies_in_thread')
-                    prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
-                    if prior_replies >= reply_threshold:
-                        print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
-                        success = dryruncheck()
+                    target_author = getattr(mention, 'author_id', None)
+                    if per_user_threshold:
+                        prior_replies_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_user_id, target_author, api_bot_replies)
+                        if prior_replies_to_user >= reply_threshold:
+                            print(f"Skipping reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
+                            success = dryruncheck()
+                            continue
                     else:
-                        # Pass context to fact_check and reply
-                        success = fact_check(mention.text, mention.id, context)
+                        prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
+                        if prior_replies >= reply_threshold:
+                            print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
+                            success = dryruncheck()
+                            continue
+                    # Pass context to fact_check and reply
+                    success = fact_check(mention.text, mention.id, context)
                 if success == 'done!':
                     last_tweet_id = max(last_tweet_id, mention.id)
                     write_last_tweet_id(last_tweet_id)
@@ -1444,6 +1519,7 @@ parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t twee
 #parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
 parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
+parser.add_argument('--per_user_threshold', type=bool, help='If True, enforce reply_threshold per unique user per thread; if False, enforce per-thread total (default True)', default=True)
 parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets', default=None)
 parser.add_argument('--search_max_results', type=int, help='Max results to fetch per search (default 10)', default=10)
 parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches (default 5)', default=5)
@@ -1469,6 +1545,11 @@ if args.dryrun:
 
 if args.reply_threshold:
     reply_threshold = args.reply_threshold
+else:
+    reply_threshold = 5
+
+# Determine behavior mode
+per_user_threshold = bool(args.per_user_threshold)
 
 
 # File to store the last processed tweet ID
