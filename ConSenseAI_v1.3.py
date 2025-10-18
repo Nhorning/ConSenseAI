@@ -111,10 +111,17 @@ def _increment_daily_count():
     data[today] += 1
     _save_json_file(SEARCH_REPLY_COUNT_FILE, data)
 
+
 def _get_today_count():
     data = _load_json_file(SEARCH_REPLY_COUNT_FILE, {})
     today = datetime.date.today().isoformat()
     return int(data.get(today, 0))
+
+# Compute current search cap based on interval
+def get_current_search_cap(max_daily_cap, interval_hours):
+    now = datetime.datetime.now()
+    increments = 1 + int(now.hour // interval_hours)
+    return min(max_daily_cap, increments)
 
 def _add_sent_hash(reply_text: str):
     # store hash keyed by timestamp
@@ -147,6 +154,13 @@ def fetch_and_process_search(search_term: str, user_id=None):
     """Search and run pipeline with safeguards: daily cap, dedupe, optional human approval."""
     global backoff_multiplier
     last_id = read_last_search_id(search_term)
+    # Respect dynamic cap
+    today_count = _get_today_count()
+    current_cap = get_current_search_cap(int(args.search_daily_cap), int(args.search_cap_interval_hours))
+    if today_count >= current_cap:
+        print(f"[Search] Current cap reached ({today_count}/{current_cap}), skipping processing")
+        return
+    
     print(f"[Search] Query='{search_term}' since_id={last_id}")
     try:
         resp = read_client.search_recent_tweets(
@@ -166,13 +180,9 @@ def fetch_and_process_search(search_term: str, user_id=None):
         print(f"[Search] No results for '{search_term}'")
         return
 
-    # Respect daily cap
-    today_count = _get_today_count()
-    if today_count >= int(args.search_daily_cap):
-        print(f"[Search] Daily cap reached ({today_count}/{args.search_daily_cap}), skipping processing")
-        return
+    
 
-    bot_id = get_bot_user_id_cached()
+    bot_id = BOT_USER_ID
 
     # Process older -> newer
     for t in resp.data[::-1]:
@@ -966,20 +976,8 @@ def write_last_tweet_id(tweet_id):
 
 # Get the user ID for the specified username
 def getid():
-    # Prefer the in-memory cached BOT_USER_ID populated at authenticate()
     global BOT_USER_ID
-    if BOT_USER_ID is not None:
-        print(f"Using cached BOT_USER_ID: {BOT_USER_ID}")
-        return BOT_USER_ID
-
-    # Fall back to the cached helper which includes backoff; do not exit on failure
-    user_id = get_bot_user_id_cached()
-    if user_id:
-        print(f"User ID for @{username} (fetched): {user_id}")
-        return user_id
-    else:
-        print(f"Warning: Could not determine user id for @{username} at this time. Continuing without a cached id.")
-        return None
+    return BOT_USER_ID
 
 def fetch_and_process_mentions(user_id, username):
     global backoff_multiplier
@@ -1533,6 +1531,7 @@ parser.add_argument('--search_max_results', type=int, help='Max results to fetch
 parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches (default 5)', default=5)
 parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
 parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
+parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=1)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
