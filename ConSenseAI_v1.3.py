@@ -172,12 +172,7 @@ def fetch_and_process_search(search_term: str, user_id=None):
         print(f"[Search] Daily cap reached ({today_count}/{args.search_daily_cap}), skipping processing")
         return
 
-    me = None
-    try:
-        me = read_client.get_user(username=username)
-        bot_id = me.data.id
-    except Exception:
-        bot_id = None
+    bot_id = get_bot_user_id_cached()
 
     # Process older -> newer
     for t in resp.data[::-1]:
@@ -869,6 +864,7 @@ def authenticate():
     global read_client
     global post_client
     global keys
+    global BOT_USER_ID
     keys = load_keys()
     
     # Always use bearer for read_client (app-only, basic-tier app)
@@ -889,6 +885,12 @@ def authenticate():
             )
             user = post_client.get_me()
             print(f"Post client authenticated as @{user.data.username} (free tier).")
+            # Cache the authenticated bot user id to avoid future get_user calls
+            try:
+                BOT_USER_ID = user.data.id
+                print(f"[Authenticate] BOT_USER_ID cached as {BOT_USER_ID}")
+            except Exception:
+                pass
             if user.data.username.lower() == 'consenseai':
                 print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
                 return  # Exit early if authentication succeeds
@@ -932,6 +934,62 @@ def authenticate():
     #client_oauth2 = None
     #print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
 
+
+# Cached bot user id helper to avoid calling the API repeatedly and to handle 429s with backoff
+_bot_user_cache = {"id": None, "fetched_at": 0, "ttl": 300}  # cache for 5 minutes by default
+_bot_user_backoff = {"mult": 1, "last_429": 0}
+# In-memory global store of the bot's user id (populated during authenticate())
+#BOT_USER_ID = None
+
+def get_bot_user_id_cached(force_refresh=False):
+    """Return the bot user id, caching the result for a short TTL and backing off on 429 errors.
+
+    - force_refresh: bypass cache and re-query
+    """
+    global _bot_user_cache, _bot_user_backoff
+    global BOT_USER_ID
+    now = time.time()
+    # If authenticate() already populated BOT_USER_ID, return it immediately
+    if BOT_USER_ID is not None and not force_refresh:
+        return BOT_USER_ID
+    # If cache still valid and not forced, return
+    if not force_refresh and _bot_user_cache.get('id') and (now - _bot_user_cache.get('fetched_at', 0) < _bot_user_cache.get('ttl', 300)):
+        return _bot_user_cache['id']
+
+    # If we recently received a 429, apply exponential backoff
+    if _bot_user_backoff.get('last_429', 0) and (now - _bot_user_backoff['last_429'] < (30 * _bot_user_backoff.get('mult', 1))):
+        wait = int(30 * _bot_user_backoff.get('mult', 1) - (now - _bot_user_backoff['last_429']))
+        print(f"[BotID Cache] Recent 429, backing off for {wait}s before retrying get_user")
+        time.sleep(max(0, wait))
+
+    try:
+        me = read_client.get_user(username=username)
+        if getattr(me, 'data', None) and getattr(me.data, 'id', None):
+            bot_id = me.data.id
+            # populate global cache too
+            try:
+                BOT_USER_ID = bot_id
+            except Exception:
+                pass
+            _bot_user_cache.update({'id': bot_id, 'fetched_at': now})
+            # reset backoff on success
+            _bot_user_backoff.update({'mult': 1, 'last_429': 0})
+            return bot_id
+    except tweepy.TweepyException as e:
+        # Handle rate limit responses reasonably
+        msg = str(e)
+        if '429' in msg or 'Too Many Requests' in msg:
+            # increase backoff multiplier
+            _bot_user_backoff['last_429'] = now
+            _bot_user_backoff['mult'] = min(8, _bot_user_backoff.get('mult', 1) * 2)
+            print(f"[BotID Cache] get_user returned 429 - increasing backoff multiplier to {_bot_user_backoff['mult']}")
+        else:
+            print(f"[BotID Cache] get_user error: {e}")
+    except Exception as e:
+        print(f"[BotID Cache] Unexpected error fetching bot id: {e}")
+
+    return None
+
 def read_last_tweet_id():
     """
     Read the last processed tweet ID from the file.
@@ -964,14 +1022,20 @@ def write_last_tweet_id(tweet_id):
 
 # Get the user ID for the specified username
 def getid():
-    try:
-        user_info = read_client.get_user(username=username)
-        user_id = user_info.data.id
-        print(f"User ID for @{username} (app-only auth): {user_id}")
+    # Prefer the in-memory cached BOT_USER_ID populated at authenticate()
+    global BOT_USER_ID
+    if BOT_USER_ID is not None:
+        print(f"Using cached BOT_USER_ID: {BOT_USER_ID}")
+        return BOT_USER_ID
+
+    # Fall back to the cached helper which includes backoff; do not exit on failure
+    user_id = get_bot_user_id_cached()
+    if user_id:
+        print(f"User ID for @{username} (fetched): {user_id}")
         return user_id
-    except tweepy.TweepyException as e:
-        print(f"Error fetching @{username}'s user ID: {e}")
-        exit(1)
+    else:
+        print(f"Warning: Could not determine user id for @{username} at this time. Continuing without a cached id.")
+        return None
 
 def fetch_and_process_mentions(user_id, username):
     global backoff_multiplier
@@ -1568,7 +1632,7 @@ backoff_multiplier = 1
 def main():
     while True:
         authenticate()
-        user_id = getid()
+        user_id = BOT_USER_ID
         # Initialize search safety stores
         try:
             if not os.path.exists(SENT_HASHES_FILE):
