@@ -120,8 +120,10 @@ def _get_today_count():
 # Compute current search cap based on interval
 def get_current_search_cap(max_daily_cap, interval_hours):
     now = datetime.datetime.now()
-    increments = 1 + int(now.hour // interval_hours)
-    return min(max_daily_cap, increments)
+    hours_since_midnight = now.hour + now.minute / 60.0
+    increments = int(hours_since_midnight // interval_hours)
+    cap = min(1 + increments, max_daily_cap)
+    return cap
 
 def _add_sent_hash(reply_text: str):
     # store hash keyed by timestamp
@@ -157,6 +159,7 @@ def fetch_and_process_search(search_term: str, user_id=None):
     # Respect dynamic cap
     today_count = _get_today_count()
     current_cap = get_current_search_cap(int(args.search_daily_cap), int(args.search_cap_interval_hours))
+    print(f"[Search] Current dynamic search reply cap: {current_cap} (max: {args.search_daily_cap}, interval: {args.search_cap_interval_hours}h)")
     if today_count >= current_cap:
         print(f"[Search] Current cap reached ({today_count}/{current_cap}), skipping processing")
         return
@@ -1528,10 +1531,10 @@ parser.add_argument('--reply_threshold', type=int, help='Number of times the bot
 parser.add_argument('--per_user_threshold', type=bool, help='If True, enforce reply_threshold per unique user per thread; if False, enforce per-thread total (default True)', default=True)
 parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets', default=None)
 parser.add_argument('--search_max_results', type=int, help='Max results to fetch per search (default 10)', default=10)
-parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches (default 5)', default=5)
+parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches increases every "--search_cap_interval_hours" hours(default 5)', default=5)
 parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
 parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
-parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=1)
+parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
