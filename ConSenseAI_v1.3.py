@@ -1,3 +1,37 @@
+import requests
+
+# Fetch the full text of a tweet using twitterapi.io
+def get_full_text_twitterapiio(tweet_id, api_key):
+    """
+    Fetch the full text of a tweet using twitterapi.io API.
+    Args:
+        tweet_id (str or int): The tweet ID to fetch.
+        api_key (str, optional): The API key for twitterapi.io. If None, loads from keys.txt.
+    Returns:
+        str: The full text of the tweet, or empty string on error.
+    """
+    if api_key is None:
+        print(f'attempting to fetch tweet {tweet_id} from twitterapi.io with key [None]')
+    else:
+        print(f'attempting to fetch tweet {tweet_id} from twitterapi.io with key {api_key[:10]}')
+    url = "https://api.twitterapi.io/twitter/tweets"
+    querystring = {"tweet_ids": f"{tweet_id}"}
+    headers = {"X-API-Key": f"{api_key}"}
+    try:
+        response = requests.get(url, headers=headers, params=querystring)
+        response.raise_for_status()
+        data = response.json()
+        # twitterapi.io returns tweets under 'tweets' as a list of dicts
+        tweets = data.get("tweets", [])
+        if tweets and isinstance(tweets, list):
+            tweet_obj = tweets[0] if len(tweets) > 0 else None
+            if tweet_obj and "text" in tweet_obj:
+                return tweet_obj["text"]
+        print(f"[twitterapi.io] No tweet text found for id {tweet_id}. Response: {data}")
+        return ""
+    except requests.RequestException as e:
+        print(f"Error fetching tweet {tweet_id} from twitterapi.io: {e}")
+        return ""
 
 import json
 import os
@@ -190,8 +224,12 @@ def fetch_and_process_search(search_term: str, user_id=None):
     # Process older -> newer
     for t in resp.data[::-1]:
         # Debug: check whether the tweet text is already truncated when returned from the search API
+        # Try to get full text using twitterapi.io first, then fall back to Tweepy
         try:
-            fetched_text = get_full_text(t)
+            api_key = keys['TWITTERAPIIO_KEY']  # Will be loaded from keys.txt if not provided
+            fetched_text = get_full_text_twitterapiio(getattr(t, 'id', None), api_key)
+            if not fetched_text:
+                fetched_text = get_full_text(t)
         except Exception:
             fetched_text = getattr(t, 'text', '') if hasattr(t, 'text') else ''
         print(f"[Search Debug] Fetched tweet {getattr(t, 'id', 'unknown')} - type={type(t)} - text_len={len(fetched_text)}")
@@ -218,6 +256,9 @@ def fetch_and_process_search(search_term: str, user_id=None):
         # build context
         context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
         context['mention'] = t
+        # add instruction to context for search responses
+        context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
+
 
         # skip if bot already replied in conversation
         conv_id = str(getattr(t, 'conversation_id', ''))
@@ -654,7 +695,13 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
 def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     # Construct context string
     def get_full_text(t):
-        # Return the full text directly from the 'text' field (API v2 standard)
+        # Try twitterapi.io first, then fall back to Tweepy/standard
+        api_key = keys['TWITTERAPIIO_KEY']  # Will be loaded from keys.txt if not provided
+        tweet_id = getattr(t, 'id', None) if hasattr(t, 'id') else t.get('id', None) if isinstance(t, dict) else None
+        if tweet_id:
+            text = get_full_text_twitterapiio(tweet_id, api_key)
+            if text:
+                return text
         if hasattr(t, 'text'):
             return t.text
         elif isinstance(t, dict) and 'text' in t:
@@ -663,6 +710,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
 
     context_str = ""
     if context:
+        # If context_instructions are present, prepend them
         if len(context['ancestor_chain']) <= 1:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {get_full_text(context['original_tweet'])}\n"
@@ -677,14 +725,17 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
         if len(context['ancestor_chain']) > 1:
                context_str += "\nThread hierarchy:\n"
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
-
+    
+    #get instructions from context (if any)
+    instructions = context['context_instructions'] if context and 'context_instructions' in context else ''
+    
     # Use full text for the mention
     full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
     print(f"[DEBUG] Full mention text length in fact_check: {len(full_mention_text)} chars")
     print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
     media_str = format_media(context.get('media', []), context.get('ancestor_chain', [])) if context else ""
     print(f"[Vision Debug] Found {len(context.get('media', []))} media items for vision analysis")
-    user_msg = f"Context:\n {context_str}\n{media_str}\nTweet: {full_mention_text}"
+    user_msg = f"Context:\n {context_str}\n{media_str}\nTweet: {full_mention_text}\n{instructions}\n"
     #print(user_msg)
 
     # Initialize clients
@@ -1161,8 +1212,12 @@ def get_tweet_context(tweet, includes=None):
 
         # Extract quoted tweets and media from cached chain
         for entry in context['ancestor_chain']:
-            context['quoted_tweets'].extend(entry.get('quoted_tweets', []))
-            context['media'].extend(entry.get('media', []))
+            if entry is None:
+                continue
+            quoted = entry.get('quoted_tweets', []) if isinstance(entry, dict) else []
+            media = entry.get('media', []) if isinstance(entry, dict) else []
+            context['quoted_tweets'].extend([q for q in quoted if q is not None])
+            context['media'].extend([m for m in media if m is not None])
 
         # Attempt to derive original_tweet from chain if not fetching separately
         if context['ancestor_chain']:
@@ -1311,17 +1366,25 @@ def get_tweet_context(tweet, includes=None):
 
     # Collect quoted tweets (from chain and any additional)
     for entry in context['ancestor_chain']:
-        context['quoted_tweets'].extend(entry.get('quoted_tweets', []))
-    context['quoted_tweets'].extend(quoted_from_api)  # Any extras
+        if entry is None:
+            continue
+        quoted = entry.get('quoted_tweets', []) if isinstance(entry, dict) else []
+        context['quoted_tweets'].extend([q for q in quoted if q is not None])
+    context['quoted_tweets'].extend([q for q in quoted_from_api if q is not None])  # Any extras
 
     # Set original tweet if available
     if context['ancestor_chain']:
-        context["original_tweet"] = context['ancestor_chain'][0]['tweet']
+        first_entry = context['ancestor_chain'][0]
+        if first_entry and isinstance(first_entry, dict):
+            context["original_tweet"] = first_entry.get('tweet')
 
     # Collect media
-    context['media'].extend(extract_media(tweet, includes))
+    context['media'].extend([m for m in extract_media(tweet, includes) if m is not None])
     for entry in context['ancestor_chain']:
-        context['media'].extend(entry.get('media', []))
+        if entry is None:
+            continue
+        media = entry.get('media', []) if isinstance(entry, dict) else []
+        context['media'].extend([m for m in media if m is not None])
 
     # Save updated cache with additional context
     additional_context = {
@@ -1363,12 +1426,28 @@ def build_ancestor_chain(ancestor_chain, indent=0):
     out = ""
 
     for i, entry in enumerate(ancestor_chain):
-        t = entry["tweet"]
-        quoted_tweets = entry["quoted_tweets"]
-        # Support Tweepy objects and cached dicts
+        if entry is None or not isinstance(entry, dict):
+            continue
+        t = entry.get("tweet")
+        quoted_tweets = entry.get("quoted_tweets", [])
         tweet_id = get_attr(t, "id")
         author_id = get_attr(t, "author_id", "")
-        tweet_text = get_full_text(t)
+        # Prefer cached bot tweet content if available
+        tweet_text = get_bot_tweet_content(tweet_id)
+        if not tweet_text:
+            # Try twitterapi.io for full text, fallback to Tweepy/dict
+            api_key = keys['TWITTERAPIIO_KEY']
+            try:
+                tweet_text = get_full_text_twitterapiio(tweet_id, api_key)
+            except Exception as e:
+                print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
+            if not tweet_text:
+                if hasattr(t, 'text'):
+                    tweet_text = t.text
+                elif isinstance(t, dict) and 'text' in t:
+                    tweet_text = t['text']
+                else:
+                    tweet_text = ''
         print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
         is_bot_tweet = str(author_id) == str(getid())
         if is_bot_tweet and tweet_id:
@@ -1383,9 +1462,23 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
         for qt in quoted_tweets:
+            qt_id = get_attr(qt, 'id')
             qt_author_id = qt.get('author_id') if isinstance(qt, dict) else getattr(qt, 'author_id', '')
             qt_author = f" (quoted @{qt_author_id})" if qt_author_id else ""
-            qt_text = get_full_text(qt)
+            # Prefer cached content, then twitterapi.io, then fallback
+            qt_text = get_bot_tweet_content(qt_id)
+            if not qt_text:
+                try:
+                    qt_text = get_full_text_twitterapiio(qt_id, api_key)
+                except Exception as e:
+                    print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
+                if not qt_text:
+                    if hasattr(qt, 'text'):
+                        qt_text = qt.text
+                    elif isinstance(qt, dict) and 'text' in qt:
+                        qt_text = qt['text']
+                    else:
+                        qt_text = ''
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
@@ -1404,6 +1497,8 @@ def extract_media(t, includes=None):
     # FIRST: Check includes for media (most reliable source from API responses)
     if includes and 'media' in includes:
         for m in includes['media']:
+            if m is None:
+                continue
             media_list.append({
                 'type': getattr(m, 'type', '') if hasattr(m, 'type') else m.get('type', ''),
                 'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else m.get('url', m.get('preview_image_url', '')),
@@ -1415,6 +1510,8 @@ def extract_media(t, includes=None):
     # Handle dicts with 'media' key
     if isinstance(t, dict) and 'media' in t:
         for m in t['media']:
+            if m is None:
+                continue
             media_list.append({
                 'type': m.get('type'),
                 'url': m.get('url', m.get('preview_image_url', '')),
@@ -1427,6 +1524,8 @@ def extract_media(t, includes=None):
     # Already checked includes above, so skip it here
     elif hasattr(t, 'includes') and 'media' in t.includes:
         for m in t.includes['media']:
+            if m is None:
+                continue
             media_list.append({
                 'type': getattr(m, 'type', ''),
                 'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
@@ -1437,6 +1536,8 @@ def extract_media(t, includes=None):
     # Optionally, handle Tweepy objects with direct 'media' attribute
     elif hasattr(t, 'media') and isinstance(t.media, list):
         for m in t.media:
+            if m is None:
+                continue
             media_list.append({
                 'type': getattr(m, 'type', ''),
                 'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')),
