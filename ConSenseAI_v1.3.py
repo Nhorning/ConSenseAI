@@ -241,33 +241,16 @@ def fetch_and_process_search(search_term: str, user_id=None):
         if today_count >= current_cap:
             print(f"[Search] Cap reached during processing ({today_count}/{current_cap}), stopping batch early.")
             break
-        # Build full context including ancestor chain and thread
+        # Build full context including ancestor chain and thread, only once
         context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
-        context['mention'] = t  # Store the search tweet as the mention
-        # Use robust fact_check pipeline (dry-run/generate_only)
-        try:
-            reply_text = fact_check(get_full_text_twitterapiio(getattr(t, 'id', None), keys.get('TWITTERAPIIO_KEY')), getattr(t, 'id', None), context, generate_only=True)
-        except Exception as e:
-            print(f"[Search Debug] Error in fact_check for tweet {getattr(t, 'id', 'unknown')}: {e}")
-            reply_text = None
-        print(f"[Search Debug] Fetched tweet {getattr(t, 'id', 'unknown')} - type={type(t)} - reply_len={len(reply_text) if reply_text else 0}")
-        print(f"[Search Debug] Preview: {reply_text[:500] if reply_text else ''}")
+        context['mention'] = t
+        context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
         # basic guard: don't reply to ourselves
         if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
             continue
-
-        # build context
-        context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
-        context['mention'] = t
-        # add instruction to context for search responses
-        context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
-
-
         # skip if bot already replied in conversation
         conv_id = str(getattr(t, 'conversation_id', ''))
-        # Enforce reply threshold. If per_user_threshold is True, limit replies per unique author in the thread;
-        # otherwise, fallback to limiting total bot replies in the thread.
         if per_user_threshold:
             target_author = getattr(t, 'author_id', None)
             prior_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_id, target_author, context.get('bot_replies_in_thread'))
