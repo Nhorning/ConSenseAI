@@ -154,8 +154,17 @@ def _get_today_count():
 # Compute current search cap based on interval
 def get_current_search_cap(max_daily_cap, interval_hours):
     now = datetime.datetime.now()
-    hours_since_midnight = now.hour + now.minute / 60.0
-    increments = int(hours_since_midnight // interval_hours)
+    cap_increase_time = getattr(args, 'cap_increase_time', '10:00')
+    try:
+        cap_hour, cap_minute = map(int, cap_increase_time.split(':'))
+    except Exception:
+        cap_hour, cap_minute = 10, 0
+    start_minutes = cap_hour * 60 + cap_minute
+    now_minutes = now.hour * 60 + now.minute
+    if now_minutes < start_minutes:
+        increments = 0
+    else:
+        increments = int(((now_minutes - start_minutes) / 60) // interval_hours)
     cap = min(1 + increments, max_daily_cap)
     return cap
 
@@ -1622,6 +1631,7 @@ parser.add_argument('--search_daily_cap', type=int, help='Max automated replies 
 parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
 parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
 parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
+parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
