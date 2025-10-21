@@ -223,31 +223,17 @@ def fetch_and_process_search(search_term: str, user_id=None):
 
     # Process older -> newer
     for t in resp.data[::-1]:
-        # Debug: check whether the tweet text is already truncated when returned from the search API
-        # Try to get full text using twitterapi.io first, then fall back to Tweepy
+        # Build full context including ancestor chain and thread
+        context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
+        context['mention'] = t  # Store the search tweet as the mention
+        # Use robust fact_check pipeline (dry-run/generate_only)
         try:
-            api_key = keys['TWITTERAPIIO_KEY']  # Will be loaded from keys.txt if not provided
-            fetched_text = get_full_text_twitterapiio(getattr(t, 'id', None), api_key)
-            if not fetched_text:
-                fetched_text = get_full_text(t)
-        except Exception:
-            fetched_text = getattr(t, 'text', '') if hasattr(t, 'text') else ''
-        print(f"[Search Debug] Fetched tweet {getattr(t, 'id', 'unknown')} - type={type(t)} - text_len={len(fetched_text)}")
-        print(f"[Search Debug] Preview: {fetched_text[:500]}")
-        # If the returned text looks short, try re-fetching the tweet via get_tweet to compare
-        if len(fetched_text) < 200:
-            try:
-                full = read_client.get_tweet(
-                    id=getattr(t, 'id', None),
-                    tweet_fields=["text", "entities", "referenced_tweets"],
-                    expansions=["referenced_tweets.id"]
-                )
-                if getattr(full, 'data', None):
-                    ref_text = full.data.get('text') if isinstance(full.data, dict) else getattr(full.data, 'text', '')
-                    print(f"[Search Debug] Re-fetched tweet {getattr(t, 'id', 'unknown')} - refetch_len={len(ref_text)}")
-                    print(f"[Search Debug] Re-fetch preview: {ref_text[:500]}")
-            except Exception as e:
-                print(f"[Search Debug] Re-fetch failed for {getattr(t, 'id', 'unknown')}: {e}")
+            reply_text = fact_check(get_full_text_twitterapiio(getattr(t, 'id', None), keys.get('TWITTERAPIIO_KEY')), getattr(t, 'id', None), context, generate_only=True)
+        except Exception as e:
+            print(f"[Search Debug] Error in fact_check for tweet {getattr(t, 'id', 'unknown')}: {e}")
+            reply_text = None
+        print(f"[Search Debug] Fetched tweet {getattr(t, 'id', 'unknown')} - type={type(t)} - reply_len={len(reply_text) if reply_text else 0}")
+        print(f"[Search Debug] Preview: {reply_text[:500] if reply_text else ''}")
         # basic guard: don't reply to ourselves
         if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
