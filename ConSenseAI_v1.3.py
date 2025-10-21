@@ -236,6 +236,11 @@ def fetch_and_process_search(search_term: str, user_id=None):
 
     # Process older -> newer
     for t in resp.data[::-1]:
+        # In-loop cap check to prevent overruns
+        today_count = _get_today_count()
+        if today_count >= current_cap:
+            print(f"[Search] Cap reached during processing ({today_count}/{current_cap}), stopping batch early.")
+            break
         # Build full context including ancestor chain and thread
         context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
         context['mention'] = t  # Store the search tweet as the mention
