@@ -152,9 +152,8 @@ def _get_today_count():
     return int(data.get(today, 0))
 
 # Compute current search cap based on interval
-def get_current_search_cap(max_daily_cap, interval_hours):
+def get_current_search_cap(max_daily_cap, interval_hours, cap_increase_time='10:00'):
     now = datetime.datetime.now()
-    cap_increase_time = getattr(args, 'cap_increase_time', '10:00')
     try:
         cap_hour, cap_minute = map(int, cap_increase_time.split(':'))
     except Exception:
@@ -201,8 +200,13 @@ def fetch_and_process_search(search_term: str, user_id=None):
     last_id = read_last_search_id(search_term)
     # Respect dynamic cap
     today_count = _get_today_count()
-    current_cap = get_current_search_cap(int(args.search_daily_cap), int(args.search_cap_interval_hours))
-    print(f"[Search] Current dynamic search reply cap: {current_cap} (max: {args.search_daily_cap}, interval: {args.search_cap_interval_hours}h)")
+    start_time = args.cap_increase_time
+    current_cap = get_current_search_cap(
+        int(args.search_daily_cap),
+        int(args.search_cap_interval_hours),
+        start_time
+    )
+    print(f"[Search] Current dynamic search reply cap: {current_cap} (max: {args.search_daily_cap}, interval: {args.search_cap_interval_hours}h, Start Time: {start_time})")
     if today_count >= current_cap:
         print(f"[Search] Current cap reached ({today_count}/{current_cap}), skipping processing")
         return
