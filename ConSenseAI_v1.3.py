@@ -1,3 +1,38 @@
+# Top-level function: summarize and post about recent threads
+def post_recent_threads_summary(n=10):
+    chains = load_ancestor_chains()
+    sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
+    recent = sorted_chains[:n]
+    summary_points = []
+    for conv_id, chain_data in recent:
+        chain = chain_data.get('chain', chain_data) if isinstance(chain_data, dict) else chain_data
+        if not chain:
+            continue
+        # Use build_ancestor_chain to get full hierarchy with usernames and indentation
+        thread_hierarchy = build_ancestor_chain(chain, indent=0)
+        summary_points.append(f'Thread {conv_id[:8]}:{thread_hierarchy}')
+    summary_context = "\n".join(summary_points)
+    prompt = "look at your most recent conversations and post a tweet you feel is something you would say.\n\
+-Feel free to take into account your organizations values if you can find them in a search.\n\
+-Optimize for engagement"
+    try:
+        # Build a minimal context dict with all expected keys
+        context = {
+            "context_instructions": prompt,
+            "ancestor_chain": [],
+            "thread_tweets": [],
+            "quoted_tweets": [],
+            "original_tweet": None,
+        }
+        reply_text = fact_check(summary_context, tweet_id="recent_threads_summary", context=context, generate_only=True)
+        print(f"[RecentThreads] Generated summary: {reply_text}")
+        if reply_text and not args.dryrun:
+            posted = post_client.create_tweet(text=reply_text)
+            if hasattr(posted, 'data') and 'id' in posted.data:
+                save_bot_tweet(posted.data['id'], reply_text)
+                print(f"[RecentThreads] Posted summary tweet {posted.data['id']}")
+    except Exception as e:
+        print(f"[RecentThreads] Error generating or posting summary: {e}")
 import requests
 
 # Fetch the full text of a tweet using twitterapi.io
@@ -1624,6 +1659,7 @@ parser.add_argument('--dedupe_window_hours', type=float, help='Window to conside
 parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
 parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
 parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
+parser.add_argument('--post_interval', type=int, help='Number of cycles between posting something based on recent threads (default 10)', default=10)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -1665,6 +1701,11 @@ backoff_multiplier = 1
 
 # The main loop
 def main():
+    post_interval = int(args.post_interval)
+    if post_interval == 0:
+        print('[Config] post_interval of 0 is not allowed. Defaulting to 10.')
+        post_interval = 10
+    cycle_count = 0
     while True:
         authenticate()
         user_id = BOT_USER_ID
@@ -1683,20 +1724,19 @@ def main():
             print(f"[SearchInit] Warning initializing search state files: {e}")
         try:
             while True:
-                fetch_and_process_mentions(user_id, username)  # Changed from fetch_and_process_tweets
-
-                # If a search term was provided on the CLI, run the search pipeline each cycle.
-                # The search pipeline honors dry-run, human approval, dedupe and daily caps.
+                fetch_and_process_mentions(user_id, username)
                 if getattr(args, 'search_term', None):
                     try:
                         print(f"[Main] Running search for term: {args.search_term}")
                         fetch_and_process_search(args.search_term, user_id=user_id)
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
-                        raise  # This will propagate the error to the outer loop and trigger a restart
-
+                        raise
+                if cycle_count % post_interval == 0:
+                    post_recent_threads_summary(n=10)
+                cycle_count += 1
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
-                time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
+                time.sleep(delay*60*backoff_multiplier)
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
             print(f"Restarting script in {RESTART_DELAY} seconds...")
