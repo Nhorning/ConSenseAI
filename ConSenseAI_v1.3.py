@@ -1738,7 +1738,7 @@ def main():
                         print(f"[Main] Search error: {e}")
                         raise
                 current_post_count = get_successful_post_count()
-                print(f"[Main] Current successful post count since last summary: {current_post_count} (last summary count: {last_summary_post_count})")
+                print(f"[Main] Current successful post count since last summary: {current_post_count} (Post interval: {post_interval})")
                 # Only post summary if enough new successful posts have occurred since last summary
                 if (current_post_count - last_summary_post_count) >= post_interval:
                     post_recent_threads_summary(n=10)
