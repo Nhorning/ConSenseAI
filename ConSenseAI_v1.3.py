@@ -1060,6 +1060,7 @@ def fetch_and_process_mentions(user_id, username):
     last_tweet_id = read_last_tweet_id()
     print(f"Checking for mentions of {username} at {datetime.datetime.now()}")
     sys.stdout.flush()  # Force immediate log update
+    reply_posted = False
     try:
         mentions = read_client.get_users_mentions(
             id=user_id,
@@ -1069,36 +1070,16 @@ def fetch_and_process_mentions(user_id, username):
             expansions=["referenced_tweets.id", "attachments.media_keys"],
             media_fields=["type", "url", "preview_image_url", "alt_text"]
         )
-        
         if mentions.data:
-            for mention in mentions.data[::-1]:  # Process in reverse order to newest first
-                # print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
-                # print(f"[DEBUG] Mention ID: {mention.id}")
-                # print(f"[DEBUG] Mention from: {mention.author_id}")
-                # print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
-                # print(f"[DEBUG] Full mention text: {mention.text}")
-                # print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
-                # print(f"[DEBUG] Mention object type: {type(mention)}")
-                # print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
-                # print(f"[DEBUG] All mention attributes: {dir(mention)}")
-                # print(f"[DEBUG] ===================================")
-                
-                # Fetch conversation context
+            for mention in mentions.data[::-1]:
                 context = get_tweet_context(mention, mentions.includes)
-                context['mention'] = mention  # Store the mention in context
-
-
-                # Safety checks using persisted caches + API results
+                context['mention'] = mention
                 conv_id = str(getattr(mention, 'conversation_id', ''))
                 bot_user_id = user_id
-
-                # 1) If the mention is authored by the bot, skip (normalize types)
                 if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
                     print(f"Skipping mention from self: {mention.text}")
                     success = dryruncheck()
-
                 else:
-                    # 2) Count prior bot replies using ancestor cache + API-provided bot replies
                     api_bot_replies = context.get('bot_replies_in_thread')
                     target_author = getattr(mention, 'author_id', None)
                     if per_user_threshold:
@@ -1113,17 +1094,17 @@ def fetch_and_process_mentions(user_id, username):
                             print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
                             success = dryruncheck()
                             continue
-                    # Pass context to fact_check and reply
                     success = fact_check(mention.text, mention.id, context)
                 if success == 'done!':
                     last_tweet_id = max(last_tweet_id, mention.id)
                     write_last_tweet_id(last_tweet_id)
                     backoff_multiplier = 1
                     time.sleep(30)
+                    reply_posted = True
                 if success == 'delay!':
                     backoff_multiplier *= 2
                     print(f'Backoff Multiplier:{backoff_multiplier}')
-                    return
+                    return reply_posted
         else:
             print("No new mentions found.")
             backoff_multiplier = 1
@@ -1131,6 +1112,7 @@ def fetch_and_process_mentions(user_id, username):
         print(f"Error fetching mentions: {e}")
         backoff_multiplier += 1
         print(f'Backoff Multiplier:{backoff_multiplier}')
+    return reply_posted
 
 from collections import defaultdict
 
@@ -1258,121 +1240,104 @@ def get_tweet_context(tweet, includes=None):
                 else:
                     # fallback: assume entry itself is a tweet-like object
                     last_tweet_obj = last_entry
-                last_id = get_attr(last_tweet_obj, 'id', None)
-            except Exception:
-                last_id = None
-            mention_id = get_attr(tweet, 'id', None)
-            if mention_id and str(last_id) != str(mention_id):
-                # Collect media and quoted tweets for the mention and append to the in-memory chain
-                mention_media = extract_media(tweet, includes)
-                quoted_in_mention = [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))]
-                context['ancestor_chain'].append({
-                    'tweet': tweet,
-                    'quoted_tweets': quoted_in_mention,
-                    'media': mention_media
-                })
-                # Also expose mention media in the top-level context media list
-                context['media'].extend(mention_media)
-                print(f"[Context Cache] Appended current mention {mention_id} to ancestor_chain (cached path)")
+                reply_posted = False
+                today_count = _get_today_count()
+                start_time = args.cap_increase_time
+                current_cap = get_current_search_cap(
+                    int(args.search_daily_cap),
+                    int(args.search_cap_interval_hours),
+                    start_time
+                )
+                print(f"[Search] Current dynamic search reply cap: {current_cap} (max: {args.search_daily_cap}, interval: {args.search_cap_interval_hours}h, Start Time: {start_time})")
+                if today_count >= current_cap:
+                    print(f"[Search] Current cap reached ({today_count}/{current_cap}), skipping processing")
+                    return reply_posted
 
-            context['media'].extend(extract_media(tweet, includes))
+                print(f"[Search] Query='{search_term}' since_id={last_id}")
+                try:
+                    resp = read_client.search_recent_tweets(
+                        query=search_term,
+                        since_id=last_id,
+                        max_results=min(args.search_max_results, 100),
+                        tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
+                        expansions=["referenced_tweets.id", "attachments.media_keys"],
+                        media_fields=["type", "url", "preview_image_url", "alt_text"]
+                    )
+                except tweepy.TweepyException as e:
+                    print(f"[Search] API error: {e}")
+                    backoff_multiplier += 1
+                    return reply_posted
 
-            # Generate full_thread_text from cached data
-            if context["thread_tweets"]:
-                original_author_id = get_attr(tweet, 'author_id')
-                thread_texts = []
-                sorted_tweets = sorted([t for t in context["thread_tweets"] if get_attr(t, 'created_at') is not None],
-                                     key=lambda t: get_attr(t, 'created_at'))
-                for tt in sorted_tweets:
-                    tt_author = get_attr(tt, 'author_id')
-                    if str(tt_author) == str(original_author_id):
-                        tt_text = get_full_text(tt)
-                        thread_texts.append(tt_text)
-                context["full_thread_text"] = " ".join(thread_texts)
-            else:
-                context["full_thread_text"] = get_full_text(tweet)
+                if not resp or not getattr(resp, 'data', None):
+                    print(f"[Search] No results for '{search_term}'")
+                    return reply_posted
 
-            return context
+                bot_id = BOT_USER_ID
 
-    # If not fully cached, build ancestor chain
-    print(f"[Context Cache] Incomplete cache for {conv_id} - building with API")
-    ancestor_chain = []
-    current_tweet = tweet
-    visited = set()
-    quoted_from_api = []  # Collect any newly fetched quoted tweets
-    try:
-        while True:
-            current_text = get_full_text(current_tweet)
-            print(f"[Ancestor Build] Processing tweet {current_tweet.id}, text length: {len(current_text)} chars")
-            quoted_responses = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
-            quoted = [qr.data for qr in quoted_responses]  # Extract data for storage
-            quoted_from_api.extend(quoted)
-            # Extract media, passing includes if available
-            current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
-            media = extract_media(current_tweet, current_includes)
-            # Extract media from quoted tweets
-            for qr in quoted_responses:
-                media.extend(extract_media(qr.data, qr.includes))
-            ancestor_chain.append({
-                "tweet": current_tweet,
-                "quoted_tweets": quoted,
-                "media": media
-            })
-            visited.add(current_tweet.id)
-            parent_id = None
-            if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
-                for ref in current_tweet.referenced_tweets:
-                    if ref.type == 'replied_to':
-                        parent_id = ref.id
+                for t in resp.data[::-1]:
+                    today_count = _get_today_count()
+                    if today_count >= current_cap:
+                        print(f"[Search] Cap reached during processing ({today_count}/{current_cap}), stopping batch early.")
                         break
-            if parent_id is None or parent_id in visited:
-                break
-            parent_response = read_client.get_tweet(
-                id=parent_id,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
-                expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
-            )
-            if parent_response.data:
-                current_tweet = parent_response.data
-                print(f"[API Debug] Fetched parent tweet {parent_id}, text length: {len(current_tweet.text)} chars")
-                print(f"[API Debug] First 100 chars: {current_tweet.text[:100]}")
-                print(f"[API Debug] Last 100 chars: {current_tweet.text[-100:]}")
-            else:
-                break
-    except tweepy.TweepyException as e:
-        print(f"Error building ancestor chain: {e}")
-
-    ancestor_chain = ancestor_chain[::-1]  # Root first
-    context['ancestor_chain'] = ancestor_chain
-
-    # NEW: Ensure the current mention is appended as the final entry with its media
-    if ancestor_chain and ancestor_chain[-1]['tweet'].id != tweet.id:
-        mention_media = extract_media(tweet, includes)
-        ancestor_chain.append({
-            "tweet": tweet,
-            "quoted_tweets": [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))],  # Fetch any quoted in mention
-            "media": mention_media
-        })
-
-    # Fetch thread if not cached and enabled
-    if args.fetchthread and not context["thread_tweets"]:
-        # Fetch as above (code duplicated for clarity, but could refactor)
-        try:
-            thread_response = read_client.search_recent_tweets(
-                query=f"conversation_id:{conv_id} -from:{username}",
-                max_results=10,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
-                expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
-            )
-            if thread_response.data:
-                context["thread_tweets"] = thread_response.data
-        except tweepy.TweepyException as e:
-            print(f"Error fetching thread tweets: {e}")
-
-    # Fetch bot replies if not cached
-    if not context["bot_replies_in_thread"]:
+                    context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
+                    context['mention'] = t
+                    context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
+                    if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
+                        print(f"[Search] Skipping self tweet {t.id}")
+                        continue
+                    conv_id = str(getattr(t, 'conversation_id', ''))
+                    if per_user_threshold:
+                        target_author = getattr(t, 'author_id', None)
+                        prior_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_id, target_author, context.get('bot_replies_in_thread'))
+                        if prior_to_user >= reply_threshold:
+                            print(f"[Search] Skipping {t.id}: bot already replied to user {target_author} {prior_to_user} times (threshold={reply_threshold})")
+                            continue
+                    else:
+                        prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
+                        if prior >= reply_threshold:
+                            print(f"[Search] Skipping {t.id}: bot already replied {prior} times in thread (threshold={reply_threshold})")
+                            continue
+                    try:
+                        reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
+                    except Exception as e:
+                        print(f"[Search] Error generating reply: {e}")
+                        continue
+                    if not isinstance(reply_text, str) or not reply_text:
+                        print(f"[Search] No reply generated for {t.id}; skipping")
+                        continue
+                    lowered = reply_text.lower()
+                    if any(x in lowered for x in ["doxx", "address", "phone", "ssn", "private"]):
+                        print(f"[Search] Reply contains potential sensitive content; queuing for review")
+                        queue_for_approval({"tweet_id": t.id, "text": reply_text, "reason": "sensitive"})
+                        continue
+                    if _is_duplicate(reply_text):
+                        print(f"[Search] Duplicate reply detected; skipping")
+                        continue
+                    today_count = _get_today_count()
+                    if today_count >= int(args.search_daily_cap):
+                        print(f"[Search] Daily cap reached during processing; stopping")
+                        break
+                    if args.enable_human_approval:
+                        queue_for_approval({"tweet_id": t.id, "text": reply_text, "context_summary": get_full_text(t)[:300]})
+                        print(f"[Search] Queued reply for human approval: tweet {t.id}")
+                        continue
+                    if args.dryrun:
+                        print(f"[Search dryrun] Would reply to {t.id}: {reply_text[:200]}")
+                    else:
+                        posted = post_reply(t.id, reply_text, conversation_id=conv_id)
+                        if posted == 'done!':
+                            _add_sent_hash(reply_text)
+                            _increment_daily_count()
+                            write_last_search_id(search_term, t.id)
+                            time.sleep(5)
+                            reply_posted = True
+                        elif posted == 'delay!':
+                            backoff_multiplier *= 2
+                            print(f"[Search] Post rate-limited, backing off")
+                            return reply_posted
+                return reply_posted
+            except Exception as e:
+                print(f"[Context Cache] Error during context loading: {e}")
         try:
             bot_replies_response = read_client.search_recent_tweets(
                 query=f"conversation_id:{conv_id} from:{username}",
@@ -1386,6 +1351,9 @@ def get_tweet_context(tweet, includes=None):
         except tweepy.TweepyException as e:
             print(f"Error fetching bot replies: {e}")
 
+    # Ensure quoted_from_api is always defined
+    if 'quoted_from_api' not in locals():
+        quoted_from_api = []
     # Collect quoted tweets (from chain and any additional)
     for entry in context['ancestor_chain']:
         if entry is None:
@@ -1408,6 +1376,9 @@ def get_tweet_context(tweet, includes=None):
         media = entry.get('media', []) if isinstance(entry, dict) else []
         context['media'].extend([m for m in media if m is not None])
 
+    # Ensure ancestor_chain is always defined
+    if 'ancestor_chain' not in locals():
+        ancestor_chain = context.get('ancestor_chain', [])
     # Save updated cache with additional context
     additional_context = {
         "thread_tweets": [tweet_to_dict(t) for t in context["thread_tweets"]],
@@ -1699,17 +1670,50 @@ APPROVAL_QUEUE_FILE = f'approval_queue_{username}.json'
 RESTART_DELAY = 10
 backoff_multiplier = 1
 
+
+
+
+# Count only bot replies (not summary posts) since last summary
+
+# Use ancestor_chains.json to count bot replies (not summary posts)
+def get_successful_post_count(last_summary_id=None):
+    try:
+        if os.path.exists(ANCESTOR_CHAIN_FILE):
+            with open(ANCESTOR_CHAIN_FILE, 'r') as f:
+                chains = json.load(f)
+                bot_id = getid()  # Get bot user ID
+                count = 0
+                found_last_summary = last_summary_id is None
+                for conv_id, cache_entry in chains.items():
+                    chain = cache_entry.get('chain', []) if isinstance(cache_entry, dict) else cache_entry
+                    for entry in chain:
+                        t = entry.get('tweet', {})
+                        tweet_id = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+                        author_id = str(t.get('author_id')) if isinstance(t, dict) and t.get('author_id') is not None else None
+                        in_reply_to = t.get('in_reply_to_user_id') if isinstance(t, dict) else None
+                        # Only count bot replies (not summary posts or direct posts)
+                        if author_id == str(bot_id) and in_reply_to:
+                            if not found_last_summary:
+                                if tweet_id == last_summary_id:
+                                    found_last_summary = True
+                                continue
+                            if found_last_summary:
+                                count += 1
+                return count
+    except Exception as e:
+        print(f"[CacheCount] Error reading {ANCESTOR_CHAIN_FILE}: {e}")
+    return 0
+
 # The main loop
 def main():
     post_interval = int(args.post_interval)
     if post_interval == 0:
         print('[Config] post_interval of 0 is not allowed. Defaulting to 10.')
         post_interval = 10
-    cycle_count = 0
+    last_summary_post_count = get_successful_post_count()
     while True:
         authenticate()
         user_id = BOT_USER_ID
-        # Initialize search safety stores
         try:
             if not os.path.exists(SENT_HASHES_FILE):
                 with open(SENT_HASHES_FILE, 'w') as f:
@@ -1724,17 +1728,21 @@ def main():
             print(f"[SearchInit] Warning initializing search state files: {e}")
         try:
             while True:
-                fetch_and_process_mentions(user_id, username)
+                mention_replied = fetch_and_process_mentions(user_id, username)
+                search_replied = False
                 if getattr(args, 'search_term', None):
                     try:
                         print(f"[Main] Running search for term: {args.search_term}")
-                        fetch_and_process_search(args.search_term, user_id=user_id)
+                        search_replied = fetch_and_process_search(args.search_term, user_id=user_id)
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
                         raise
-                if cycle_count % post_interval == 0:
+                current_post_count = get_successful_post_count()
+                print(f"[Main] Current successful post count since last summary: {current_post_count} (last summary count: {last_summary_post_count})")
+                # Only post summary if enough new successful posts have occurred since last summary
+                if (current_post_count - last_summary_post_count) >= post_interval:
                     post_recent_threads_summary(n=10)
-                cycle_count += 1
+                    last_summary_post_count = current_post_count
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)
         except (ConnectionError, tweepy.TweepyException, Exception) as e:
