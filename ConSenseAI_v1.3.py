@@ -1693,6 +1693,7 @@ def main():
                         fetch_and_process_search(args.search_term, user_id=user_id)
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
+                        raise  # This will propagate the error to the outer loop and trigger a restart
 
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
