@@ -1030,32 +1030,39 @@ def fetch_and_process_mentions(user_id, username):
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
-            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "referenced_tweets", "attachments", "entities"],
+            tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
             expansions=["referenced_tweets.id", "attachments.media_keys"],
             media_fields=["type", "url", "preview_image_url", "alt_text"]
         )
         
         if mentions.data:
             for mention in mentions.data[::-1]:  # Process in reverse order to newest first
-                # print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
-                # print(f"[DEBUG] Mention ID: {mention.id}")
-                # print(f"[DEBUG] Mention from: {mention.author_id}")
-                # print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
-                # print(f"[DEBUG] Full mention text: {mention.text}")
-                # print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
-                # print(f"[DEBUG] Mention object type: {type(mention)}")
-                # print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
-                # print(f"[DEBUG] All mention attributes: {dir(mention)}")
-                # print(f"[DEBUG] ===================================")
+                print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
+                print(f"[DEBUG] Mention ID: {mention.id}")
+                print(f"[DEBUG] Mention from: {mention.author_id}")
+                print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
+                print(f"[DEBUG] Full mention text: {mention.text}")
+                print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
+                print(f"[DEBUG] Mention object type: {type(mention)}")
+                print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
+                #print(f"[DEBUG] All mention attributes: {dir(mention)}")
+                print(f"[DEBUG] ===================================")
                 
-                # Fetch conversation context
+                # Quick self-check: avoid expensive context fetch when the mention
+                # is authored by the bot itself. Use author_id when present.
+                bot_user_id = user_id
+                mention_author = getattr(mention, 'author_id', None) if hasattr(mention, 'author_id') else (mention.get('author_id') if isinstance(mention, dict) else None)
+                mention_id = getattr(mention, 'id', None) if hasattr(mention, 'id') else (mention.get('id') if isinstance(mention, dict) else None)
+                if mention_author and str(mention_author) == str(bot_user_id):
+                    print(f"Skipping mention from self early: id:{mention_id} author:{mention_author}")
+                    success = dryruncheck()
+                    continue
+
+                # Fetch conversation context (only after quick checks pass)
                 context = get_tweet_context(mention, mentions.includes)
                 context['mention'] = mention  # Store the mention in context
-
-
                 # Safety checks using persisted caches + API results
                 conv_id = str(getattr(mention, 'conversation_id', ''))
-                bot_user_id = user_id
 
                 # 1) If the mention is authored by the bot, skip (normalize types)
                 if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
