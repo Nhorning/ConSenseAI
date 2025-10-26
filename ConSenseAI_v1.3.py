@@ -973,9 +973,9 @@ def post_reflection_on_recent_bot_threads(n=10):
 
         summary_context = "\n\n".join(summary_points)
         prompt = (
-            "Review the following recent threads where I (the bot) participated. "
-            "Write a short reflective tweet that summarizes lessons, themes, or notable patterns across these threads. "
-            "Keep it conversational and under 280 characters."
+            "Prompt: Review the previous recent threads where you participated. "
+            "Write a short reflective tweet inspired by the threads that sounds like you."
+            "Keep it conversational and optimize for engagement."
         )
 
         context = {
