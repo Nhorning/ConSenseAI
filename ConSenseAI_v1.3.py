@@ -983,7 +983,7 @@ def post_reflection_on_recent_bot_threads(n=10):
                 t = entry.get('tweet', {})
                 tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
                 created = t.get('created_at') if isinstance(t, dict) else None
-                # Normalize timestamp-ish value
+                # Normalize timestamp-ish value. Prefer created_at; if missing use tweet id as a fallback
                 ts = 0
                 if created:
                     try:
@@ -994,6 +994,12 @@ def post_reflection_on_recent_bot_threads(n=10):
                             ts = int(created)
                         except Exception:
                             ts = 0
+                # Fallback: if no created_at but we have a tweet id, use the numeric id (snowflake) as a proxy for recency
+                if ts == 0 and tid:
+                    try:
+                        ts = int(tid)
+                    except Exception:
+                        ts = ts
                 if tid and tid in bot_ids:
                     bot_found = True
                     most_recent_ts = max(most_recent_ts, ts)
