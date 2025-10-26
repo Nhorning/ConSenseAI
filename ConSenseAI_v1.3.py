@@ -874,6 +874,140 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
             return 'delay!'
 
 
+def get_total_bot_reply_count():
+    """Count total number of bot tweet ids referenced in the ancestor_chains cache.
+
+    This provides a rough cumulative count of bot replies that are recorded in the cache.
+    Falls back to the number of entries in bot_tweets.json if ancestor cache is empty.
+    """
+    try:
+        chains = load_ancestor_chains()
+        bot_tweets = load_bot_tweets()
+        bot_ids = set(bot_tweets.keys())
+        if not chains:
+            return len(bot_ids)
+        count = 0
+        for conv_id, cache_entry in chains.items():
+            chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            for entry in chain:
+                if not isinstance(entry, dict):
+                    continue
+                t = entry.get('tweet', {})
+                tid = None
+                if isinstance(t, dict):
+                    tid = str(t.get('id')) if t.get('id') is not None else None
+                # Count if this tweet id is known to be a bot tweet
+                if tid and tid in bot_ids:
+                    count += 1
+        return count
+    except Exception as e:
+        print(f"[Reflection] Error counting bot replies: {e}")
+        return len(load_bot_tweets())
+
+
+def post_reflection_on_recent_bot_threads(n=10):
+    """Read the last N threads where the bot posted, generate a reflective tweet about them, and post it.
+
+    Uses the cached ancestor chains to assemble thread hierarchies and passes them to fact_check()
+    with generate_only=True. If args.dryrun is True, it will only print the generated reflection.
+    """
+    try:
+        chains = load_ancestor_chains()
+        if not chains:
+            print("[Reflection] No ancestor chains available to reflect on.")
+            return
+
+        bot_tweets = load_bot_tweets()
+        bot_ids = set(bot_tweets.keys())
+
+        # Gather conversations where the bot has posted and pick the most recent N
+        convs_with_bot = []  # list of (most_recent_bot_time, conv_id, cache_entry)
+        for conv_id, cache_entry in chains.items():
+            chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            most_recent_ts = 0
+            bot_found = False
+            for entry in chain:
+                if not isinstance(entry, dict):
+                    continue
+                t = entry.get('tweet', {})
+                tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+                created = t.get('created_at') if isinstance(t, dict) else None
+                # Normalize timestamp-ish value
+                ts = 0
+                if created:
+                    try:
+                        # created may be ISO string
+                        ts = int(datetime.datetime.fromisoformat(created).timestamp())
+                    except Exception:
+                        try:
+                            ts = int(created)
+                        except Exception:
+                            ts = 0
+                if tid and tid in bot_ids:
+                    bot_found = True
+                    most_recent_ts = max(most_recent_ts, ts)
+            if bot_found:
+                convs_with_bot.append((most_recent_ts, conv_id, cache_entry))
+
+        if not convs_with_bot:
+            print("[Reflection] No conversations with bot replies found in cache.")
+            return
+
+        # Sort by most_recent_ts desc and take top N
+        convs_with_bot.sort(key=lambda x: x[0], reverse=True)
+        selected = convs_with_bot[:n]
+
+        # Build a multi-thread context for fact_check
+        summary_points = []
+        aggregated_chain = []
+        aggregated_thread_tweets = []
+        for ts, conv_id, cache_entry in selected:
+            chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0))
+            # aggregate for context
+            for entry in chain:
+                if isinstance(entry, dict):
+                    aggregated_chain.append(entry)
+            if isinstance(cache_entry, dict) and 'thread_tweets' in cache_entry:
+                aggregated_thread_tweets.extend(cache_entry['thread_tweets'])
+
+        summary_context = "\n\n".join(summary_points)
+        prompt = (
+            "Review the following recent threads where I (the bot) participated. "
+            "Write a short reflective tweet that summarizes lessons, themes, or notable patterns across these threads. "
+            "Keep it conversational and under 280 characters."
+        )
+
+        context = {
+            'context_instructions': prompt,
+            'ancestor_chain': aggregated_chain,
+            'thread_tweets': aggregated_thread_tweets,
+            'quoted_tweets': [],
+            'original_tweet': aggregated_chain[0]['tweet'] if aggregated_chain else None,
+        }
+
+        reflection = fact_check(summary_context, tweet_id="reflection_summary", context=context, generate_only=True)
+        print(f"[Reflection] Generated text: {reflection}")
+        if reflection and not args.dryrun:
+            # Post as a standalone tweet (not a reply)
+            try:
+                posted = post_client.create_tweet(text=reflection)
+                created_id = None
+                if hasattr(posted, 'data') and isinstance(posted.data, dict) and 'id' in posted.data:
+                    created_id = posted.data['id']
+                elif hasattr(posted, 'id'):
+                    created_id = getattr(posted, 'id')
+                if created_id:
+                    save_bot_tweet(created_id, reflection)
+                    print(f"[Reflection] Posted reflection tweet {created_id}")
+            except Exception as e:
+                print(f"[Reflection] Error posting reflection: {e}")
+        return
+    except Exception as e:
+        print(f"[Reflection] Unexpected error: {e}")
+        return
+
+
 def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
     """Append a simple entry for a reply to the ancestor_chains cache so future checks detect the bot reply."""
     try:
@@ -1631,6 +1765,7 @@ parser.add_argument('--dedupe_window_hours', type=float, help='Window to conside
 parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
 parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
 parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
+parser.add_argument('--post_interval', type=int, help='Number of bot replies between posting a reflection based on recent threads (default 10)', default=10)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -1675,6 +1810,12 @@ def main():
     while True:
         authenticate()
         user_id = BOT_USER_ID
+        # Initialize the last summary counter after authentication so BOT_USER_ID is available
+        try:
+            last_summary_count = get_total_bot_reply_count()
+            print(f"[Main] Initial bot reply count: {last_summary_count}")
+        except Exception:
+            last_summary_count = 0
         # Initialize search safety stores
         try:
             if not os.path.exists(SENT_HASHES_FILE):
@@ -1701,6 +1842,17 @@ def main():
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
                         raise  # This will propagate the error to the outer loop and trigger a restart
+
+                # Check whether enough bot replies have occurred to trigger a reflection post
+                try:
+                    current_count = get_total_bot_reply_count()
+                    print(f"[Main] Current successful post count: {current_count} (last: {last_summary_count})")
+                    if (current_count - last_summary_count) >= int(args.post_interval):
+                        print(f"[Main] Triggering reflection: {args.post_interval} posts reached")
+                        post_reflection_on_recent_bot_threads(int(args.post_interval))
+                        last_summary_count = current_count
+                except Exception as e:
+                    print(f"[Main] Error checking/triggering reflection: {e}")
 
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
