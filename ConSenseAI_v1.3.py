@@ -1008,19 +1008,17 @@ def post_reflection_on_recent_bot_threads(n=10):
         convs_with_bot.sort(key=lambda x: x[0], reverse=True)
         selected = convs_with_bot[:n]
 
-        # Build a multi-thread context for fact_check
+        # Build a multi-thread context for fact_check using only the ancestor chains (the thread hierarchy)
         summary_points = []
         aggregated_chain = []
-        aggregated_thread_tweets = []
         for ts, conv_id, cache_entry in selected:
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            # Use only the ancestor chain (thread) text for the summary — do not include broader thread_tweets
             summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0))
-            # aggregate for context
+            # aggregate the chain entries for context
             for entry in chain:
                 if isinstance(entry, dict):
                     aggregated_chain.append(entry)
-            if isinstance(cache_entry, dict) and 'thread_tweets' in cache_entry:
-                aggregated_thread_tweets.extend(cache_entry['thread_tweets'])
 
         summary_context = "\n\n".join(summary_points)
         prompt = (
@@ -1029,10 +1027,11 @@ def post_reflection_on_recent_bot_threads(n=10):
             "Keep it conversational and optimize for engagement."
         )
 
+        # Only provide the ancestor_chain (the thread hierarchy) to the fact_check prompt
         context = {
             'context_instructions': prompt,
             'ancestor_chain': aggregated_chain,
-            'thread_tweets': aggregated_thread_tweets,
+            'thread_tweets': [],  # intentionally empty: reflect on threads only
             'quoted_tweets': [],
             'original_tweet': aggregated_chain[0]['tweet'] if aggregated_chain else None,
         }
