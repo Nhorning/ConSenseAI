@@ -301,8 +301,13 @@ def fetch_and_process_search(search_term: str, user_id=None):
         if args.dryrun:
             print(f"[Search dryrun] Would reply to {t.id}: {reply_text[:200]}")
         else:
+            # Prefer context-provided reply target (e.g., retweeter's tweet id) when available
+            try:
+                reply_target = context.get('reply_target_id') if context and context.get('reply_target_id') else (getattr(t, 'id', None) if hasattr(t, 'id') else (t.get('id') if isinstance(t, dict) else None))
+            except Exception:
+                reply_target = (getattr(t, 'id', None) if hasattr(t, 'id') else (t.get('id') if isinstance(t, dict) else None))
             # post and track
-            posted = post_reply(t.id, reply_text, conversation_id=conv_id)
+            posted = post_reply(reply_target, reply_text, conversation_id=conv_id)
             if posted == 'done!':
                 _add_sent_hash(reply_text)
                 _increment_daily_count()
@@ -829,7 +834,16 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     # Post reply checks are passed
     if dryruncheck() == 'done!':
         conv_id = context.get('conversation_id') if context else None
-        success = post_reply(tweet_id, reply, conversation_id=conv_id)
+        # Prefer a computed reply_target_id (e.g., retweeter's tweet) when available
+        target = None
+        try:
+            if context and context.get('reply_target_id'):
+                target = context.get('reply_target_id')
+        except Exception:
+            target = None
+        if not target:
+            target = tweet_id
+        success = post_reply(target, reply, conversation_id=conv_id)
     else:
         print(f'Not tweeting:\n{reply}')
         success = 'fail'
