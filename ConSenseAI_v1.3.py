@@ -1339,6 +1339,42 @@ def get_tweet_context(tweet, includes=None):
     conv_id = str(context["conversation_id"])
     cached_data = load_ancestor_chains().get(conv_id)
 
+    # Default: reply target is the tweet itself unless we detect a retweet and override it
+    try:
+        context['reply_target_id'] = getattr(tweet, 'id', None) if hasattr(tweet, 'id') else (tweet.get('id') if isinstance(tweet, dict) else None)
+    except Exception:
+        context['reply_target_id'] = None
+
+    # Helper: search includes for a tweet object by id (robust to dict or object shapes)
+    def find_in_includes(includes_obj, tid):
+        if not includes_obj or not tid:
+            return None
+        try:
+            # dict-like includes (e.g., manual caches or some SDKs)
+            if isinstance(includes_obj, dict):
+                # common shapes: {'tweets': [...]} or {'media': [...], 'tweets': [...]}
+                tweets_list = includes_obj.get('tweets') or includes_obj.get('data') or []
+                for tt in tweets_list:
+                    if isinstance(tt, dict) and str(tt.get('id')) == str(tid):
+                        return tt
+                    if hasattr(tt, 'id') and str(getattr(tt, 'id')) == str(tid):
+                        return tt
+            else:
+                # object-like includes (tweepy) may have .data or .tweets attributes
+                if hasattr(includes_obj, 'data') and isinstance(includes_obj.data, list):
+                    for tt in includes_obj.data:
+                        tid_v = getattr(tt, 'id', None) if not isinstance(tt, dict) else tt.get('id')
+                        if str(tid_v) == str(tid):
+                            return tt
+                if hasattr(includes_obj, 'tweets'):
+                    for tt in includes_obj.tweets:
+                        tid_v = getattr(tt, 'id', None) if not isinstance(tt, dict) else tt.get('id')
+                        if str(tid_v) == str(tid):
+                            return tt
+        except Exception:
+            return None
+        return None
+
     if cached_data:
         print(f"[Context Cache] Loaded cached data for conversation {conv_id}")
 
@@ -1463,6 +1499,70 @@ def get_tweet_context(tweet, includes=None):
     current_tweet = tweet
     visited = set()
     quoted_from_api = []  # Collect any newly fetched quoted tweets
+    # Special handling: if this mention is a retweet of another tweet, attempt to
+    # fetch the original full text (prefer twitterapi.io if configured) and
+    # ensure we reply to the retweeter's tweet (the incoming tweet id) rather
+    # than the original tweet's id. This keeps replies visible in the retweeter's thread.
+    try:
+        refs = getattr(tweet, 'referenced_tweets', None) if hasattr(tweet, 'referenced_tweets') else (tweet.get('referenced_tweets') if isinstance(tweet, dict) else None)
+        if refs:
+            for ref in refs:
+                rtype = getattr(ref, 'type', None) if not isinstance(ref, dict) else ref.get('type')
+                rid = getattr(ref, 'id', None) if not isinstance(ref, dict) else ref.get('id')
+                if rtype == 'retweeted' and rid:
+                    original_text = ''
+                    original_obj = None
+                    # 1) Prefer twitterapi.io when available and requested
+                    try:
+                        if getattr(args, 'use_twitterapiio', False) and 'TWITTERAPIIO_KEY' in keys and keys.get('TWITTERAPIIO_KEY'):
+                            original_text = get_full_text_twitterapiio(rid, keys.get('TWITTERAPIIO_KEY'))
+                            if original_text:
+                                original_obj = {'id': str(rid), 'text': original_text}
+                    except Exception as e:
+                        print(f"[Context] twitterapi.io fetch error for {rid}: {e}")
+
+                    # 2) Try to find the referenced tweet in the includes payload
+                    if not original_text:
+                        inc_obj = find_in_includes(includes, rid)
+                        if inc_obj:
+                            original_obj = inc_obj
+                            try:
+                                original_text = get_full_text(inc_obj)
+                            except Exception:
+                                # fallback to dict/text access
+                                if isinstance(inc_obj, dict):
+                                    original_text = inc_obj.get('text', '')
+
+                    # 3) Final fallback: call the official API
+                    if not original_text:
+                        try:
+                            resp = read_client.get_tweet(
+                                id=rid,
+                                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                                expansions=["referenced_tweets.id", "attachments.media_keys"],
+                                media_fields=["type", "url", "preview_image_url", "alt_text"]
+                            )
+                            if resp and getattr(resp, 'data', None):
+                                original_obj = resp.data
+                                try:
+                                    original_text = get_full_text(resp.data)
+                                except Exception:
+                                    original_text = getattr(resp.data, 'text', '') if hasattr(resp.data, 'text') else ''
+                        except Exception as e:
+                            print(f"[Context] Error fetching original tweet {rid} via API: {e}")
+
+                    if original_obj:
+                        context['original_tweet'] = original_obj
+                        context['mention_full_text'] = original_text
+                        # Ensure we reply to the retweeter's tweet (the incoming mention)
+                        try:
+                            context['reply_target_id'] = getattr(tweet, 'id', None) if hasattr(tweet, 'id') else (tweet.get('id') if isinstance(tweet, dict) else None)
+                        except Exception:
+                            pass
+                    # We handled the retweet reference; stop checking further refs
+                    break
+    except Exception as e:
+        print(f"[Context] Error handling retweet fallback: {e}")
     try:
         while True:
             current_text = get_full_text(current_tweet)
