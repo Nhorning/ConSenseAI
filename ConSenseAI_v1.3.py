@@ -721,8 +721,11 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     #get instructions from context (if any)
     instructions = context['context_instructions'] if context and 'context_instructions' in context else ''
     
-    # Use full text for the mention
-    full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
+    # Use full text for the mention. Prefer any full text computed by get_tweet_context()
+    if context and context.get('mention_full_text'):
+        full_mention_text = context.get('mention_full_text')
+    else:
+        full_mention_text = get_full_text(context.get('mention', {})) if context and 'mention' in context else tweet_text
     print(f"[DEBUG] Full mention text length in fact_check: {len(full_mention_text)} chars")
     print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
     media_str = format_media(context.get('media', []), context.get('ancestor_chain', [])) if context else ""
