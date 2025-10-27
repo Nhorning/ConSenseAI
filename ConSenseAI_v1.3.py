@@ -242,7 +242,8 @@ def fetch_and_process_search(search_term: str, user_id=None):
             print(f"[Search] Cap reached during processing ({today_count}/{current_cap}), stopping batch early.")
             break
         # Build full context including ancestor chain and thread, only once
-        context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None)
+        # Pass explicit bot username (global username expected to be set from args)
+        context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None, bot_username=username if 'username' in globals() else None)
         context['mention'] = t
         context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
         # basic guard: don't reply to ourselves
@@ -1268,7 +1269,8 @@ def fetch_and_process_mentions(user_id, username):
                     continue
 
                 # Fetch conversation context (only after quick checks pass)
-                context = get_tweet_context(mention, mentions.includes)
+                # Pass the caller's username explicitly so get_tweet_context can query bot replies
+                context = get_tweet_context(mention, mentions.includes, bot_username=username)
                 context['mention'] = mention  # Store the mention in context
                 # Safety checks using persisted caches + API results
                 conv_id = str(getattr(mention, 'conversation_id', ''))
@@ -1342,7 +1344,7 @@ def collect_quoted(refs, includes=None):
                 print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
     return quoted_responses
 
-def get_tweet_context(tweet, includes=None):
+def get_tweet_context(tweet, includes=None, bot_username=None):
     """Fetch context for a tweet, prioritizing cache before API calls."""
     context = {
         "original_tweet": None,
@@ -1434,8 +1436,10 @@ def get_tweet_context(tweet, includes=None):
             else:
                 # Fetch bot replies
                 try:
+                    # Use explicit bot_username when provided to avoid relying on caller globals
+                    uname = bot_username if bot_username else (username if 'username' in globals() else None)
                     bot_replies_response = read_client.search_recent_tweets(
-                        query=f"conversation_id:{conv_id} from:{username}",
+                        query=f"conversation_id:{conv_id} from:{uname}",
                         max_results=10,
                         tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                         expansions=["referenced_tweets.id", "attachments.media_keys"],
@@ -1655,13 +1659,14 @@ def get_tweet_context(tweet, includes=None):
     # Fetch bot replies if not cached
     if not context["bot_replies_in_thread"]:
         try:
+            uname = bot_username if bot_username else (username if 'username' in globals() else None)
             bot_replies_response = read_client.search_recent_tweets(
-                query=f"conversation_id:{conv_id} from:{username}",
+                query=f"conversation_id:{conv_id} from:{uname}",
                 max_results=10,
                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                 expansions=["referenced_tweets.id", "attachments.media_keys"],
                 media_fields=["type", "url", "preview_image_url", "alt_text"]
-            )
+                )
             if bot_replies_response.data:
                 context["bot_replies_in_thread"] = bot_replies_response.data
         except tweepy.TweepyException as e:
