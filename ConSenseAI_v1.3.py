@@ -1029,8 +1029,8 @@ def post_reflection_on_recent_bot_threads(n=10):
         summary_context = "\n\n".join(summary_points)
         prompt = (
             "Prompt: Review the previous recent threads where you participated. "
-            "Write a short reflective tweet inspired by the threads that sounds like you."
-            "Keep it conversational and optimize for engagement."
+            "Write a short tweet that sounds like you. "
+            "Optimize for engagement."
         )
 
         # Only provide the ancestor_chain (the thread hierarchy) to the fact_check prompt
