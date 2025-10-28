@@ -1247,66 +1247,76 @@ def fetch_and_process_mentions(user_id, username):
         
         if mentions.data:
             for mention in mentions.data[::-1]:  # Process in reverse order to newest first
-                print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
-                print(f"[DEBUG] Mention ID: {mention.id}")
-                print(f"[DEBUG] Mention from: {mention.author_id}")
-                print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
-                print(f"[DEBUG] Full mention text: {mention.text}")
-                print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
-                print(f"[DEBUG] Mention object type: {type(mention)}")
-                print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
-                #print(f"[DEBUG] All mention attributes: {dir(mention)}")
-                print(f"[DEBUG] ===================================")
-                
-                # Quick self-check: avoid expensive context fetch when the mention
-                # is authored by the bot itself. Use author_id when present.
-                bot_user_id = user_id
-                mention_author = getattr(mention, 'author_id', None) if hasattr(mention, 'author_id') else (mention.get('author_id') if isinstance(mention, dict) else None)
-                mention_id = getattr(mention, 'id', None) if hasattr(mention, 'id') else (mention.get('id') if isinstance(mention, dict) else None)
-                if mention_author and str(mention_author) == str(bot_user_id):
-                    print(f"Skipping mention from self early: id:{mention_id} author:{mention_author}")
-                    success = dryruncheck()
-                    continue
+                try:
+                    print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
+                    print(f"[DEBUG] Mention ID: {mention.id}")
+                    print(f"[DEBUG] Mention from: {mention.author_id}")
+                    print(f"[DEBUG] Tweet text length: {len(mention.text)} chars")
+                    print(f"[DEBUG] Full mention text: {mention.text}")
+                    print(f"[DEBUG] Has 'text' attribute: {hasattr(mention, 'text')}")
+                    print(f"[DEBUG] Mention object type: {type(mention)}")
+                    print(f"[DEBUG] Mention.__dict__ keys: {list(mention.__dict__.keys()) if hasattr(mention, '__dict__') else 'N/A'}")
+                    #print(f"[DEBUG] All mention attributes: {dir(mention)}")
+                    print(f"[DEBUG] ===================================")
+                    
+                    # Quick self-check: avoid expensive context fetch when the mention
+                    # is authored by the bot itself. Use author_id when present.
+                    bot_user_id = user_id
+                    mention_author = getattr(mention, 'author_id', None) if hasattr(mention, 'author_id') else (mention.get('author_id') if isinstance(mention, dict) else None)
+                    mention_id = getattr(mention, 'id', None) if hasattr(mention, 'id') else (mention.get('id') if isinstance(mention, dict) else None)
+                    if mention_author and str(mention_author) == str(bot_user_id):
+                        print(f"Skipping mention from self early: id:{mention_id} author:{mention_author}")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
 
-                # Fetch conversation context (only after quick checks pass)
-                # Pass the caller's username explicitly so get_tweet_context can query bot replies
-                context = get_tweet_context(mention, mentions.includes, bot_username=username)
-                context['mention'] = mention  # Store the mention in context
-                # Safety checks using persisted caches + API results
-                conv_id = str(getattr(mention, 'conversation_id', ''))
+                    # Fetch conversation context (only after quick checks pass)
+                    # Pass the caller's username explicitly so get_tweet_context can query bot replies
+                    context = get_tweet_context(mention, mentions.includes, bot_username=username)
+                    context['mention'] = mention  # Store the mention in context
+                    # Safety checks using persisted caches + API results
+                    conv_id = str(getattr(mention, 'conversation_id', ''))
 
-                # 1) If the mention is authored by the bot, skip (normalize types)
-                if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
-                    print(f"Skipping mention from self: {mention.text}")
-                    success = dryruncheck()
+                    # 1) If the mention is authored by the bot, skip (normalize types)
+                    if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
+                        print(f"Skipping mention from self: {mention.text}")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
 
-                else:
-                    # 2) Count prior bot replies using ancestor cache + API-provided bot replies
-                    api_bot_replies = context.get('bot_replies_in_thread')
-                    target_author = getattr(mention, 'author_id', None)
-                    if per_user_threshold:
-                        prior_replies_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_user_id, target_author, api_bot_replies)
-                        if prior_replies_to_user >= reply_threshold:
-                            print(f"Skipping reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
-                            success = dryruncheck()
-                            continue
                     else:
-                        prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
-                        if prior_replies >= reply_threshold:
-                            print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
-                            success = dryruncheck()
-                            continue
-                    # Pass context to fact_check and reply
-                    success = fact_check(mention.text, mention.id, context)
-                if success == 'done!':
-                    last_tweet_id = max(last_tweet_id, mention.id)
-                    write_last_tweet_id(last_tweet_id)
-                    backoff_multiplier = 1
-                    time.sleep(30)
-                if success == 'delay!':
-                    backoff_multiplier *= 2
-                    print(f'Backoff Multiplier:{backoff_multiplier}')
-                    return
+                        # 2) Count prior bot replies using ancestor cache + API-provided bot replies
+                        api_bot_replies = context.get('bot_replies_in_thread')
+                        target_author = getattr(mention, 'author_id', None)
+                        if per_user_threshold:
+                            prior_replies_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_user_id, target_author, api_bot_replies)
+                            if prior_replies_to_user >= reply_threshold:
+                                print(f"Skipping reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
+                                success = dryruncheck()
+                                write_last_tweet_id(mention.id)
+                                continue
+                        else:
+                            prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
+                            if prior_replies >= reply_threshold:
+                                print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
+                                success = dryruncheck()
+                                write_last_tweet_id(mention.id)
+                                continue
+                        # Pass context to fact_check and reply
+                        success = fact_check(mention.text, mention.id, context)
+                        if success == 'done!':
+                            last_tweet_id = max(last_tweet_id, mention.id)
+                            write_last_tweet_id(last_tweet_id)
+                            backoff_multiplier = 1
+                            time.sleep(30)
+                        if success == 'delay!':
+                            backoff_multiplier *= 2
+                            print(f'Backoff Multiplier:{backoff_multiplier}')
+                            return
+                except Exception as e:
+                    print(f"[Mention Processing] Error processing mention {mention.id}: {e}")
+                    # Always write the mention ID to avoid restart loops
+                    write_last_tweet_id(mention.id)
+                    # Continue to next mention instead of crashing
         else:
             print("No new mentions found.")
             backoff_multiplier = 1
@@ -1797,13 +1807,15 @@ def extract_media(t, includes=None):
 
     # Added debug logging for includes
     print(f"[Media Debug] Extracting media for tweet {get_attr(t, 'id')} - includes provided: {includes is not None}")
-    if includes:
-        print(f"[Media Debug] Includes keys: {list(includes.keys()) if isinstance(includes, dict) else 'Not dict'}")
+    if includes and isinstance(includes, dict):
+        print(f"[Media Debug] Includes keys: {list(includes.keys())}")
         if 'media' in includes:
             print(f"[Media Debug] Found 'media' in includes with {len(includes['media'])} items")
+    elif includes:
+        print(f"[Media Debug] Includes provided but not a dict (type: {type(includes)})")
 
     # FIRST: Check includes for media (most reliable source from API responses)
-    if includes and 'media' in includes:
+    if includes and isinstance(includes, dict) and 'media' in includes:
         for m in includes['media']:
             if m is None:
                 continue
