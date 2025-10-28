@@ -1820,9 +1820,9 @@ def extract_media(t, includes=None):
             if m is None:
                 continue
             media_list.append({
-                'type': getattr(m, 'type', '') if hasattr(m, 'type') else m.get('type', ''),
-                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else m.get('url', m.get('preview_image_url', '')),
-                'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else m.get('alt_text', '')
+                'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
+                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
+                'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
             })
             found_media = True
         print(f"[Media Debug] Extracted {len(media_list)} media items from includes['media']")
@@ -1832,12 +1832,13 @@ def extract_media(t, includes=None):
         for m in t['media']:
             if m is None:
                 continue
-            media_list.append({
-                'type': m.get('type'),
-                'url': m.get('url', m.get('preview_image_url', '')),
-                'alt_text': m.get('alt_text', '')
-            })
-            found_media = True
+            if isinstance(m, dict):
+                media_list.append({
+                    'type': m.get('type'),
+                    'url': m.get('url', m.get('preview_image_url', '')),
+                    'alt_text': m.get('alt_text', '')
+                })
+                found_media = True
 
     # Handle Tweepy tweet objects with attachments/media
     #elif hasattr(t, 'attachments') and hasattr(t.attachments, 'media_keys'):
