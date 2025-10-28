@@ -1120,6 +1120,7 @@ def post_reflection_on_recent_bot_threads(n=10):
             "Write a short tweet that sounds like you. "
             "Optimize for engagement. "
             "Do not talk about differences between models."
+            "Post the text of the tweet only, without any additional commentary."
         )
 
         # Only provide the ancestor_chain (the thread hierarchy) to the fact_check prompt
