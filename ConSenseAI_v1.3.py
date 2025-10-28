@@ -887,7 +887,7 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
         print('done!')
         return 'done!'
     except tweepy.TweepyException as e:
-        print(f"Error posting reply: {e}")
+        print(f"Error posting reply (TweepyException): {e}")
         # If rate limited, return delay to trigger backoff
         if hasattr(e, 'response') and e.response.status_code == 429:
             return 'delay!'
@@ -919,13 +919,46 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
             print('done! (retry succeeded)')
             return 'done!'
         except tweepy.TweepyException as retry_e:
-            print(f"[Post Reply] Retry failed: {retry_e}")
+            print(f"[Post Reply] Retry failed (TweepyException): {retry_e}")
             if hasattr(retry_e, 'response') and retry_e.response.status_code == 429:
                 return 'delay!'
             # Retry failed, return failure
             return 'fail'
         except Exception as retry_e:
             print(f"[Post Reply] Retry failed with unexpected error: {retry_e}")
+            return 'fail'
+    except (ConnectionError, OSError) as e:
+        # Catch connection errors (RemoteDisconnected, ConnectionAborted, etc.)
+        print(f"Error posting reply (ConnectionError): {e}")
+        print("[Post Reply] Re-authenticating and retrying post once...")
+        try:
+            import time
+            time.sleep(2)  # Brief pause before retry
+            authenticate()
+            print(f"[Post Reply] Retrying post to tweet {parent_tweet_id}...")
+            response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
+            
+            # Store the full tweet content
+            created_id = None
+            if hasattr(response, 'data') and isinstance(response.data, dict) and 'id' in response.data:
+                created_id = response.data['id']
+            elif hasattr(response, 'id'):
+                created_id = getattr(response, 'id')
+
+            if created_id:
+                print(f"[Tweet Storage] Storing new tweet {created_id} (retry after connection error succeeded)")
+                save_bot_tweet(created_id, reply_text)
+                if conversation_id:
+                    try:
+                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                    except Exception as e:
+                        print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
+            else:
+                print("[Tweet Storage] Warning: Could not get tweet ID from response (retry)")
+            print('done! (retry after connection error succeeded)')
+            return 'done!'
+        except Exception as retry_e:
+            print(f"[Post Reply] Retry after connection error failed: {retry_e}")
             return 'fail'
 
 
