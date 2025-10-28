@@ -861,6 +861,7 @@ def dryruncheck():
         return 'done!'
     
 def post_reply(parent_tweet_id, reply_text, conversation_id=None):
+    """Post a reply tweet. On API errors (except 429), retries once after re-authenticating."""
     try:
         print(f"\nattempting reply to tweet {parent_tweet_id}: {reply_text}\n")
         response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
@@ -887,9 +888,45 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
         return 'done!'
     except tweepy.TweepyException as e:
         print(f"Error posting reply: {e}")
-        #ifthe there have been too many tweets sent out, return to the main function to wait for the delay.
-        if e.response.status_code == 429:
+        # If rate limited, return delay to trigger backoff
+        if hasattr(e, 'response') and e.response.status_code == 429:
             return 'delay!'
+        
+        # For other API errors, try re-authenticating and retrying once
+        print("[Post Reply] Re-authenticating and retrying post once...")
+        try:
+            authenticate()
+            print(f"[Post Reply] Retrying post to tweet {parent_tweet_id}...")
+            response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
+            
+            # Store the full tweet content
+            created_id = None
+            if hasattr(response, 'data') and isinstance(response.data, dict) and 'id' in response.data:
+                created_id = response.data['id']
+            elif hasattr(response, 'id'):
+                created_id = getattr(response, 'id')
+
+            if created_id:
+                print(f"[Tweet Storage] Storing new tweet {created_id} (retry succeeded)")
+                save_bot_tweet(created_id, reply_text)
+                if conversation_id:
+                    try:
+                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                    except Exception as e:
+                        print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
+            else:
+                print("[Tweet Storage] Warning: Could not get tweet ID from response (retry)")
+            print('done! (retry succeeded)')
+            return 'done!'
+        except tweepy.TweepyException as retry_e:
+            print(f"[Post Reply] Retry failed: {retry_e}")
+            if hasattr(retry_e, 'response') and retry_e.response.status_code == 429:
+                return 'delay!'
+            # Retry failed, return failure
+            return 'fail'
+        except Exception as retry_e:
+            print(f"[Post Reply] Retry failed with unexpected error: {retry_e}")
+            return 'fail'
 
 
 def get_total_bot_reply_count():
@@ -1247,6 +1284,7 @@ def fetch_and_process_mentions(user_id, username):
         
         if mentions.data:
             for mention in mentions.data[::-1]:  # Process in reverse order to newest first
+                context = None  # Initialize context outside try block so it's available in except
                 try:
                     print(f"\n[DEBUG] ===== RAW MENTION OBJECT =====")
                     print(f"[DEBUG] Mention ID: {mention.id}")
@@ -1308,13 +1346,19 @@ def fetch_and_process_mentions(user_id, username):
                             write_last_tweet_id(last_tweet_id)
                             backoff_multiplier = 1
                             time.sleep(30)
-                        if success == 'delay!':
+                        elif success == 'delay!':
                             backoff_multiplier *= 2
                             print(f'Backoff Multiplier:{backoff_multiplier}')
                             return
+                        else:
+                            # fact_check returned 'fail' - this means retry failed or dryrun
+                            print(f"[Mention Processing] Fact check failed for mention {mention.id}, skipping")
+                            write_last_tweet_id(mention.id)
                 except Exception as e:
                     print(f"[Mention Processing] Error processing mention {mention.id}: {e}")
-                    # Always write the mention ID to avoid restart loops
+                    import traceback
+                    traceback.print_exc()
+                    # Always write the mention ID to avoid restart loops on code errors
                     write_last_tweet_id(mention.id)
                     # Continue to next mention instead of crashing
         else:
