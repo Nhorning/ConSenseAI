@@ -191,20 +191,23 @@ def queue_for_approval(item: dict):
     _save_json_file(APPROVAL_QUEUE_FILE, queue)
 
 def has_bot_replied_to_tweet(tweet_id):
-    """Check if bot has already replied to a specific tweet by checking ancestor chains and bot_tweets cache."""
+    """Check if bot has already replied to a specific tweet by checking bot_tweets.json for reply target tracking."""
     if not tweet_id:
         return False
     
     tweet_id_str = str(tweet_id)
     
-    # First, check all ancestor chains for any bot reply to this tweet
+    # Load bot_tweets which are keyed by the bot's tweet ID
+    bot_tweets = load_bot_tweets()
+    
+    # We need to check ancestor chains to find replies where in_reply_to matches our target
     chains = load_ancestor_chains()
     
     for conv_id, cache_entry in chains.items():
         if not isinstance(cache_entry, dict):
             continue
             
-        # Check the ancestor chain
+        # Check the ancestor chain for bot tweets
         chain = cache_entry.get('chain', [])
         for entry in chain:
             if not isinstance(entry, dict):
@@ -215,33 +218,31 @@ def has_bot_replied_to_tweet(tweet_id):
                 
             # Check if this is a bot tweet
             tweet_author = str(tweet.get('author_id', ''))
-            if tweet_author != str(BOT_USER_ID):
-                continue
+            tweet_id_from_entry = str(tweet.get('id', ''))
             
-            # Check if it's replying to our target tweet
-            # Look for referenced_tweets to find the parent
-            referenced = tweet.get('referenced_tweets', [])
-            for ref in referenced:
-                if isinstance(ref, dict) and ref.get('type') == 'replied_to':
-                    parent_id = str(ref.get('id', ''))
-                    if parent_id == tweet_id_str:
-                        print(f"[Retweet Check] Bot already replied to tweet {tweet_id} in conversation {conv_id}")
-                        return True
+            # If this is a bot tweet (either by author or by being in bot_tweets)
+            if tweet_author == str(BOT_USER_ID) or tweet_id_from_entry in bot_tweets:
+                # Check in_reply_to_user_id to see if it's replying to our target conversation
+                # Actually, we need to check if the tweet this bot tweet is replying to
+                # is part of the target tweet's thread
+                
+                # Get the parent tweet ID from the referenced_tweets field if it exists
+                # But since referenced_tweets isn't saved, let's use a different approach:
+                # Check if this conversation contains our target tweet as the root
+                if conv_id == tweet_id_str:
+                    # The bot has replied in the conversation started by our target tweet
+                    print(f"[Retweet Check] Bot already replied in conversation {tweet_id_str} (tweet {tweet_id_from_entry})")
+                    return True
         
-        # Also check bot_replies list if present
+        # Also check bot_replies list
         bot_replies = cache_entry.get('bot_replies', [])
         for br in bot_replies:
             if not isinstance(br, dict):
                 continue
-            
-            # Check referenced_tweets for replied_to relationship
-            referenced = br.get('referenced_tweets', [])
-            for ref in referenced:
-                if isinstance(ref, dict) and ref.get('type') == 'replied_to':
-                    parent_id = str(ref.get('id', ''))
-                    if parent_id == tweet_id_str:
-                        print(f"[Retweet Check] Bot already replied to tweet {tweet_id} (found in bot_replies)")
-                        return True
+            # If this bot reply is in a conversation rooted at our target tweet
+            if conv_id == tweet_id_str:
+                print(f"[Retweet Check] Bot already replied in conversation {tweet_id_str} (found in bot_replies)")
+                return True
     
     return False
 
