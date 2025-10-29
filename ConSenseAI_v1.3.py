@@ -190,6 +190,61 @@ def queue_for_approval(item: dict):
     queue.append(item)
     _save_json_file(APPROVAL_QUEUE_FILE, queue)
 
+def has_bot_replied_to_tweet(tweet_id):
+    """Check if bot has already replied to a specific tweet by checking ancestor chains and bot_tweets cache."""
+    if not tweet_id:
+        return False
+    
+    tweet_id_str = str(tweet_id)
+    
+    # First, check all ancestor chains for any bot reply to this tweet
+    chains = load_ancestor_chains()
+    
+    for conv_id, cache_entry in chains.items():
+        if not isinstance(cache_entry, dict):
+            continue
+            
+        # Check the ancestor chain
+        chain = cache_entry.get('chain', [])
+        for entry in chain:
+            if not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet', {})
+            if not isinstance(tweet, dict):
+                continue
+                
+            # Check if this is a bot tweet
+            tweet_author = str(tweet.get('author_id', ''))
+            if tweet_author != str(BOT_USER_ID):
+                continue
+            
+            # Check if it's replying to our target tweet
+            # Look for referenced_tweets to find the parent
+            referenced = tweet.get('referenced_tweets', [])
+            for ref in referenced:
+                if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                    parent_id = str(ref.get('id', ''))
+                    if parent_id == tweet_id_str:
+                        print(f"[Retweet Check] Bot already replied to tweet {tweet_id} in conversation {conv_id}")
+                        return True
+        
+        # Also check bot_replies list if present
+        bot_replies = cache_entry.get('bot_replies', [])
+        for br in bot_replies:
+            if not isinstance(br, dict):
+                continue
+            
+            # Check referenced_tweets for replied_to relationship
+            referenced = br.get('referenced_tweets', [])
+            for ref in referenced:
+                if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                    parent_id = str(ref.get('id', ''))
+                    if parent_id == tweet_id_str:
+                        print(f"[Retweet Check] Bot already replied to tweet {tweet_id} (found in bot_replies)")
+                        return True
+    
+    return False
+
 
 # Removed generate_reply_text_for_tweet to avoid duplicate model orchestration.
 # fetch_and_process_search now calls fact_check(..., generate_only=True) to obtain generated reply text.
@@ -246,10 +301,20 @@ def fetch_and_process_search(search_term: str, user_id=None):
         context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None, bot_username=username if 'username' in globals() else None)
         context['mention'] = t
         context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
+        
         # basic guard: don't reply to ourselves
         if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
             continue
+        
+        # Check if this is a retweet and we've already replied to the original tweet
+        reply_target = context.get('reply_target_id')
+        if reply_target and str(reply_target) != str(t.id):
+            # This is a retweet (reply_target is different from the current tweet)
+            if has_bot_replied_to_tweet(reply_target):
+                print(f"[Search] Skipping retweet {t.id}: bot already replied to original tweet {reply_target}")
+                continue
+        
         # skip if bot already replied in conversation
         conv_id = str(getattr(t, 'conversation_id', ''))
         if per_user_threshold:
