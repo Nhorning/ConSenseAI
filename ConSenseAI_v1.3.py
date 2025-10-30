@@ -770,7 +770,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     context_str = ""
     if context:
         # If context_instructions are present, prepend them
-        if len(context['ancestor_chain']) <= 1:
+        if len(context['ancestor_chain']) < 1:
             if context["original_tweet"]:
                 context_str += f"Original tweet: {get_full_text(context['original_tweet'])}\n"
         if context.get("quoted_tweets"):
@@ -781,7 +781,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
             context_str += "Conversation thread:\n" + "\n".join(
                 [f"- {get_full_text(t)}" for t in context["thread_tweets"]]
             ) + "\n"
-        if len(context['ancestor_chain']) > 1:
+        if len(context['ancestor_chain']) > 0:
                context_str += "\nThread hierarchy:\n"
                context_str += build_ancestor_chain(context.get('ancestor_chain', []))
     
