@@ -1847,6 +1847,18 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             continue
         media = entry.get('media', []) if isinstance(entry, dict) else []
         context['media'].extend([m for m in media if m is not None])
+    
+    # Deduplicate media by URL (keep first occurrence)
+    seen_urls = set()
+    deduped_media = []
+    for m in context['media']:
+        if m and isinstance(m, dict) and m.get('url'):
+            url = m['url']
+            if url not in seen_urls:
+                seen_urls.add(url)
+                deduped_media.append(m)
+    context['media'] = deduped_media
+    print(f"[Media Debug] After deduplication: {len(context['media'])} unique media items")
 
     # Save updated cache with additional context
     additional_context = {
@@ -1894,8 +1906,19 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         quoted_tweets = entry.get("quoted_tweets", [])
         tweet_id = get_attr(t, "id")
         author_id = get_attr(t, "author_id", "")
-        # Prefer cached bot tweet content if available
-        tweet_text = get_bot_tweet_content(tweet_id)
+        is_bot_tweet = str(author_id) == str(getid())
+        
+        # Only check bot_tweets.json if this is actually a bot tweet
+        tweet_text = None
+        if is_bot_tweet and tweet_id:
+            print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
+            tweet_text = get_bot_tweet_content(tweet_id)
+            if tweet_text:
+                print(f"[Tweet Storage] Using stored content for tweet {tweet_id}")
+            else:
+                print(f"[Tweet Storage] No stored content for bot tweet {tweet_id}, fetching from API")
+        
+        # If not a bot tweet or no stored content, fetch normally
         if not tweet_text:
             # Try twitterapi.io for full text, fallback to Tweepy/dict
             api_key = keys['TWITTERAPIIO_KEY']
@@ -1911,15 +1934,6 @@ def build_ancestor_chain(ancestor_chain, indent=0):
                 else:
                     tweet_text = ''
         print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
-        is_bot_tweet = str(author_id) == str(getid())
-        if is_bot_tweet and tweet_id:
-            print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
-            stored_content = get_bot_tweet_content(tweet_id)
-            if stored_content:
-                tweet_text = stored_content
-                print(f"[Tweet Storage] Using stored content for tweet {tweet_id}")
-            else:
-                print(f"[Tweet Storage] Using API content for bot tweet {tweet_id} (no stored version found)")
         author = f" (from @{author_id})" if author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
@@ -1927,8 +1941,16 @@ def build_ancestor_chain(ancestor_chain, indent=0):
             qt_id = get_attr(qt, 'id')
             qt_author_id = qt.get('author_id') if isinstance(qt, dict) else getattr(qt, 'author_id', '')
             qt_author = f" (quoted @{qt_author_id})" if qt_author_id else ""
-            # Prefer cached content, then twitterapi.io, then fallback
-            qt_text = get_bot_tweet_content(qt_id)
+            
+            # Only check bot_tweets.json if this quoted tweet is from the bot
+            qt_text = None
+            is_bot_qt = str(qt_author_id) == str(getid())
+            if is_bot_qt and qt_id:
+                qt_text = get_bot_tweet_content(qt_id)
+                if qt_text:
+                    print(f"[Tweet Storage] Using stored content for bot quoted tweet {qt_id}")
+            
+            # If not a bot tweet or no stored content, fetch normally
             if not qt_text:
                 try:
                     qt_text = get_full_text_twitterapiio(qt_id, api_key)
