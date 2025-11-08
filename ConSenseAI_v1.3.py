@@ -320,10 +320,14 @@ def fetch_and_process_search(search_term: str, user_id=None):
         conv_id = str(getattr(t, 'conversation_id', ''))
         if per_user_threshold:
             target_author = getattr(t, 'author_id', None)
+            print(f"[Search Threshold] Checking per-user threshold for user {target_author} in conversation {conv_id}")
             prior_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_id, target_author, context.get('bot_replies_in_thread'))
+            print(f"[Search Threshold] User {target_author}: {prior_to_user} replies / {reply_threshold} threshold")
             if prior_to_user >= reply_threshold:
-                print(f"[Search] Skipping {t.id}: bot already replied to user {target_author} {prior_to_user} times (threshold={reply_threshold})")
+                print(f"[Search Threshold] SKIPPING {t.id}: bot already replied to user {target_author} {prior_to_user} times (threshold={reply_threshold})")
                 continue
+            else:
+                print(f"[Search Threshold] PROCEEDING with reply to user {target_author} ({prior_to_user} < {reply_threshold})")
         else:
             prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
             if prior >= reply_threshold:
@@ -501,30 +505,41 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
     equals the target_user_id.
     """
     if not conversation_id or not target_user_id:
+        print(f"[Per-User Count] Missing conversation_id or target_user_id, returning 0")
         return 0
     cid = str(conversation_id)
     count = 0
     bot_tweets = load_bot_tweets()
+    
+    print(f"[Per-User Count] Checking replies to user {target_user_id} in conversation {cid}")
 
     # Check ancestor chain cache
     chains = load_ancestor_chains()
     cached_data = chains.get(cid)
     if cached_data:
         chain = cached_data.get('chain', cached_data) if isinstance(cached_data, dict) else cached_data
+        print(f"[Per-User Count] Found cached chain with {len(chain)} entries")
         for entry in chain:
             t = entry.get('tweet', {})
             # t may be a dict saved by tweet_to_dict
             t_author = str(t.get('author_id')) if isinstance(t, dict) and t.get('author_id') is not None else None
             t_in_reply_to = str(t.get('in_reply_to_user_id')) if isinstance(t, dict) and t.get('in_reply_to_user_id') is not None else None
+            tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+            
+            # Debug each entry
+            if t_author and str(t_author) == str(bot_user_id):
+                print(f"[Per-User Count] Found bot tweet {tid}, in_reply_to_user_id={t_in_reply_to}, target={target_user_id}")
+            
             # If this tweet is authored by the bot and was in reply to the target user, count it
             if t_author and bot_user_id and str(t_author) == str(bot_user_id) and t_in_reply_to and str(t_in_reply_to) == str(target_user_id):
                 # If we also stored the tweet id in bot_tweets, prefer that as authoritative
-                tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
                 if tid is None or tid in bot_tweets:
                     count += 1
+                    print(f"[Per-User Count] Counted bot reply {tid} to user {target_user_id} (count now: {count})")
 
         # Also inspect cached bot_replies list if present
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
+            print(f"[Per-User Count] Checking cached bot_replies list ({len(cached_data['bot_replies'])} entries)")
             for br in cached_data['bot_replies']:
                 br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
                 br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
@@ -532,9 +547,13 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
                     br_id = str(br.get('id')) if br.get('id') is not None else None
                     if br_id is None or br_id in bot_tweets:
                         count += 1
+                        print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {count})")
+    else:
+        print(f"[Per-User Count] No cached data found for conversation {cid}")
 
     # Check API-provided bot replies if any
     if api_bot_replies:
+        print(f"[Per-User Count] Checking API-provided bot replies ({len(api_bot_replies)} entries)")
         for br in api_bot_replies:
             # br may be a Tweepy object or dict
             br_author = br.get('author_id') if isinstance(br, dict) else getattr(br, 'author_id', None)
@@ -547,7 +566,9 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
                 br_id = br.get('id') if isinstance(br, dict) else getattr(br, 'id', None)
                 if br_id is None or str(br_id) in bot_tweets:
                     count += 1
+                    print(f"[Per-User Count] Counted bot reply {br_id} from API results (count now: {count})")
 
+    print(f"[Per-User Count] FINAL COUNT: {count} replies to user {target_user_id} in conversation {cid}")
     return count
 
 def save_bot_tweet(tweet_id, full_content):
@@ -1260,6 +1281,11 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text, bot_us
         'quoted_tweets': [], 
         'media': []
     }
+    
+    print(f"[Ancestor Cache] Appending reply {reply_id} to conversation {cid}")
+    print(f"[Ancestor Cache]   - author_id: {bot_user_id}")
+    print(f"[Ancestor Cache]   - in_reply_to_user_id: {parent_author_id}")
+    print(f"[Ancestor Cache]   - This counts as a reply from bot ({bot_user_id}) to user ({parent_author_id})")
 
     # Handle both old format (direct list) and new format (dict with 'chain')
     cached_data = chains.get(cid, {})
@@ -1453,12 +1479,16 @@ def fetch_and_process_mentions(user_id, username):
                         api_bot_replies = context.get('bot_replies_in_thread')
                         target_author = getattr(mention, 'author_id', None)
                         if per_user_threshold:
+                            print(f"[Mention Threshold] Checking per-user threshold for user {target_author} in conversation {conv_id}")
                             prior_replies_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_user_id, target_author, api_bot_replies)
+                            print(f"[Mention Threshold] User {target_author}: {prior_replies_to_user} replies / {reply_threshold} threshold")
                             if prior_replies_to_user >= reply_threshold:
-                                print(f"Skipping reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
+                                print(f"[Mention Threshold] SKIPPING reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
                                 success = dryruncheck()
                                 write_last_tweet_id(mention.id)
                                 continue
+                            else:
+                                print(f"[Mention Threshold] PROCEEDING with reply to user {target_author} ({prior_replies_to_user} < {reply_threshold})")
                         else:
                             prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
                             if prior_replies >= reply_threshold:
