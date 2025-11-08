@@ -913,7 +913,14 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
             target = None
         if not target:
             target = tweet_id
-        success = post_reply(target, reply, conversation_id=conv_id)
+        
+        # Get the parent author ID from the mention (the tweet we're replying to)
+        parent_author = None
+        if context and context.get('mention'):
+            mention = context['mention']
+            parent_author = getattr(mention, 'author_id', None) if hasattr(mention, 'author_id') else mention.get('author_id') if isinstance(mention, dict) else None
+        
+        success = post_reply(target, reply, conversation_id=conv_id, parent_author_id=parent_author)
     else:
         print(f'Not tweeting:\n{reply}')
         success = 'fail'
@@ -926,8 +933,15 @@ def dryruncheck():
     else:
         return 'done!'
     
-def post_reply(parent_tweet_id, reply_text, conversation_id=None):
-    """Post a reply tweet. On API errors (except 429), retries once after re-authenticating."""
+def post_reply(parent_tweet_id, reply_text, conversation_id=None, parent_author_id=None):
+    """Post a reply tweet. On API errors (except 429), retries once after re-authenticating.
+    
+    Args:
+        parent_tweet_id: ID of the tweet being replied to
+        reply_text: Text of the reply
+        conversation_id: ID of the conversation thread
+        parent_author_id: User ID of the parent tweet's author (for per-user counting)
+    """
     try:
         print(f"\nattempting reply to tweet {parent_tweet_id}: {reply_text}\n")
         response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
@@ -944,7 +958,8 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
             # If caller supplied a conversation_id, record the reply in the ancestor cache
             if conversation_id:
                 try:
-                    append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                    append_reply_to_ancestor_chain(conversation_id, created_id, reply_text, 
+                                                  bot_user_id=BOT_USER_ID, parent_author_id=parent_author_id)
                 except Exception as e:
                     print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
         else:
@@ -977,7 +992,8 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
                 save_bot_tweet(created_id, reply_text)
                 if conversation_id:
                     try:
-                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text,
+                                                      bot_user_id=BOT_USER_ID, parent_author_id=parent_author_id)
                     except Exception as e:
                         print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
             else:
@@ -1016,7 +1032,8 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None):
                 save_bot_tweet(created_id, reply_text)
                 if conversation_id:
                     try:
-                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text)
+                        append_reply_to_ancestor_chain(conversation_id, created_id, reply_text,
+                                                      bot_user_id=BOT_USER_ID, parent_author_id=parent_author_id)
                     except Exception as e:
                         print(f"[Ancestor Cache] Warning: could not record reply in cache: {e}")
             else:
@@ -1221,7 +1238,7 @@ def post_reflection_on_recent_bot_threads(n=10):
         return None
 
 
-def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
+def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text, bot_user_id=None, parent_author_id=None):
     """Append a simple entry for a reply to the ancestor_chains cache so future checks detect the bot reply."""
     try:
         chains = {}
@@ -1232,7 +1249,17 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text):
         print(f"[Ancestor Cache] Error reading {ANCESTOR_CHAIN_FILE}: {e}")
         chains = {}
     cid = str(conversation_id)
-    entry = {'tweet': {'id': str(reply_id), 'author_id': None, 'text': reply_text}, 'quoted_tweets': [], 'media': []}
+    # Include author_id and in_reply_to_user_id for proper per-user counting
+    entry = {
+        'tweet': {
+            'id': str(reply_id), 
+            'author_id': str(bot_user_id) if bot_user_id else None, 
+            'in_reply_to_user_id': str(parent_author_id) if parent_author_id else None,
+            'text': reply_text
+        }, 
+        'quoted_tweets': [], 
+        'media': []
+    }
 
     # Handle both old format (direct list) and new format (dict with 'chain')
     cached_data = chains.get(cid, {})
