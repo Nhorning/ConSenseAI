@@ -1146,11 +1146,118 @@ def compute_baseline_replies_since_last_direct_post():
         return 0, total, None
 
 
+def generate_auto_search_term(n=10):
+    """Generate a search term based on recent bot threads.
+    
+    This is called when --search_term is set to "auto" after posting a reflection.
+    Returns a single-word or short phrase search term, or None if unable to generate.
+    """
+    try:
+        chains = load_ancestor_chains()
+        if not chains:
+            print("[Auto Search] No ancestor chains available to generate search term.")
+            return None
+
+        bot_tweets = load_bot_tweets()
+        bot_ids = set(bot_tweets.keys())
+
+        # Gather recent conversations with bot participation
+        convs_with_bot = []
+        for conv_id, cache_entry in chains.items():
+            chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            most_recent_ts = 0
+            bot_found = False
+            for entry in chain:
+                if not isinstance(entry, dict):
+                    continue
+                t = entry.get('tweet', {})
+                tid = str(t.get('id')) if isinstance(t, dict) and t.get('id') is not None else None
+                created = t.get('created_at') if isinstance(t, dict) else None
+                ts = 0
+                if created:
+                    try:
+                        ts = int(datetime.datetime.fromisoformat(created).timestamp())
+                    except Exception:
+                        try:
+                            ts = int(created)
+                        except Exception:
+                            ts = 0
+                if ts == 0 and tid:
+                    try:
+                        ts = int(tid)
+                    except Exception:
+                        ts = 0
+                if tid and tid in bot_ids:
+                    bot_found = True
+                    most_recent_ts = max(most_recent_ts, ts)
+            if bot_found:
+                convs_with_bot.append((most_recent_ts, conv_id, cache_entry))
+
+        if not convs_with_bot:
+            print("[Auto Search] No conversations with bot replies found.")
+            return None
+
+        # Sort by most recent and take top N
+        convs_with_bot.sort(key=lambda x: x[0], reverse=True)
+        selected = convs_with_bot[:n]
+
+        # Build context from recent threads
+        summary_points = []
+        for ts, conv_id, cache_entry in selected:
+            chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0))
+
+        summary_context = "\n\n".join(summary_points)
+        
+        # Prompt the bot to generate a search term
+        prompt = (
+            "Based on the recent threads you participated in, suggest ONE relevant search term or short phrase "
+            "(1-3 words maximum) that would help you find similar important conversations to fact-check. "
+            "The term should relate to misinformation, political issues, or social topics where fact-checking is valuable. "
+            "Respond with ONLY the search term, nothing else. No quotes, no explanation."
+        )
+
+        # Create minimal context for generation
+        context = {
+            'context_instructions': prompt,
+            'ancestor_chain': [],
+            'thread_tweets': [],
+            'quoted_tweets': [],
+            'original_tweet': None,
+        }
+
+        # Generate the search term
+        search_term = fact_check(summary_context, tweet_id="auto_search_gen", context=context, generate_only=True)
+        
+        if search_term:
+            # Clean up the response - remove quotes, extra whitespace, newlines
+            search_term = search_term.strip().strip('"\'').strip()
+            # Take only first line if multiple
+            search_term = search_term.split('\n')[0].strip()
+            # Limit to reasonable length (3-4 words max)
+            words = search_term.split()
+            if len(words) > 4:
+                search_term = ' '.join(words[:4])
+            
+            print(f"[Auto Search] Generated search term: '{search_term}'")
+            return search_term
+        else:
+            print("[Auto Search] Failed to generate search term")
+            return None
+            
+    except Exception as e:
+        print(f"[Auto Search] Error generating search term: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def post_reflection_on_recent_bot_threads(n=10):
     """Read the last N threads where the bot posted, generate a reflective tweet about them, and post it.
 
     Uses the cached ancestor chains to assemble thread hierarchies and passes them to fact_check()
     with generate_only=True. If args.dryrun is True, it will only print the generated reflection.
+    Returns the reflection tweet ID if posted successfully, None otherwise.
     """
     try:
         chains = load_ancestor_chains()
@@ -2173,7 +2280,7 @@ parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t twee
 parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
 parser.add_argument('--per_user_threshold', type=bool, help='If True, enforce reply_threshold per unique user per thread; if False, enforce per-thread total (default True)', default=True)
-parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets', default=None)
+parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets. Use "auto" to automatically generate relevant search terms after each reflection cycle.', default=None)
 parser.add_argument('--search_max_results', type=int, help='Max results to fetch per search (default 10)', default=10)
 parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches increases every "--search_cap_interval_hours" hours(default 5)', default=5)
 parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
@@ -2225,6 +2332,21 @@ def main():
     while True:
         authenticate()
         user_id = BOT_USER_ID
+        
+        # Check if auto search mode is enabled
+        auto_search_mode = False
+        current_search_term = None
+        if getattr(args, 'search_term', None):
+            if args.search_term.lower() == 'auto':
+                auto_search_mode = True
+                print("[Main] Auto search mode enabled - will generate search terms after reflections")
+                # Generate initial search term
+                current_search_term = generate_auto_search_term()
+                if not current_search_term:
+                    print("[Main] Warning: Failed to generate initial search term, will retry after first reflection")
+            else:
+                current_search_term = args.search_term
+        
         # Initialize the last summary counter after authentication so BOT_USER_ID is available
         try:
             baseline, total_replies, last_direct = compute_baseline_replies_since_last_direct_post()
@@ -2254,12 +2376,15 @@ def main():
             while True:
                 fetch_and_process_mentions(user_id, username)  # Changed from fetch_and_process_tweets
 
-                # If a search term was provided on the CLI, run the search pipeline each cycle.
+                # If a search term is available (either static or auto-generated), run the search pipeline
                 # The search pipeline honors dry-run, human approval, dedupe and daily caps.
-                if getattr(args, 'search_term', None):
+                if current_search_term:
                     try:
-                        print(f"[Main] Running search for term: {args.search_term}")
-                        fetch_and_process_search(args.search_term, user_id=user_id)
+                        if auto_search_mode:
+                            print(f"[Main] Running auto-generated search for term: {current_search_term}")
+                        else:
+                            print(f"[Main] Running search for term: {current_search_term}")
+                        fetch_and_process_search(current_search_term, user_id=user_id)
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
                         raise  # This will propagate the error to the outer loop and trigger a restart
@@ -2274,6 +2399,16 @@ def main():
                         # Only advance the baseline if a reflection was actually posted
                         if created_id:
                             last_summary_count = current_count
+                            
+                            # If in auto search mode, generate a new search term
+                            if auto_search_mode:
+                                print("[Main] Auto search mode: generating new search term after reflection")
+                                new_term = generate_auto_search_term()
+                                if new_term:
+                                    current_search_term = new_term
+                                    print(f"[Main] Updated search term to: {current_search_term}")
+                                else:
+                                    print("[Main] Warning: Failed to generate new search term, keeping current term")
                 except Exception as e:
                     print(f"[Main] Error checking/triggering reflection: {e}")
 
