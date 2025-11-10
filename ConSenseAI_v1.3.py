@@ -1211,9 +1211,10 @@ def generate_auto_search_term(n=10):
         
         # Prompt the bot to generate a search term
         prompt = (
-            "Based on the recent threads you participated in, suggest ONE relevant search term or short phrase "
+            "Inspired by the recent threads you participated in, suggest ONE relevant search term or short phrase "
             "(1-3 words maximum) that would help you find similar important conversations to fact-check. "
             "The term should relate to misinformation, political issues, or social topics where fact-checking is valuable. "
+            "Feel free to look up controversial current events and/or your organization's values for further inspiration. "
             "Respond with ONLY the search term, nothing else. No quotes, no explanation."
         )
 
