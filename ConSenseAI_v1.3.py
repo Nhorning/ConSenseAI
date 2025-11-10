@@ -836,8 +836,6 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
-        #vision models (index 6)
-        #{"name": "gpt-5", "client": openai_client, "api": "openai-vision"}
     ]
     
     randomized_models = models[:3].copy()
@@ -1221,7 +1219,8 @@ def post_reflection_on_recent_bot_threads(n=10):
         summary_context = "\n\n".join(summary_points)
         prompt = (
             "Prompt: Review the previous recent threads where you participated. "
-            "Write a short tweet that sounds like you. "
+            "Write a short tweet in your voice that is provocative but true. "
+            "Stick to one subject."
             "Optimize for engagement. "
             "Do not talk about differences between models."
             "Post the text of the tweet only, without any additional commentary."
