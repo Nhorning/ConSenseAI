@@ -2330,23 +2330,29 @@ backoff_multiplier = 1
 
 # The main loop
 def main():
+    # Initialize search term variables outside the restart loop so they persist across restarts
+    auto_search_mode = False
+    current_search_term = None
+    
+    # Check if auto search mode is enabled (only once at startup)
+    if getattr(args, 'search_term', None):
+        if args.search_term.lower() == 'auto':
+            auto_search_mode = True
+            print("[Main] Auto search mode enabled - will generate search terms after reflections")
+        else:
+            current_search_term = args.search_term
+            print(f"[Main] Using static search term: {current_search_term}")
+    
     while True:
         authenticate()
         user_id = BOT_USER_ID
         
-        # Check if auto search mode is enabled
-        auto_search_mode = False
-        current_search_term = None
-        if getattr(args, 'search_term', None):
-            if args.search_term.lower() == 'auto':
-                auto_search_mode = True
-                print("[Main] Auto search mode enabled - will generate search terms after reflections")
-                # Generate initial search term
-                current_search_term = generate_auto_search_term()
-                if not current_search_term:
-                    print("[Main] Warning: Failed to generate initial search term, will retry after first reflection")
-            else:
-                current_search_term = args.search_term
+        # Generate initial search term for auto mode (only if we don't have one yet)
+        if auto_search_mode and not current_search_term:
+            print("[Main] Generating initial search term for auto mode...")
+            current_search_term = generate_auto_search_term()
+            if not current_search_term:
+                print("[Main] Warning: Failed to generate initial search term, will retry after first reflection")
         
         # Initialize the last summary counter after authentication so BOT_USER_ID is available
         try:
