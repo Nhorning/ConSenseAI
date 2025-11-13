@@ -1150,14 +1150,14 @@ def compute_baseline_replies_since_last_direct_post():
         return 0, total, None
 
 
-def generate_auto_search_term(n=10, current_term=None):
+def generate_auto_search_term(n=100, current_term=None):
     """Generate a search term based on recent bot threads.
     
     This is called when --search_term is set to "auto" after posting a reflection.
     Returns a single-word or short phrase search term, or None if unable to generate.
     
     Args:
-        n: Number of recent threads to analyze
+        n: Number of recent threads to analyze (default 100, ~37K tokens)
         current_term: The current search term to avoid reusing
     """
     try:
@@ -1220,10 +1220,11 @@ def generate_auto_search_term(n=10, current_term=None):
         # Prompt the bot to generate a search term
         current_term_text = f'"{current_term}"' if current_term else "not yet set"
         prompt = (
-            f"The current search term is {current_term_text}. "
-            "Inspired by the recent threads you participated in, suggest ONE relevant search term or short phrase "
+            f"Prompt: The current search term is {current_term_text}. "
+            "The previous threads have been provided to give you a sense of who you are. "
+            "Suggest ONE relevant search term or short phrase "
             "(1-3 words maximum) that would help you find other important conversations to respond to. "
-            "DO NOT reuse the current search term - suggest something new that will drive engagement, relevance, and impact. "
+            "DO NOT reuse the current search term - suggest something completely different that will drive engagement, relevance, and impact. "
             #"The term should relate to misinformation, political issues, or social topics where fact-checking is valuable. "
             "Feel free to look up controversial current events and/or your organization's values for further inspiration. "
             "Respond with ONLY the search term, nothing else. No quotes, no explanation."
