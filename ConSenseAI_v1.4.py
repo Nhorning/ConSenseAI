@@ -775,18 +775,22 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
 def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
     # Construct context string
     def get_full_text(t):
-        # Try twitterapi.io first, then fall back to Tweepy/standard
-        api_key = keys['TWITTERAPIIO_KEY']  # Will be loaded from keys.txt if not provided
+        # Get the existing text first to check if we need full text
+        existing_text = ''
+        if hasattr(t, 'text'):
+            existing_text = t.text
+        elif isinstance(t, dict) and 'text' in t:
+            existing_text = t['text']
+        
+        # Only call twitterapi.io if text might be truncated (180-280 chars)
         tweet_id = getattr(t, 'id', None) if hasattr(t, 'id') else t.get('id', None) if isinstance(t, dict) else None
-        if tweet_id:
+        if tweet_id and 180 <= len(existing_text) <= 280:
+            api_key = keys['TWITTERAPIIO_KEY']
             text = get_full_text_twitterapiio(tweet_id, api_key)
             if text:
                 return text
-        if hasattr(t, 'text'):
-            return t.text
-        elif isinstance(t, dict) and 'text' in t:
-            return t['text']
-        return ''  # Fallback for invalid/missing tweet
+        
+        return existing_text  # Return existing text if not truncated or API call failed
 
     context_str = ""
     if context:
@@ -1859,26 +1863,28 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 if rtype == 'retweeted' and rid:
                     original_text = ''
                     original_obj = None
-                    # 1) Prefer twitterapi.io when available and requested
-                    try:
-                        if getattr(args, 'use_twitterapiio', False) and 'TWITTERAPIIO_KEY' in keys and keys.get('TWITTERAPIIO_KEY'):
-                            original_text = get_full_text_twitterapiio(rid, keys.get('TWITTERAPIIO_KEY'))
-                            if original_text:
-                                original_obj = {'id': str(rid), 'text': original_text}
-                    except Exception as e:
-                        print(f"[Context] twitterapi.io fetch error for {rid}: {e}")
-
-                    # 2) Try to find the referenced tweet in the includes payload
-                    if not original_text:
-                        inc_obj = find_in_includes(includes, rid)
-                        if inc_obj:
-                            original_obj = inc_obj
-                            try:
-                                original_text = get_full_text(inc_obj)
-                            except Exception:
-                                # fallback to dict/text access
-                                if isinstance(inc_obj, dict):
-                                    original_text = inc_obj.get('text', '')
+                    
+                    # First, try to find the referenced tweet in the includes payload
+                    inc_obj = find_in_includes(includes, rid)
+                    if inc_obj:
+                        original_obj = inc_obj
+                        try:
+                            original_text = get_full_text(inc_obj)
+                        except Exception:
+                            # fallback to dict/text access
+                            if isinstance(inc_obj, dict):
+                                original_text = inc_obj.get('text', '')
+                    
+                    # Only use twitterapi.io if text might be truncated (180-280 chars)
+                    if 180 <= len(original_text) <= 280:
+                        try:
+                            if getattr(args, 'use_twitterapiio', False) and 'TWITTERAPIIO_KEY' in keys and keys.get('TWITTERAPIIO_KEY'):
+                                full_text = get_full_text_twitterapiio(rid, keys.get('TWITTERAPIIO_KEY'))
+                                if full_text:
+                                    original_text = full_text
+                                    original_obj = {'id': str(rid), 'text': full_text}
+                        except Exception as e:
+                            print(f"[Context] twitterapi.io fetch error for {rid}: {e}")
 
                     # 3) Final fallback: call the official API
                     if not original_text:
@@ -2091,19 +2097,23 @@ def build_ancestor_chain(ancestor_chain, indent=0):
         
         # If not a bot tweet or no stored content, fetch normally
         if not tweet_text:
-            # Try twitterapi.io for full text, fallback to Tweepy/dict
-            api_key = keys['TWITTERAPIIO_KEY']
-            try:
-                tweet_text = get_full_text_twitterapiio(tweet_id, api_key)
-            except Exception as e:
-                print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
-            if not tweet_text:
-                if hasattr(t, 'text'):
-                    tweet_text = t.text
-                elif isinstance(t, dict) and 'text' in t:
-                    tweet_text = t['text']
-                else:
-                    tweet_text = ''
+            # Get existing text first
+            if hasattr(t, 'text'):
+                tweet_text = t.text
+            elif isinstance(t, dict) and 'text' in t:
+                tweet_text = t['text']
+            else:
+                tweet_text = ''
+            
+            # Only try twitterapi.io if text might be truncated (180-280 chars)
+            if 180 <= len(tweet_text) <= 280:
+                api_key = keys['TWITTERAPIIO_KEY']
+                try:
+                    full_text = get_full_text_twitterapiio(tweet_id, api_key)
+                    if full_text:
+                        tweet_text = full_text
+                except Exception as e:
+                    print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
         print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
         author = f" (from @{author_id})" if author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
@@ -2123,17 +2133,22 @@ def build_ancestor_chain(ancestor_chain, indent=0):
             
             # If not a bot tweet or no stored content, fetch normally
             if not qt_text:
-                try:
-                    qt_text = get_full_text_twitterapiio(qt_id, api_key)
-                except Exception as e:
-                    print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
-                if not qt_text:
-                    if hasattr(qt, 'text'):
-                        qt_text = qt.text
-                    elif isinstance(qt, dict) and 'text' in qt:
-                        qt_text = qt['text']
-                    else:
-                        qt_text = ''
+                # Get existing text first
+                if hasattr(qt, 'text'):
+                    qt_text = qt.text
+                elif isinstance(qt, dict) and 'text' in qt:
+                    qt_text = qt['text']
+                else:
+                    qt_text = ''
+                
+                # Only try twitterapi.io if text might be truncated (180-280 chars)
+                if 180 <= len(qt_text) <= 280:
+                    try:
+                        full_text = get_full_text_twitterapiio(qt_id, api_key)
+                        if full_text:
+                            qt_text = full_text
+                    except Exception as e:
+                        print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
