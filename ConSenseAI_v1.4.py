@@ -185,6 +185,47 @@ def _is_duplicate(reply_text: str):
     h = str(abs(hash(reply_text)))
     return h in data
 
+def _has_replied_to_conversation_via_search(conversation_id: str, bot_user_id):
+    """
+    Check if bot has already replied to this conversation by examining ancestor_chains.json.
+    Returns True if the bot has any replies in this conversation thread.
+    """
+    chains = load_ancestor_chains()
+    conv_id_str = str(conversation_id)
+    
+    if conv_id_str not in chains:
+        # No cached data for this conversation
+        return False
+    
+    cache_entry = chains[conv_id_str]
+    
+    # Check if there are any bot replies recorded
+    bot_replies = cache_entry.get('bot_replies', []) if isinstance(cache_entry, dict) else []
+    if bot_replies:
+        print(f"[Search Dedupe] Conversation {conv_id_str[:12]}.. already has {len(bot_replies)} bot replies")
+        return True
+    
+    # Also check the chain itself for bot tweets
+    chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
+    bot_tweets = load_bot_tweets()
+    
+    for entry in chain:
+        if not isinstance(entry, dict):
+            continue
+        tweet = entry.get('tweet', {})
+        if not isinstance(tweet, dict):
+            continue
+        
+        tweet_id = str(tweet.get('id', ''))
+        author_id = str(tweet.get('author_id', ''))
+        
+        # Check if this is a bot tweet
+        if author_id == str(bot_user_id) or tweet_id in bot_tweets:
+            print(f"[Search Dedupe] Conversation {conv_id_str[:12]}.. contains bot tweet {tweet_id}")
+            return True
+    
+    return False
+
 def queue_for_approval(item: dict):
     queue = _load_json_file(APPROVAL_QUEUE_FILE, [])
     queue.append(item)
@@ -316,8 +357,13 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 print(f"[Search] Skipping retweet {t.id}: bot already replied to original tweet {reply_target}")
                 continue
         
-        # skip if bot already replied in conversation
+        # Check if bot has already replied to this conversation (conversation-level dedupe)
         conv_id = str(getattr(t, 'conversation_id', ''))
+        if _has_replied_to_conversation_via_search(conv_id, bot_id):
+            print(f"[Search] Skipping {t.id}: bot already replied to conversation {conv_id[:12]}..")
+            continue
+        
+        # skip if bot already replied in conversation (per-user or per-thread threshold)
         if per_user_threshold:
             target_author = getattr(t, 'author_id', None)
             print(f"[Search Threshold] Checking per-user threshold for user {target_author} in conversation {conv_id}")
