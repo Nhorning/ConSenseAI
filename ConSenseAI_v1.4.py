@@ -349,19 +349,24 @@ def fetch_and_process_search(search_term: str, user_id=None):
             print(f"[Search] Skipping self tweet {t.id}")
             continue
         
-        # Check if this is a retweet and we've already replied to the original tweet
-        reply_target = context.get('reply_target_id')
-        if reply_target and str(reply_target) != str(t.id):
-            # This is a retweet (reply_target is different from the current tweet)
-            if has_bot_replied_to_tweet(reply_target):
-                print(f"[Search] Skipping retweet {t.id}: bot already replied to original tweet {reply_target}")
-                continue
-        
         # Check if bot has already replied to this conversation (conversation-level dedupe)
         conv_id = str(getattr(t, 'conversation_id', ''))
         if _has_replied_to_conversation_via_search(conv_id, bot_id):
             print(f"[Search] Skipping {t.id}: bot already replied to conversation {conv_id[:12]}..")
             continue
+        
+        # Check if this is a retweet and we've already replied to the original tweet's conversation
+        reply_target = context.get('reply_target_id')
+        original_conv_id = context.get('original_conversation_id')
+        if reply_target and str(reply_target) != str(t.id):
+            # This is a retweet (reply_target is different from the current tweet)
+            if has_bot_replied_to_tweet(reply_target):
+                print(f"[Search] Skipping retweet {t.id}: bot already replied to retweeter's conversation {reply_target}")
+                continue
+            # Also check if bot replied to the ORIGINAL tweet's conversation
+            if original_conv_id and _has_replied_to_conversation_via_search(original_conv_id, bot_id):
+                print(f"[Search] Skipping retweet {t.id}: bot already replied to original conversation {original_conv_id[:12]}..")
+                continue
         
         # skip if bot already replied in conversation (per-user or per-thread threshold)
         if per_user_threshold:
@@ -1954,6 +1959,10 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                     if original_obj:
                         context['original_tweet'] = original_obj
                         context['mention_full_text'] = original_text
+                        # Save the original tweet's conversation ID for deduplication
+                        orig_conv_id = original_obj.get('conversation_id') if isinstance(original_obj, dict) else getattr(original_obj, 'conversation_id', None)
+                        if orig_conv_id:
+                            context['original_conversation_id'] = str(orig_conv_id)
                         # Ensure we reply to the retweeter's tweet (the incoming mention)
                         try:
                             context['reply_target_id'] = getattr(tweet, 'id', None) if hasattr(tweet, 'id') else (tweet.get('id') if isinstance(tweet, dict) else None)
