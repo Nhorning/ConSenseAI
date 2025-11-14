@@ -859,7 +859,8 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
             ) + "\n"
         if len(context['ancestor_chain']) > 0:
                context_str += "\nThread hierarchy:\n"
-               context_str += build_ancestor_chain(context.get('ancestor_chain', []))
+               from_cache = context.get('from_cache', False)
+               context_str += build_ancestor_chain(context.get('ancestor_chain', []), from_cache=from_cache)
     
     #get instructions from context (if any)
     instructions = context['context_instructions'] if context and 'context_instructions' in context else ''
@@ -1264,7 +1265,7 @@ def generate_auto_search_term(n=100, current_term=None):
         summary_points = []
         for ts, conv_id, cache_entry in selected:
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
-            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0))
+            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0, from_cache=True))
 
         summary_context = "\n\n".join(summary_points)
         
@@ -1381,7 +1382,7 @@ def post_reflection_on_recent_bot_threads(n=10):
         for ts, conv_id, cache_entry in selected:
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
             # Use only the ancestor chain (thread) text for the summary — do not include broader thread_tweets
-            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0))
+            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0, from_cache=True))
             # aggregate the chain entries for context
             for entry in chain:
                 if isinstance(entry, dict):
@@ -1850,6 +1851,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
         # If we have everything from cache, return early
         if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
             print("[Context Cache] All context loaded from cache - skipping API calls")
+            context['from_cache'] = True  # Mark that this context was loaded from cache
             # Still collect media from mention if not in chain
             # Ensure the current mention is present as the final entry in the ancestor_chain
             try:
@@ -2129,7 +2131,7 @@ def get_attr(obj, attr, default=None):
     else:
         return getattr(obj, attr, default)
 
-def build_ancestor_chain(ancestor_chain, indent=0):
+def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
     out = ""
 
     for i, entry in enumerate(ancestor_chain):
@@ -2161,8 +2163,9 @@ def build_ancestor_chain(ancestor_chain, indent=0):
             else:
                 tweet_text = ''
             
-            # Only try twitterapi.io if text might be truncated (180-280 chars)
-            if 180 <= len(tweet_text) <= 280:
+            # Only try twitterapi.io if text might be truncated AND not from cache
+            # (cached data already has full text from when it was originally fetched)
+            if not from_cache and 180 <= len(tweet_text) <= 280:
                 api_key = keys['TWITTERAPIIO_KEY']
                 try:
                     full_text = get_full_text_twitterapiio(tweet_id, api_key)
@@ -2197,8 +2200,8 @@ def build_ancestor_chain(ancestor_chain, indent=0):
                 else:
                     qt_text = ''
                 
-                # Only try twitterapi.io if text might be truncated (180-280 chars)
-                if 180 <= len(qt_text) <= 280:
+                # Only try twitterapi.io if text might be truncated AND not from cache
+                if not from_cache and 180 <= len(qt_text) <= 280:
                     try:
                         full_text = get_full_text_twitterapiio(qt_id, api_key)
                         if full_text:
