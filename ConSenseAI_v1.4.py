@@ -350,9 +350,15 @@ def fetch_and_process_search(search_term: str, user_id=None):
             continue
         
         # Check if bot has already replied to this conversation (conversation-level dedupe)
+        # Check both the cache AND the context we just built
         conv_id = str(getattr(t, 'conversation_id', ''))
         if _has_replied_to_conversation_via_search(conv_id, bot_id):
             print(f"[Search] Skipping {t.id}: bot already replied to conversation {conv_id[:12]}..")
+            continue
+        
+        # Also check the bot_replies in the context we just built (for conversations not yet cached)
+        if context.get('bot_replies_in_thread'):
+            print(f"[Search] Skipping {t.id}: bot already has {len(context['bot_replies_in_thread'])} replies in this conversation")
             continue
         
         # Check if this is a retweet and we've already replied to the original tweet's conversation
