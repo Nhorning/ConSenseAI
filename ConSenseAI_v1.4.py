@@ -2285,6 +2285,8 @@ def extract_media(t, includes=None):
 
     # Updated: Check for image URLs in entities.urls with enhanced debug logging and Twitter media pattern detection
     entities = get_attr(t, 'entities', {})
+    if entities is None:
+        entities = {}
     urls = entities.get('urls', [])
     print(f"[Media Debug] Found {len(urls)} URLs in entities for tweet {get_attr(t, 'id')}")
     for url in urls:
