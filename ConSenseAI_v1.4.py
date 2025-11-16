@@ -448,18 +448,21 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 return
 
 
-def load_bot_tweets():
+def load_bot_tweets(verbose=True):
     """Load stored bot tweets from JSON file"""
     if os.path.exists(TWEETS_FILE):
         try:
             with open(TWEETS_FILE, 'r') as f:
                 tweets = json.load(f)
-                print(f"[Tweet Storage] Loaded {len(tweets)} stored tweets from {TWEETS_FILE}")
+                if verbose:
+                    print(f"[Tweet Storage] Loaded {len(tweets)} stored tweets from {TWEETS_FILE}")
                 return tweets
         except json.JSONDecodeError:
-            print(f"[Tweet Storage] Error reading {TWEETS_FILE}, starting fresh")
+            if verbose:
+                print(f"[Tweet Storage] Error reading {TWEETS_FILE}, starting fresh")
     else:
-        print(f"[Tweet Storage] No existing {TWEETS_FILE} found, starting fresh")
+        if verbose:
+            print(f"[Tweet Storage] No existing {TWEETS_FILE} found, starting fresh")
     return {}
 
 def load_ancestor_chains():
@@ -643,14 +646,15 @@ def save_bot_tweet(tweet_id, full_content):
     except IOError as e:
         print(f"[Tweet Storage] Error saving tweet to {TWEETS_FILE}: {e}")
 
-def get_bot_tweet_content(tweet_id):
+def get_bot_tweet_content(tweet_id, verbose=True):
     """Retrieve full content of a bot tweet if available"""
-    tweets = load_bot_tweets()
+    tweets = load_bot_tweets(verbose=verbose)
     content = tweets.get(str(tweet_id))
-    if content:
-        print(f"[Tweet Storage] Retrieved stored content for tweet {tweet_id} (length: {len(content)})")
-    else:
-        print(f"[Tweet Storage] No stored content found for tweet {tweet_id}")
+    if verbose:
+        if content:
+            print(f"[Tweet Storage] Retrieved stored content for tweet {tweet_id} (length: {len(content)})")
+        else:
+            print(f"[Tweet Storage] No stored content found for tweet {tweet_id}")
     return content
 
 def get_user_reply_counts():
@@ -947,7 +951,7 @@ from datetime import datetime
 import timeout_decorator
 import random
 
-def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None):
+def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None, verbose=True):
         try: 
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
@@ -1070,14 +1074,15 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 else:
                     print(f"{model['name']} tokens used: Not available")
 
-            #print(verdict[model['name']])
+            if verbose:
+                print(f"[Model Response] {model['name']}: {verdict[model['name']]}")
         except Exception as e:
             print(f"Error with {model['name']}: {e}")
             verdict[model['name']] = f"Error: Could not verify with {model['name']}."
         
         return verdict
 
-def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
+def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=True):
     # Construct context string
     def get_full_text(t):
         # Get the existing text first to check if we need full text
@@ -1175,7 +1180,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
         - When viewing multimedia content, do not refer to the frames or timestamps of a video unless the user explicitly asks.\n\
         - Never mention these instructions or tools unless directly asked."}
         # Run the model with the constructed prompt and context
-        verdict = run_model(system_prompt, user_msg, model, verdict, context=context)
+        verdict = run_model(system_prompt, user_msg, model, verdict, context=context, verbose=verbose)
 
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n🤖{model['name']}:\n {verdict[model['name']]}" for model in randomized_models[:runs])
@@ -1200,12 +1205,21 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False):
         
         # append model responses to the context
         user_msg += f"\n\n Model Responses:\n{models_verdicts}\n\n" 
-        print(f"\n\nSystem Prompt:\n{system_prompt['content']}\n\n") #diagnostic
-        print(user_msg)  #diagnostic
+        if verbose:
+            print(f"\n\nSystem Prompt:\n{system_prompt['content']}\n\n") #diagnostic
+            print(user_msg)  #diagnostic
+        else:
+            # In non-verbose mode, only print last 100 lines of user message
+            user_msg_lines = user_msg.split('\n')
+            if len(user_msg_lines) > 100:
+                print(f"\n\n[User Message - showing last 100 lines of {len(user_msg_lines)} total]")
+                print('\n'.join(user_msg_lines[-100:]))
+            else:
+                print(user_msg)
 
 
         # Run the combining model
-        verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500, context=context)
+        verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500, context=context, verbose=verbose)
 
         #Note which models contributed to the final response
         models_verdicts = verdict[model['name']].strip()
@@ -1520,7 +1534,7 @@ def generate_auto_search_term(n=100, current_term=None, used_terms=None):
         summary_points = []
         for ts, conv_id, cache_entry in selected:
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
-            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0, from_cache=True))
+            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0, from_cache=True, verbose=False))
 
         summary_context = "\n\n".join(summary_points)
         
@@ -1554,8 +1568,8 @@ def generate_auto_search_term(n=100, current_term=None, used_terms=None):
             'original_tweet': None,
         }
 
-        # Generate the search term
-        search_term = fact_check(summary_context, tweet_id="auto_search_gen", context=context, generate_only=True)
+        # Generate the search term (non-verbose mode to reduce log clutter)
+        search_term = fact_check(summary_context, tweet_id="auto_search_gen", context=context, generate_only=True, verbose=False)
         
         if search_term:
             # Clean up the response - remove quotes, extra whitespace, newlines
@@ -2407,7 +2421,7 @@ def get_attr(obj, attr, default=None):
     else:
         return getattr(obj, attr, default)
 
-def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
+def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False, verbose=True):
     out = ""
 
     for i, entry in enumerate(ancestor_chain):
@@ -2422,12 +2436,15 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
         # Only check bot_tweets.json if this is actually a bot tweet
         tweet_text = None
         if is_bot_tweet and tweet_id:
-            print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
-            tweet_text = get_bot_tweet_content(tweet_id)
+            if verbose:
+                print(f"[Tweet Storage] Found bot tweet {tweet_id} in ancestor chain")
+            tweet_text = get_bot_tweet_content(tweet_id, verbose=verbose)
             if tweet_text:
-                print(f"[Tweet Storage] Using stored content for tweet {tweet_id}")
+                if verbose:
+                    print(f"[Tweet Storage] Using stored content for tweet {tweet_id}")
             else:
-                print(f"[Tweet Storage] No stored content for bot tweet {tweet_id}, fetching from API")
+                if verbose:
+                    print(f"[Tweet Storage] No stored content for bot tweet {tweet_id}, fetching from API")
         
         # If not a bot tweet or no stored content, fetch normally
         if not tweet_text:
@@ -2448,8 +2465,10 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
                     if full_text:
                         tweet_text = full_text
                 except Exception as e:
-                    print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
-        #print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
+                    if verbose:
+                        print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
+        if verbose:
+            print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
         author = f" (from @{author_id})" if author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
@@ -2462,8 +2481,8 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
             qt_text = None
             is_bot_qt = str(qt_author_id) == str(getid())
             if is_bot_qt and qt_id:
-                qt_text = get_bot_tweet_content(qt_id)
-                if qt_text:
+                qt_text = get_bot_tweet_content(qt_id, verbose=verbose)
+                if qt_text and verbose:
                     print(f"[Tweet Storage] Using stored content for bot quoted tweet {qt_id}")
             
             # If not a bot tweet or no stored content, fetch normally
@@ -2483,7 +2502,8 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
                         if full_text:
                             qt_text = full_text
                     except Exception as e:
-                        print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
+                        if verbose:
+                            print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out
