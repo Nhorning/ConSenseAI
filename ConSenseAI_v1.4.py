@@ -1389,7 +1389,7 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None, parent_author_
 
 
 def get_total_bot_reply_count():
-    """Count total number of bot tweet ids referenced in the ancestor_chains cache.
+    """Count total number of UNIQUE bot tweet ids referenced in the ancestor_chains cache.
 
     This provides a rough cumulative count of bot replies that are recorded in the cache.
     Falls back to the number of entries in bot_tweets.json if ancestor cache is empty.
@@ -1400,7 +1400,9 @@ def get_total_bot_reply_count():
         bot_ids = set(bot_tweets.keys())
         if not chains:
             return len(bot_ids)
-        count = 0
+        
+        # Use a set to track unique bot tweet IDs across all chains
+        unique_bot_reply_ids = set()
         for conv_id, cache_entry in chains.items():
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
             for entry in chain:
@@ -1410,10 +1412,10 @@ def get_total_bot_reply_count():
                 tid = None
                 if isinstance(t, dict):
                     tid = str(t.get('id')) if t.get('id') is not None else None
-                # Count if this tweet id is known to be a bot tweet
+                # Add to set if this tweet id is known to be a bot tweet
                 if tid and tid in bot_ids:
-                    count += 1
-        return count
+                    unique_bot_reply_ids.add(tid)
+        return len(unique_bot_reply_ids)
     except Exception as e:
         print(f"[Reflection] Error counting bot replies: {e}")
         return len(load_bot_tweets())
