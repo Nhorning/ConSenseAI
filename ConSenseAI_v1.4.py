@@ -1456,7 +1456,7 @@ def compute_baseline_replies_since_last_direct_post():
         return 0, total, None
 
 
-def generate_auto_search_term(n=100, current_term=None):
+def generate_auto_search_term(n=100, current_term=None, used_terms=None):
     """Generate a search term based on recent bot threads.
     
     This is called when --search_term is set to "auto" after posting a reflection.
@@ -1464,7 +1464,8 @@ def generate_auto_search_term(n=100, current_term=None):
     
     Args:
         n: Number of recent threads to analyze (default 100, ~37K tokens)
-        current_term: The current search term to avoid reusing
+        current_term: The current search term to avoid reusing (deprecated, use used_terms)
+        used_terms: List of all previously used search terms to avoid repeating
     """
     try:
         chains = load_ancestor_chains()
@@ -1524,13 +1525,21 @@ def generate_auto_search_term(n=100, current_term=None):
         summary_context = "\n\n".join(summary_points)
         
         # Prompt the bot to generate a search term
-        current_term_text = f'"{current_term}"' if current_term else "not yet set"
+        if not used_terms:
+            used_terms = [current_term] if current_term else []
+        
+        if used_terms:
+            used_terms_text = ', '.join(f'"{term}"' for term in used_terms if term)
+            avoid_clause = f"DO NOT reuse any of these previously used terms: {used_terms_text}. "
+        else:
+            avoid_clause = ""
+        
         prompt = (
-            f"Prompt: The current search term is {current_term_text}. "
-            "The previous threads have been provided to give you a sense of who you are. "
+            "Prompt: The previous threads have been provided to give you a sense of who you are. "
             "Suggest ONE relevant search term or short phrase "
             "(1-3 words maximum) that would help you find other important conversations to respond to. "
-            "DO NOT reuse the current search term - suggest something completely different that will drive engagement, relevance, and impact. "
+            f"{avoid_clause}"
+            "Suggest something completely different that will drive engagement, relevance, and impact. "
             #"The term should relate to misinformation, political issues, or social topics where fact-checking is valuable. "
             "Feel free to look up controversial current events and/or your organization's values for further inspiration. "
             "Respond with ONLY the search term, nothing else. No quotes, no explanation."
@@ -2684,6 +2693,7 @@ def main():
     # Initialize search term variables outside the restart loop so they persist across restarts
     auto_search_mode = False
     current_search_term = None
+    used_search_terms = []  # Track all search terms used in this run
     
     # Check if auto search mode is enabled (only once at startup)
     if getattr(args, 'search_term', None):
@@ -2692,6 +2702,7 @@ def main():
             print("[Main] Auto search mode enabled - will generate search terms after reflections")
         else:
             current_search_term = args.search_term
+            used_search_terms.append(current_search_term)
             print(f"[Main] Using static search term: {current_search_term}")
     
     while True:
@@ -2701,8 +2712,11 @@ def main():
         # Generate initial search term for auto mode (only if we don't have one yet)
         if auto_search_mode and not current_search_term:
             print("[Main] Generating initial search term for auto mode...")
-            current_search_term = generate_auto_search_term(current_term=None)
-            if not current_search_term:
+            current_search_term = generate_auto_search_term(current_term=None, used_terms=used_search_terms)
+            if current_search_term:
+                used_search_terms.append(current_search_term)
+                print(f"[Main] Generated initial search term: {current_search_term}")
+            else:
                 print("[Main] Warning: Failed to generate initial search term, will retry after first reflection")
         
         # Initialize the last summary counter after authentication so BOT_USER_ID is available
@@ -2760,11 +2774,13 @@ def main():
                             
                             # If in auto search mode, generate a new search term
                             if auto_search_mode:
-                                print(f"[Main] Auto search mode: generating new search term (current: {current_search_term})")
-                                new_term = generate_auto_search_term(current_term=current_search_term)
+                                print(f"[Main] Auto search mode: generating new search term (used terms: {used_search_terms})")
+                                new_term = generate_auto_search_term(current_term=current_search_term, used_terms=used_search_terms)
                                 if new_term:
                                     current_search_term = new_term
+                                    used_search_terms.append(new_term)
                                     print(f"[Main] Updated search term to: {current_search_term}")
+                                    print(f"[Main] All used search terms this run: {used_search_terms}")
                                 else:
                                     print("[Main] Warning: Failed to generate new search term, keeping current term")
                 except Exception as e:
