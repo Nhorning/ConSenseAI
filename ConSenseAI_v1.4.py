@@ -726,6 +726,129 @@ def save_followed_user(user_id):
         except IOError as e:
             print(f"[Auto-Follow] Error saving followed user: {e}")
 
+def sync_followed_users_from_api():
+    """
+    Sync the cached followed users list with the actual following list.
+    Tries X API first, falls back to twitterapi.io if that fails.
+    This ensures the cache stays accurate even if users are unfollowed manually.
+    """
+    actual_following = set()
+    
+    # Try X API first (Basic tier)
+    try:
+        print("[Auto-Follow] Syncing followed users from X API...")
+        pagination_token = None
+        
+        while True:
+            try:
+                if pagination_token:
+                    response = read_client.get_users_following(id=getid(), pagination_token=pagination_token, max_results=100)
+                else:
+                    response = read_client.get_users_following(id=getid(), max_results=100)
+                
+                if response.data:
+                    for user in response.data:
+                        actual_following.add(str(user.id))
+                
+                # Check if there are more pages
+                if hasattr(response, 'meta') and response.meta.get('next_token'):
+                    pagination_token = response.meta['next_token']
+                else:
+                    break
+            except tweepy.errors.TooManyRequests:
+                print("[Auto-Follow] Rate limited by X API, will retry next cycle")
+                return
+            except (tweepy.errors.Forbidden, tweepy.errors.Unauthorized) as e:
+                print(f"[Auto-Follow] X API not available: {e}")
+                print("[Auto-Follow] Falling back to twitterapi.io...")
+                actual_following = set()  # Clear any partial data
+                break
+            except Exception as e:
+                print(f"[Auto-Follow] X API error: {e}")
+                print("[Auto-Follow] Falling back to twitterapi.io...")
+                actual_following = set()
+                break
+        
+        # If we got data from X API, we're done
+        if actual_following:
+            tweets = load_bot_tweets()
+            tweets['_followed_users'] = list(actual_following)
+            try:
+                with open(TWEETS_FILE, 'w') as f:
+                    json.dump(tweets, f, indent=2)
+                print(f"[Auto-Follow] Synced {len(actual_following)} followed users from X API")
+            except IOError as e:
+                print(f"[Auto-Follow] Error saving synced followers: {e}")
+            return
+            
+    except Exception as e:
+        print(f"[Auto-Follow] Unexpected error with X API: {e}")
+        print("[Auto-Follow] Falling back to twitterapi.io...")
+    
+    # Fallback to twitterapi.io
+    try:
+        api_key = keys.get('TWITTERAPIIO_KEY')
+        if not api_key:
+            print("[Auto-Follow] No TWITTERAPIIO_KEY found, skipping sync")
+            return
+        
+        print("[Auto-Follow] Using twitterapi.io to sync followed users...")
+        
+        try:
+            url = "https://api.twitterapi.io/twitter/user/followings"
+            
+            headers = {
+                'X-API-Key': api_key
+            }
+            
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                print(f"[Auto-Follow DEBUG] twitterapi.io response keys: {list(data.keys())}")
+                
+                # Extract user IDs from the response
+                # Try different possible response formats
+                users = data.get('users', data.get('data', []))
+                if isinstance(data, list):
+                    users = data
+                    
+                for user in users:
+                    if isinstance(user, dict):
+                        user_id = user.get('id_str') or user.get('id')
+                        if user_id:
+                            actual_following.add(str(user_id))
+                    elif isinstance(user, str):
+                        actual_following.add(str(user))
+                
+            elif response.status_code == 429:
+                print("[Auto-Follow] Rate limited by twitterapi.io, will retry next cycle")
+                return
+            else:
+                print(f"[Auto-Follow] twitterapi.io returned status {response.status_code}: {response.text[:200]}")
+                return
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[Auto-Follow] Network error fetching following list: {e}")
+            return
+        except Exception as e:
+            print(f"[Auto-Follow] Error parsing following list: {e}")
+            return
+        
+        # Update the cache with the actual list
+        tweets = load_bot_tweets()
+        tweets['_followed_users'] = list(actual_following)
+        
+        try:
+            with open(TWEETS_FILE, 'w') as f:
+                json.dump(tweets, f, indent=2)
+            print(f"[Auto-Follow] Synced {len(actual_following)} followed users from twitterapi.io")
+        except IOError as e:
+            print(f"[Auto-Follow] Error saving synced followers: {e}")
+            
+    except Exception as e:
+        print(f"[Auto-Follow] Error syncing followed users: {e}")
+
 def follow_user(user_id):
     """
     Follow a user via Twitter API.
@@ -1541,6 +1664,12 @@ def post_reflection_on_recent_bot_threads(n=10):
         reflection = fact_check(summary_context, tweet_id="reflection_summary", context=context, generate_only=True)
         print(f"[Reflection] Generated text: {reflection}")
         
+        # Sync followed users from API to keep cache accurate
+        try:
+            sync_followed_users_from_api()
+        except Exception as e:
+            print(f"[Reflection] Error during follower sync: {e}")
+        
         # Check for users to auto-follow during reflection cycle
         try:
             check_and_follow_active_users(min_replies=args.follow_threshold)
@@ -2311,7 +2440,7 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False):
                         tweet_text = full_text
                 except Exception as e:
                     print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
-        print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
+        #print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
         author = f" (from @{author_id})" if author_id else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
