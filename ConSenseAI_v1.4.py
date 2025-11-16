@@ -653,6 +653,131 @@ def get_bot_tweet_content(tweet_id):
         print(f"[Tweet Storage] No stored content found for tweet {tweet_id}")
     return content
 
+def get_user_reply_counts():
+    """
+    Count how many times each user has mentioned/replied to the bot.
+    Only counts tweets that directly reply to (mention) the bot.
+    Returns dict: {user_id: mention_count}
+    """
+    user_counts = {}
+    
+    # Load ancestor chains which contain all conversation data
+    try:
+        with open(ANCESTOR_CHAIN_FILE, 'r') as f:
+            chains = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("[Auto-Follow] No ancestor chains found")
+        return user_counts
+    
+    bot_id = str(getid())
+    
+    for conv_id, conv_data in chains.items():
+        # Handle both dict format (new) and list format (legacy)
+        if isinstance(conv_data, dict):
+            chain = conv_data.get('chain', [])
+            bot_replies = conv_data.get('bot_replies', [])
+        else:
+            chain = conv_data
+            bot_replies = []
+        
+        # Only process conversations where the bot participated
+        if not bot_replies and not any(str(get_attr(entry.get('tweet'), 'author_id')) == bot_id 
+                                       for entry in chain if entry and isinstance(entry, dict)):
+            continue
+        
+        # Count tweets that directly reply to the bot (in_reply_to_user_id == bot_id)
+        for entry in chain:
+            if not entry or not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet')
+            if not tweet:
+                continue
+            
+            author_id = str(get_attr(tweet, 'author_id', ''))
+            in_reply_to = str(get_attr(tweet, 'in_reply_to_user_id', ''))
+            
+            # Count only if this tweet is a direct reply/mention to the bot
+            if author_id and author_id != bot_id and in_reply_to == bot_id:
+                user_counts[author_id] = user_counts.get(author_id, 0) + 1
+    
+    print(f"[Auto-Follow] Counted mentions from {len(user_counts)} unique users across {len(chains)} conversations")
+    return user_counts
+
+def get_followed_users():
+    """
+    Load list of users we've already followed. 
+    Stored in bot_tweets.json under special key '_followed_users'
+    """
+    tweets = load_bot_tweets()
+    followed = tweets.get('_followed_users', [])
+    return set(followed)
+
+def save_followed_user(user_id):
+    """Add user_id to the list of followed users in bot_tweets.json"""
+    tweets = load_bot_tweets()
+    followed = tweets.get('_followed_users', [])
+    if user_id not in followed:
+        followed.append(user_id)
+        tweets['_followed_users'] = followed
+        try:
+            with open(TWEETS_FILE, 'w') as f:
+                json.dump(tweets, f, indent=2)
+                print(f"[Auto-Follow] Saved user {user_id} to followed list")
+        except IOError as e:
+            print(f"[Auto-Follow] Error saving followed user: {e}")
+
+def follow_user(user_id):
+    """
+    Follow a user via Twitter API.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        # Use Tweepy v2 Client method
+        post_client.follow_user(target_user_id=user_id)
+        print(f"[Auto-Follow] Successfully followed user {user_id}")
+        return True
+    except tweepy.errors.Forbidden as e:
+        # Already following or user has blocked us
+        print(f"[Auto-Follow] Cannot follow user {user_id}: {e}")
+        return False
+    except tweepy.errors.TooManyRequests:
+        print(f"[Auto-Follow] Rate limited on follow request for user {user_id}")
+        return False
+    except Exception as e:
+        print(f"[Auto-Follow] Error following user {user_id}: {e}")
+        return False
+
+def check_and_follow_active_users(min_replies=3):
+    """
+    Check for users with min_replies or more interactions and follow them.
+    Called during reflection cycle.
+    """
+    print(f"[Auto-Follow] Checking for users with {min_replies}+ replies to follow...")
+    
+    user_counts = get_user_reply_counts()
+    already_followed = get_followed_users()
+    
+    # Filter to users with enough replies who we haven't followed yet
+    to_follow = {uid: count for uid, count in user_counts.items() 
+                 if count >= min_replies and uid not in already_followed}
+    
+    if not to_follow:
+        print(f"[Auto-Follow] No new users to follow (checked {len(user_counts)} users, {len(already_followed)} already followed)")
+        return
+    
+    print(f"[Auto-Follow] Found {len(to_follow)} users to follow: {to_follow}")
+    
+    # Follow each user
+    followed_count = 0
+    for user_id, count in to_follow.items():
+        if follow_user(user_id):
+            save_followed_user(user_id)
+            followed_count += 1
+            # Add small delay between follows to avoid rate limits
+            time.sleep(2)
+    
+    print(f"[Auto-Follow] Successfully followed {followed_count}/{len(to_follow)} users")
+
 def load_keys():
     """Load keys from the key file. Format:
     XAPI_key=_kJsU_your_XAPI_KEY 
@@ -1415,6 +1540,13 @@ def post_reflection_on_recent_bot_threads(n=10):
 
         reflection = fact_check(summary_context, tweet_id="reflection_summary", context=context, generate_only=True)
         print(f"[Reflection] Generated text: {reflection}")
+        
+        # Check for users to auto-follow during reflection cycle
+        try:
+            check_and_follow_active_users(min_replies=args.follow_threshold)
+        except Exception as e:
+            print(f"[Reflection] Error during auto-follow check: {e}")
+        
         if reflection and not args.dryrun:
             # Post as a standalone tweet (not a reply)
             try:
@@ -2378,6 +2510,7 @@ parser.add_argument('--enable_human_approval', type=bool, help='If True, queue c
 parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
 parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
 parser.add_argument('--post_interval', type=int, help='Number of bot replies between posting a reflection based on recent threads (default 10)', default=10)
+parser.add_argument('--follow_threshold', type=int, help='Minimum number of replies from a user before auto-following them (default 2)', default=2)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
