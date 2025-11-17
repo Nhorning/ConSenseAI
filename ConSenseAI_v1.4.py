@@ -812,18 +812,22 @@ def sync_followed_users_from_api():
                 print(f"[Auto-Follow DEBUG] twitterapi.io response keys: {list(data.keys())}")
                 
                 # Extract user IDs from the response
-                # Try different possible response formats
-                users = data.get('users', data.get('data', []))
+                # twitterapi.io returns 'followings' key with list of users
+                users = data.get('followings', data.get('users', data.get('data', [])))
                 if isinstance(data, list):
                     users = data
+                
+                print(f"[Auto-Follow DEBUG] Found {len(users) if isinstance(users, list) else 0} users in response")
                     
                 for user in users:
                     if isinstance(user, dict):
                         user_id = user.get('id_str') or user.get('id')
                         if user_id:
                             actual_following.add(str(user_id))
+                            print(f"[Auto-Follow DEBUG] Added user {user_id} to following list")
                     elif isinstance(user, str):
                         actual_following.add(str(user))
+                        print(f"[Auto-Follow DEBUG] Added user {user} to following list")
                 
             elif response.status_code == 429:
                 print("[Auto-Follow] Rate limited by twitterapi.io, will retry next cycle")
