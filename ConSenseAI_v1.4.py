@@ -804,16 +804,17 @@ def sync_followed_users_from_api():
             headers = {
                 'X-API-Key': api_key
             }
+            querystring = {"pageSize":"200","userName":username}
             
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, params=querystring, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 print(f"[Auto-Follow DEBUG] twitterapi.io response keys: {list(data.keys())}")
                 
                 # Extract user IDs from the response
-                # twitterapi.io returns 'followings' key with list of users
-                users = data.get('followings', data.get('users', data.get('data', [])))
+                # Note: twitterapi.io uses 'followers' key even for the /user/followings endpoint
+                users = data.get('followers', data.get('followings', data.get('users', data.get('data', []))))
                 if isinstance(data, list):
                     users = data
                 
@@ -821,10 +822,11 @@ def sync_followed_users_from_api():
                     
                 for user in users:
                     if isinstance(user, dict):
-                        user_id = user.get('id_str') or user.get('id')
+                        # The 'id' field contains the user ID as a string
+                        user_id = user.get('id') or user.get('id_str')
                         if user_id:
                             actual_following.add(str(user_id))
-                            print(f"[Auto-Follow DEBUG] Added user {user_id} to following list")
+                            print(f"[Auto-Follow DEBUG] Added user {user_id} (name: {user.get('userName', 'unknown')}) to following list")
                     elif isinstance(user, str):
                         actual_following.add(str(user))
                         print(f"[Auto-Follow DEBUG] Added user {user} to following list")
