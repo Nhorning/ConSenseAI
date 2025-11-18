@@ -1438,7 +1438,8 @@ def compute_baseline_replies_since_last_direct_post():
     """
     try:
         bot_tweets = load_bot_tweets()  # dict of id->text
-        bot_ids = set(str(k) for k in bot_tweets.keys())
+        # Filter out special keys like '_followed_users' that aren't tweet IDs
+        bot_ids = set(str(k) for k in bot_tweets.keys() if not str(k).startswith('_'))
 
         # Collect bot ids that appear in ancestor chains (i.e., replies)
         chains = load_ancestor_chains()
