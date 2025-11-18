@@ -1789,7 +1789,7 @@ def authenticate():
     keys = load_keys()
     
     # Always use bearer for read_client (app-only, basic-tier app)
-    read_client = tweepy.Client(bearer_token=keys['bearer_token'])
+    read_client = tweepy.Client(bearer_token=keys['bearer_token'], wait_on_rate_limit=True, timeout=30)
     print("Read client authenticated with Bearer Token (app-only, basic tier).")
     print(f"[DEBUG] Bearer token (first 20 chars): {keys['bearer_token'][:20]}...")
     print("[DEBUG] Please verify this bearer token matches your Basic tier app in the Twitter Developer Portal")
@@ -1802,7 +1802,9 @@ def authenticate():
                 consumer_key=keys['XAPI_key'],
                 consumer_secret=keys['XAPI_secret'],
                 access_token=keys['access_token'],
-                access_token_secret=keys['access_token_secret']
+                access_token_secret=keys['access_token_secret'],
+                wait_on_rate_limit=True,
+                timeout=30
             )
             user = post_client.get_me()
             print(f"Post client authenticated as @{user.data.username} (free tier).")
