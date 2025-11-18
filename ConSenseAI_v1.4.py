@@ -1582,7 +1582,7 @@ def generate_auto_search_term(n=100, current_term=None, used_terms=None):
             "Suggest something completely different that will drive engagement, relevance, and impact. "
             #"The term should relate to misinformation, political issues, or social topics where fact-checking is valuable. "
             "Feel free to look up controversial current events and/or your organization's values for further inspiration. "
-            "Respond with ONLY the search term, nothing else. No quotes, no explanation."
+            "Respond with ONLY the search term, nothing else. No quotes, no explanation - PARTICULARLY if you are in the final pass."
         )
 
         # Create minimal context for generation
