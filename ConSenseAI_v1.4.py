@@ -1291,9 +1291,22 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None, parent_author_
         conversation_id: ID of the conversation thread
         parent_author_id: User ID of the parent tweet's author (for per-user counting)
     """
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("API call timed out after 60 seconds")
+    
     try:
         print(f"\nattempting reply to tweet {parent_tweet_id}: {reply_text}\n")
-        response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
+        
+        # Set a 60-second timeout for the API call
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(60)
+        
+        try:
+            response = post_client.create_tweet(text=reply_text, in_reply_to_tweet_id=parent_tweet_id)
+        finally:
+            signal.alarm(0)  # Cancel the alarm
         # Store the full tweet content
         created_id = None
         if hasattr(response, 'data') and isinstance(response.data, dict) and 'id' in response.data:
@@ -1358,6 +1371,10 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None, parent_author_
         except Exception as retry_e:
             print(f"[Post Reply] Retry failed with unexpected error: {retry_e}")
             return 'fail'
+    except TimeoutError as e:
+        print(f"Error posting reply (TimeoutError): {e}")
+        print("[Post Reply] Twitter API timed out. Skipping this tweet and continuing.")
+        return 'fail'
     except (ConnectionError, OSError) as e:
         # Catch connection errors (RemoteDisconnected, ConnectionAborted, etc.)
         print(f"Error posting reply (ConnectionError): {e}")
