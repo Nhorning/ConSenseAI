@@ -448,6 +448,184 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 return
 
 
+def fetch_and_process_followed_users():
+    """
+    Periodically check tweets from followed users and reply to them.
+    Uses same pipeline as search with safeguards: daily cap, dedupe, threshold checks.
+    """
+    global backoff_multiplier
+    
+    # Check if feature is enabled
+    if not getattr(args, 'check_followed_users', False):
+        return
+    
+    # Get list of followed users
+    followed_users = get_followed_users()
+    if not followed_users:
+        print("[Followed] No followed users found")
+        return
+    
+    print(f"[Followed] Checking tweets from {len(followed_users)} followed users")
+    
+    # Load last checked tweet IDs per user
+    last_checked = {}
+    if os.path.exists(FOLLOWED_USERS_LAST_CHECK_FILE):
+        try:
+            with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'r') as f:
+                last_checked = json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"[Followed] Error loading last checked file: {e}")
+            last_checked = {}
+    
+    # Respect daily cap (share same cap as search for consistency)
+    today_count = _get_today_count()
+    start_time = args.cap_increase_time
+    current_cap = get_current_search_cap(
+        int(args.search_daily_cap),
+        int(args.search_cap_interval_hours),
+        start_time
+    )
+    print(f"[Followed] Current dynamic reply cap: {current_cap} (today's count: {today_count})")
+    if today_count >= current_cap:
+        print(f"[Followed] Cap reached ({today_count}/{current_cap}), skipping")
+        return
+    
+    bot_id = BOT_USER_ID
+    max_tweets_per_user = getattr(args, 'followed_users_max_tweets', 5)
+    
+    # Check each followed user
+    for user_id in list(followed_users)[:10]:  # Limit to 10 users per cycle to avoid API limits
+        # In-loop cap check
+        today_count = _get_today_count()
+        if today_count >= current_cap:
+            print(f"[Followed] Cap reached during processing ({today_count}/{current_cap}), stopping")
+            break
+        
+        try:
+            # Fetch recent tweets from this user
+            since_id = last_checked.get(str(user_id))
+            print(f"[Followed] Fetching tweets from user {user_id} (since_id={since_id})")
+            
+            resp = read_client.get_users_tweets(
+                id=user_id,
+                since_id=since_id,
+                max_results=min(max_tweets_per_user, 100),
+                tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
+                expansions=["referenced_tweets.id", "attachments.media_keys"],
+                media_fields=["type", "url", "preview_image_url", "alt_text"]
+            )
+            
+            if not resp or not getattr(resp, 'data', None):
+                print(f"[Followed] No new tweets from user {user_id}")
+                continue
+            
+            # Process tweets from oldest to newest
+            for t in resp.data[::-1]:
+                # In-loop cap check
+                today_count = _get_today_count()
+                if today_count >= current_cap:
+                    print(f"[Followed] Cap reached during tweet processing ({today_count}/{current_cap}), stopping")
+                    break
+                
+                # Build full context
+                context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None, bot_username=username if 'username' in globals() else None)
+                context['mention'] = t
+                context['context_instructions'] = "\nPrompt: appropriately respond to this tweet from someone you follow."
+                
+                # Don't reply to our own tweets
+                if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
+                    print(f"[Followed] Skipping self tweet {t.id}")
+                    continue
+                
+                # Check if bot already replied to this conversation
+                conv_id = str(getattr(t, 'conversation_id', ''))
+                if _has_replied_to_conversation_via_search(conv_id, bot_id):
+                    print(f"[Followed] Skipping {t.id}: bot already replied to conversation {conv_id[:12]}..")
+                    continue
+                
+                if context.get('bot_replies_in_thread'):
+                    print(f"[Followed] Skipping {t.id}: bot already has {len(context['bot_replies_in_thread'])} replies in conversation")
+                    continue
+                
+                # Check reply thresholds
+                if per_user_threshold:
+                    target_author = getattr(t, 'author_id', None)
+                    prior_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_id, target_author, context.get('bot_replies_in_thread'))
+                    if prior_to_user >= reply_threshold:
+                        print(f"[Followed] Skipping {t.id}: already replied to user {target_author} {prior_to_user} times")
+                        continue
+                else:
+                    prior = count_bot_replies_in_conversation(conv_id, bot_id, context.get('bot_replies_in_thread'))
+                    if prior >= reply_threshold:
+                        print(f"[Followed] Skipping {t.id}: already replied {prior} times in thread")
+                        continue
+                
+                # Generate reply
+                try:
+                    reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
+                except Exception as e:
+                    print(f"[Followed] Error generating reply: {e}")
+                    continue
+                
+                if not isinstance(reply_text, str) or not reply_text:
+                    print(f"[Followed] No reply generated for {t.id}; skipping")
+                    continue
+                
+                # Content safety check
+                lowered = reply_text.lower()
+                if any(x in lowered for x in ["doxx", "address", "phone", "ssn", "private"]):
+                    print(f"[Followed] Reply contains sensitive content; queuing for review")
+                    queue_for_approval({"tweet_id": t.id, "text": reply_text, "reason": "sensitive"})
+                    continue
+                
+                # Dedupe check
+                if _is_duplicate(reply_text):
+                    print(f"[Followed] Duplicate reply detected; skipping")
+                    continue
+                
+                # Final cap check
+                today_count = _get_today_count()
+                if today_count >= current_cap:
+                    print(f"[Followed] Cap reached before posting; stopping")
+                    break
+                
+                # Human approval queue if enabled
+                if args.enable_human_approval:
+                    queue_for_approval({"tweet_id": t.id, "text": reply_text, "context_summary": get_full_text(t)[:300]})
+                    print(f"[Followed] Queued reply for approval: tweet {t.id}")
+                    continue
+                
+                # Post reply (respect dryrun)
+                if args.dryrun:
+                    print(f"[Followed dryrun] Would reply to {t.id}: {reply_text[:200]}")
+                else:
+                    reply_target = context.get('reply_target_id') if context and context.get('reply_target_id') else t.id
+                    posted = post_reply(reply_target, reply_text, conversation_id=conv_id)
+                    if posted == 'done!':
+                        _add_sent_hash(reply_text)
+                        _increment_daily_count()
+                        # Update last checked ID for this user
+                        last_checked[str(user_id)] = str(t.id)
+                        try:
+                            with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'w') as f:
+                                json.dump(last_checked, f, indent=2)
+                        except IOError as e:
+                            print(f"[Followed] Error saving last checked file: {e}")
+                        time.sleep(5)  # Brief pause between posts
+                    elif posted == 'delay!':
+                        backoff_multiplier *= 2
+                        print(f"[Followed] Post rate-limited, backing off")
+                        return
+        
+        except tweepy.TweepyException as e:
+            print(f"[Followed] API error for user {user_id}: {e}")
+            backoff_multiplier += 1
+            continue
+        except Exception as e:
+            print(f"[Followed] Unexpected error for user {user_id}: {e}")
+            continue
+
+
 def load_bot_tweets(verbose=True):
     """Load stored bot tweets from JSON file"""
     if os.path.exists(TWEETS_FILE):
@@ -2696,6 +2874,8 @@ parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hou
 parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
 parser.add_argument('--post_interval', type=int, help='Number of bot replies between posting a reflection based on recent threads (default 10)', default=10)
 parser.add_argument('--follow_threshold', type=int, help='Minimum number of replies from a user before auto-following them (default 2)', default=2)
+parser.add_argument('--check_followed_users', type=bool, help='If True, periodically check and reply to tweets from followed users (default False)', default=False)
+parser.add_argument('--followed_users_max_tweets', type=int, help='Max tweets to check per followed user per cycle (default 5)', default=5)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -2731,6 +2911,7 @@ SEARCH_LAST_FILE_PREFIX = f'last_search_id_{username}_'
 SEARCH_REPLY_COUNT_FILE = f'search_reply_count_{username}.json'
 SENT_HASHES_FILE = f'sent_reply_hashes_{username}.json'
 APPROVAL_QUEUE_FILE = f'approval_queue_{username}.json'
+FOLLOWED_USERS_LAST_CHECK_FILE = f'last_checked_followed_{username}.json'
 
 RESTART_DELAY = 10
 backoff_multiplier = 1
@@ -2789,6 +2970,9 @@ def main():
             if not os.path.exists(APPROVAL_QUEUE_FILE):
                 with open(APPROVAL_QUEUE_FILE, 'w') as f:
                     json.dump([], f)
+            if not os.path.exists(FOLLOWED_USERS_LAST_CHECK_FILE):
+                with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'w') as f:
+                    json.dump({}, f)
         except Exception as e:
             print(f"[SearchInit] Warning initializing search state files: {e}")
         try:
@@ -2807,6 +2991,15 @@ def main():
                     except Exception as e:
                         print(f"[Main] Search error: {e}")
                         raise  # This will propagate the error to the outer loop and trigger a restart
+
+                # Check tweets from followed users if enabled
+                if getattr(args, 'check_followed_users', False):
+                    try:
+                        print(f"[Main] Checking tweets from followed users")
+                        fetch_and_process_followed_users()
+                    except Exception as e:
+                        print(f"[Main] Followed users check error: {e}")
+                        # Don't raise - just log and continue
 
                 # Check whether enough bot replies have occurred to trigger a reflection post
                 try:
