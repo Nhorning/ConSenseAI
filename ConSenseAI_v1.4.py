@@ -448,10 +448,58 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 return
 
 
+def _get_followed_today_count():
+    """Get count of followed-user replies posted today"""
+    data = {}
+    if os.path.exists(FOLLOWED_USERS_REPLY_COUNT_FILE):
+        try:
+            with open(FOLLOWED_USERS_REPLY_COUNT_FILE, 'r') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+    today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    return data.get(today_str, 0)
+
+def _increment_followed_daily_count():
+    """Increment the followed-user reply count for today"""
+    data = {}
+    if os.path.exists(FOLLOWED_USERS_REPLY_COUNT_FILE):
+        try:
+            with open(FOLLOWED_USERS_REPLY_COUNT_FILE, 'r') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+    today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+    data[today_str] = data.get(today_str, 0) + 1
+    try:
+        with open(FOLLOWED_USERS_REPLY_COUNT_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+    except IOError as e:
+        print(f"[Followed] Error saving reply count: {e}")
+
+def _get_rotation_state():
+    """Get rotation state for followed users (which user to check next)"""
+    if os.path.exists(FOLLOWED_USERS_ROTATION_FILE):
+        try:
+            with open(FOLLOWED_USERS_ROTATION_FILE, 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return {"last_index": 0, "last_checked": datetime.datetime.now().isoformat()}
+
+def _save_rotation_state(state):
+    """Save rotation state"""
+    try:
+        with open(FOLLOWED_USERS_ROTATION_FILE, 'w') as f:
+            json.dump(state, f, indent=2)
+    except IOError as e:
+        print(f"[Followed] Error saving rotation state: {e}")
+
 def fetch_and_process_followed_users():
     """
-    Periodically check tweets from followed users and reply to them.
+    Periodically check tweets from followed users and reply to them with rotation.
     Uses same pipeline as search with safeguards: daily cap, dedupe, threshold checks.
+    Implements rotation so not all users are checked every cycle.
     """
     global backoff_multiplier
     
@@ -459,13 +507,40 @@ def fetch_and_process_followed_users():
     if not getattr(args, 'check_followed_users', False):
         return
     
-    # Get list of followed users
-    followed_users = get_followed_users()
+    # Get list of followed users (sorted for consistent rotation)
+    followed_users = sorted(list(get_followed_users()))
     if not followed_users:
         print("[Followed] No followed users found")
         return
     
-    print(f"[Followed] Checking tweets from {len(followed_users)} followed users")
+    print(f"[Followed] Total followed users: {followed_users}")
+    
+    # Check separate daily cap for followed users
+    today_count = _get_followed_today_count()
+    daily_cap = getattr(args, 'followed_users_daily_cap', 10)
+    print(f"[Followed] Today's followed-user replies: {today_count}/{daily_cap}")
+    if today_count >= daily_cap:
+        print(f"[Followed] Daily cap reached ({today_count}/{daily_cap}), skipping")
+        return
+    
+    # Load rotation state
+    rotation_state = _get_rotation_state()
+    last_index = rotation_state.get('last_index', 0)
+    users_per_cycle = getattr(args, 'followed_users_per_cycle', 3)
+    
+    # Rotate through followed users
+    total_users = len(followed_users)
+    start_index = last_index % total_users
+    end_index = (start_index + users_per_cycle) % total_users
+    
+    if end_index > start_index:
+        users_to_check = followed_users[start_index:end_index]
+    else:
+        # Wrap around
+        users_to_check = followed_users[start_index:] + followed_users[:end_index]
+    
+    print(f"[Followed] Checking {len(users_to_check)} of {total_users} followed users (rotation index: {start_index})")
+    print(f"[Followed] Users in this cycle: {users_to_check}")
     
     # Load last checked tweet IDs per user
     last_checked = {}
@@ -475,30 +550,16 @@ def fetch_and_process_followed_users():
                 last_checked = json.load(f)
         except (json.JSONDecodeError, IOError) as e:
             print(f"[Followed] Error loading last checked file: {e}")
-            last_checked = {}
-    
-    # Respect daily cap (share same cap as search for consistency)
-    today_count = _get_today_count()
-    start_time = args.cap_increase_time
-    current_cap = get_current_search_cap(
-        int(args.search_daily_cap),
-        int(args.search_cap_interval_hours),
-        start_time
-    )
-    print(f"[Followed] Current dynamic reply cap: {current_cap} (today's count: {today_count})")
-    if today_count >= current_cap:
-        print(f"[Followed] Cap reached ({today_count}/{current_cap}), skipping")
-        return
     
     bot_id = BOT_USER_ID
     max_tweets_per_user = getattr(args, 'followed_users_max_tweets', 5)
     
-    # Check each followed user
-    for user_id in list(followed_users)[:10]:  # Limit to 10 users per cycle to avoid API limits
+    # Check each followed user in rotation
+    for user_id in users_to_check:
         # In-loop cap check
-        today_count = _get_today_count()
-        if today_count >= current_cap:
-            print(f"[Followed] Cap reached during processing ({today_count}/{current_cap}), stopping")
+        today_count = _get_followed_today_count()
+        if today_count >= daily_cap:
+            print(f"[Followed] Cap reached during processing ({today_count}/{daily_cap}), stopping")
             break
         
         try:
@@ -519,12 +580,14 @@ def fetch_and_process_followed_users():
                 print(f"[Followed] No new tweets from user {user_id}")
                 continue
             
+            print(f"[Followed] Found {len(resp.data)} tweets from user {user_id}")
+            
             # Process tweets from oldest to newest
             for t in resp.data[::-1]:
                 # In-loop cap check
-                today_count = _get_today_count()
-                if today_count >= current_cap:
-                    print(f"[Followed] Cap reached during tweet processing ({today_count}/{current_cap}), stopping")
+                today_count = _get_followed_today_count()
+                if today_count >= daily_cap:
+                    print(f"[Followed] Cap reached during tweet processing ({today_count}/{daily_cap}), stopping")
                     break
                 
                 # Build full context
@@ -584,8 +647,8 @@ def fetch_and_process_followed_users():
                     continue
                 
                 # Final cap check
-                today_count = _get_today_count()
-                if today_count >= current_cap:
+                today_count = _get_followed_today_count()
+                if today_count >= daily_cap:
                     print(f"[Followed] Cap reached before posting; stopping")
                     break
                 
@@ -603,12 +666,13 @@ def fetch_and_process_followed_users():
                     posted = post_reply(reply_target, reply_text, conversation_id=conv_id)
                     if posted == 'done!':
                         _add_sent_hash(reply_text)
-                        _increment_daily_count()
+                        _increment_followed_daily_count()
                         # Update last checked ID for this user
                         last_checked[str(user_id)] = str(t.id)
                         try:
                             with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'w') as f:
                                 json.dump(last_checked, f, indent=2)
+                            print(f"[Followed] Successfully replied to user {user_id}, tweet {t.id}")
                         except IOError as e:
                             print(f"[Followed] Error saving last checked file: {e}")
                         time.sleep(5)  # Brief pause between posts
@@ -624,6 +688,14 @@ def fetch_and_process_followed_users():
         except Exception as e:
             print(f"[Followed] Unexpected error for user {user_id}: {e}")
             continue
+    
+    # Update rotation state for next cycle
+    new_index = (start_index + users_per_cycle) % total_users
+    _save_rotation_state({
+        "last_index": new_index,
+        "last_checked": datetime.datetime.now().isoformat()
+    })
+    print(f"[Followed] Rotation complete, next cycle will start at index {new_index}")
 
 
 def load_bot_tweets(verbose=True):
@@ -2876,6 +2948,8 @@ parser.add_argument('--post_interval', type=int, help='Number of bot replies bet
 parser.add_argument('--follow_threshold', type=int, help='Minimum number of replies from a user before auto-following them (default 2)', default=2)
 parser.add_argument('--check_followed_users', type=bool, help='If True, periodically check and reply to tweets from followed users (default False)', default=False)
 parser.add_argument('--followed_users_max_tweets', type=int, help='Max tweets to check per followed user per cycle (default 5)', default=5)
+parser.add_argument('--followed_users_daily_cap', type=int, help='Max automated replies per day from followed users (default 10)', default=10)
+parser.add_argument('--followed_users_per_cycle', type=int, help='Max followed users to check per cycle for rotation (default 3)', default=3)
 args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
 
 # Set username and delay, prompting if not provided
@@ -2912,6 +2986,8 @@ SEARCH_REPLY_COUNT_FILE = f'search_reply_count_{username}.json'
 SENT_HASHES_FILE = f'sent_reply_hashes_{username}.json'
 APPROVAL_QUEUE_FILE = f'approval_queue_{username}.json'
 FOLLOWED_USERS_LAST_CHECK_FILE = f'last_checked_followed_{username}.json'
+FOLLOWED_USERS_REPLY_COUNT_FILE = f'followed_reply_count_{username}.json'
+FOLLOWED_USERS_ROTATION_FILE = f'followed_rotation_{username}.json'
 
 RESTART_DELAY = 10
 backoff_multiplier = 1
@@ -2973,6 +3049,12 @@ def main():
             if not os.path.exists(FOLLOWED_USERS_LAST_CHECK_FILE):
                 with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'w') as f:
                     json.dump({}, f)
+            if not os.path.exists(FOLLOWED_USERS_REPLY_COUNT_FILE):
+                with open(FOLLOWED_USERS_REPLY_COUNT_FILE, 'w') as f:
+                    json.dump({}, f)
+            if not os.path.exists(FOLLOWED_USERS_ROTATION_FILE):
+                with open(FOLLOWED_USERS_ROTATION_FILE, 'w') as f:
+                    json.dump({"last_index": 0, "last_checked": datetime.datetime.now().isoformat()}, f)
         except Exception as e:
             print(f"[SearchInit] Warning initializing search state files: {e}")
         try:
