@@ -1140,6 +1140,20 @@ def check_and_follow_active_users(min_replies=3):
     user_counts = get_user_reply_counts()
     already_followed = get_followed_users()
     
+    # DEBUG: Print all user counts with details
+    print(f"[Auto-Follow DEBUG] All user reply counts: {user_counts}")
+    print(f"[Auto-Follow DEBUG] Already followed: {already_followed}")
+    
+    # Show each user's status
+    for uid, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True):
+        if uid in already_followed:
+            status = "already followed"
+        elif count >= min_replies:
+            status = f"WILL FOLLOW (has {count} >= {min_replies})"
+        else:
+            status = f"not enough replies ({count} < {min_replies})"
+        print(f"[Auto-Follow DEBUG] User {uid}: {count} replies - {status}")
+    
     # Filter to users with enough replies who we haven't followed yet
     to_follow = {uid: count for uid, count in user_counts.items() 
                  if count >= min_replies and uid not in already_followed}
@@ -2445,6 +2459,17 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 # Also expose mention media in the top-level context media list
                 context['media'].extend(mention_media)
                 print(f"[Context Cache] Appended current mention {mention_id} to ancestor_chain (cached path)")
+                
+                # CRITICAL FIX: Save the updated chain back to the cache file so get_user_reply_counts() can see it
+                try:
+                    additional_context = {
+                        "thread_tweets": cached_data.get('thread_tweets', []) if isinstance(cached_data, dict) else [],
+                        "bot_replies": cached_data.get('bot_replies', []) if isinstance(cached_data, dict) else []
+                    }
+                    save_ancestor_chain(conv_id, context['ancestor_chain'], additional_context)
+                    print(f"[Context Cache] Saved updated ancestor chain with new mention to file")
+                except Exception as e:
+                    print(f"[Context Cache] Error saving updated chain: {e}")
 
             context['media'].extend(extract_media(tweet, includes))
 
