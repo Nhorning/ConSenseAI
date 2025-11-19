@@ -308,6 +308,9 @@ def fetch_and_process_search(search_term: str, user_id=None):
         print(f"[Search] Current cap reached ({today_count}/{current_cap}), skipping processing")
         return
     
+    # Track users we've already replied to in this search cycle (limit 1 reply per user per cycle)
+    replied_users_this_cycle = set()
+    
     print(f"[Search] Query='{search_term}' since_id={last_id}")
     try:
         resp = read_client.search_recent_tweets(
@@ -345,8 +348,14 @@ def fetch_and_process_search(search_term: str, user_id=None):
         context['context_instructions'] = "\nPrompt: appropriately respond to this tweet."
         
         # basic guard: don't reply to ourselves
-        if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
+        tweet_author = str(getattr(t, 'author_id', ''))
+        if bot_id and tweet_author == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
+            continue
+        
+        # Check if we've already replied to this user in this search cycle
+        if tweet_author in replied_users_this_cycle:
+            print(f"[Search Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this search cycle")
             continue
         
         # Check if bot has already replied to this conversation (conversation-level dedupe)
@@ -437,6 +446,10 @@ def fetch_and_process_search(search_term: str, user_id=None):
             # post and track
             posted = post_reply(reply_target, reply_text, conversation_id=conv_id)
             if posted == 'done!':
+                # Track that we replied to this user in this cycle
+                replied_users_this_cycle.add(tweet_author)
+                print(f"[Search Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                
                 _add_sent_hash(reply_text)
                 _increment_daily_count()
                 write_last_search_id(search_term, t.id)
@@ -506,6 +519,9 @@ def fetch_and_process_followed_users():
     # Check if feature is enabled
     if not getattr(args, 'check_followed_users', False):
         return
+    
+    # Track users we've already replied to in this cycle (limit 1 reply per user per cycle)
+    replied_users_this_cycle = set()
     
     # Get list of followed users (sorted for consistent rotation)
     followed_users = sorted(list(get_followed_users()))
@@ -596,8 +612,14 @@ def fetch_and_process_followed_users():
                 context['context_instructions'] = "\nPrompt: appropriately respond to this tweet from someone you follow."
                 
                 # Don't reply to our own tweets
-                if bot_id and str(getattr(t, 'author_id', '')) == str(bot_id):
+                tweet_author = str(getattr(t, 'author_id', ''))
+                if bot_id and tweet_author == str(bot_id):
                     print(f"[Followed] Skipping self tweet {t.id}")
+                    continue
+                
+                # Check if we've already replied to this user in this cycle
+                if tweet_author in replied_users_this_cycle:
+                    print(f"[Followed Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this cycle")
                     continue
                 
                 # Check if bot already replied to this conversation
@@ -665,6 +687,10 @@ def fetch_and_process_followed_users():
                     reply_target = context.get('reply_target_id') if context and context.get('reply_target_id') else t.id
                     posted = post_reply(reply_target, reply_text, conversation_id=conv_id)
                     if posted == 'done!':
+                        # Track that we replied to this user in this cycle
+                        replied_users_this_cycle.add(tweet_author)
+                        print(f"[Followed Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                        
                         _add_sent_hash(reply_text)
                         _increment_followed_daily_count()
                         # Update last checked ID for this user
@@ -840,12 +866,15 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
             if t_author and str(t_author) == str(bot_user_id):
                 print(f"[Per-User Count] Found bot tweet {tid}, in_reply_to_user_id={t_in_reply_to}, target={target_user_id}")
             
-            # If this tweet is authored by the bot and was in reply to the target user, count it
-            if t_author and bot_user_id and str(t_author) == str(bot_user_id) and t_in_reply_to and str(t_in_reply_to) == str(target_user_id):
-                # If we also stored the tweet id in bot_tweets, prefer that as authoritative
-                if tid is None or tid in bot_tweets:
-                    count += 1
-                    print(f"[Per-User Count] Counted bot reply {tid} to user {target_user_id} (count now: {count})")
+            # Check if this is a bot tweet replying to target user
+            # Method 1: Has explicit author_id matching bot
+            is_bot_tweet_method1 = (t_author and bot_user_id and str(t_author) == str(bot_user_id))
+            # Method 2: Tweet ID is in bot_tweets.json (works even if author_id is None)
+            is_bot_tweet_method2 = (tid and tid in bot_tweets)
+            
+            if (is_bot_tweet_method1 or is_bot_tweet_method2) and t_in_reply_to and str(t_in_reply_to) == str(target_user_id):
+                count += 1
+                print(f"[Per-User Count] Counted bot reply {tid} to user {target_user_id} (count now: {count})")
 
         # Also inspect cached bot_replies list if present
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
@@ -2177,6 +2206,10 @@ def fetch_and_process_mentions(user_id, username):
     last_tweet_id = read_last_tweet_id()
     print(f"Checking for mentions of {username} at {datetime.datetime.now()}")
     sys.stdout.flush()  # Force immediate log update
+    
+    # Track users we've already replied to in this cycle (limit 1 reply per user per cycle)
+    replied_users_this_cycle = set()
+    
     try:
         mentions = read_client.get_users_mentions(
             id=user_id,
@@ -2219,12 +2252,20 @@ def fetch_and_process_mentions(user_id, username):
                     context['mention'] = mention  # Store the mention in context
                     # Safety checks using persisted caches + API results
                     conv_id = str(getattr(mention, 'conversation_id', ''))
+                    target_author = str(getattr(mention, 'author_id', ''))
 
                     # 1) If the mention is authored by the bot, skip (normalize types)
-                    if str(getattr(mention, 'author_id', '')) == str(bot_user_id):
+                    if target_author == str(bot_user_id):
                         print(f"Skipping mention from self: {mention.text}")
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
+
+                    # 2) Check if we've already replied to this user in this cycle
+                    elif target_author in replied_users_this_cycle:
+                        print(f"[Mention Cycle Limit] SKIPPING: Already replied to user {target_author} in this cycle")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
 
                     else:
                         # 2) Count prior bot replies using ancestor cache + API-provided bot replies
@@ -2251,6 +2292,10 @@ def fetch_and_process_mentions(user_id, username):
                         # Pass context to fact_check and reply
                         success = fact_check(mention.text, mention.id, context)
                         if success == 'done!':
+                            # Track that we replied to this user in this cycle
+                            replied_users_this_cycle.add(target_author)
+                            print(f"[Mention Cycle Limit] Replied to user {target_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                            
                             last_tweet_id = max(last_tweet_id, mention.id)
                             write_last_tweet_id(last_tweet_id)
                             backoff_multiplier = 1
