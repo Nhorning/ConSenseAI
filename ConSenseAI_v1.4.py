@@ -829,6 +829,8 @@ def fetch_and_process_followed_users():
                         except IOError as e:
                             print(f"[Followed] Error saving last checked file: {e}")
                         time.sleep(5)  # Brief pause between posts
+                        # CRITICAL: Break inner loop after first successful reply to this user
+                        break  # Move to next user after replying once
                     elif posted == 'delay!':
                         backoff_multiplier *= 2
                         print(f"[Followed] Post rate-limited, backing off")
