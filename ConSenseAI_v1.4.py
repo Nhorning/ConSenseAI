@@ -231,6 +231,71 @@ def queue_for_approval(item: dict):
     queue.append(item)
     _save_json_file(APPROVAL_QUEUE_FILE, queue)
 
+def has_bot_replied_to_specific_tweet_id(target_tweet_id):
+    """Check if bot has already replied directly to this specific tweet ID.
+    
+    This is more strict than conversation-level checks - it verifies the bot 
+    hasn't already replied to THIS EXACT TWEET before.
+    """
+    if not target_tweet_id:
+        return False
+    
+    target_id_str = str(target_tweet_id)
+    bot_id_str = str(BOT_USER_ID)
+    
+    # Load ancestor chains to check for bot replies to this specific tweet
+    chains = load_ancestor_chains()
+    bot_tweets = load_bot_tweets()
+    
+    for conv_id, cache_entry in chains.items():
+        if not isinstance(cache_entry, dict):
+            continue
+        
+        # Check the ancestor chain for bot tweets that are direct replies to our target
+        chain = cache_entry.get('chain', [])
+        for entry in chain:
+            if not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet', {})
+            if not isinstance(tweet, dict):
+                continue
+            
+            tweet_id = str(tweet.get('id', ''))
+            author_id = str(tweet.get('author_id', ''))
+            
+            # Is this a bot tweet?
+            if author_id == bot_id_str or tweet_id in bot_tweets:
+                # Check if it's replying to our target tweet
+                # Look for in_reply_to_status_id or check referenced_tweets
+                in_reply_to = tweet.get('in_reply_to_status_id')
+                if in_reply_to and str(in_reply_to) == target_id_str:
+                    print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} with reply {tweet_id}")
+                    return True
+                
+                # Also check referenced_tweets for reply relationship
+                ref_tweets = tweet.get('referenced_tweets', [])
+                if ref_tweets:
+                    for ref in ref_tweets:
+                        if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                            if str(ref.get('id', '')) == target_id_str:
+                                print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} with reply {tweet_id}")
+                                return True
+        
+        # Also check bot_replies list
+        bot_replies = cache_entry.get('bot_replies', [])
+        for br in bot_replies:
+            if not isinstance(br, dict):
+                continue
+            
+            # Check in_reply_to_status_id
+            in_reply_to = br.get('in_reply_to_status_id')
+            if in_reply_to and str(in_reply_to) == target_id_str:
+                br_id = str(br.get('id', 'unknown'))
+                print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} (found in bot_replies: {br_id})")
+                return True
+    
+    return False
+
 def has_bot_replied_to_tweet(tweet_id):
     """Check if bot has already replied to a specific tweet by checking bot_tweets.json for reply target tracking."""
     if not tweet_id:
@@ -351,6 +416,11 @@ def fetch_and_process_search(search_term: str, user_id=None):
         tweet_author = str(getattr(t, 'author_id', ''))
         if bot_id and tweet_author == str(bot_id):
             print(f"[Search] Skipping self tweet {t.id}")
+            continue
+        
+        # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+        if has_bot_replied_to_specific_tweet_id(t.id):
+            print(f"[Search] Skipping {t.id}: bot already replied to this specific tweet")
             continue
         
         # Check if we've already replied to this user in this search cycle
@@ -627,6 +697,11 @@ def fetch_and_process_followed_users():
                 tweet_author = str(getattr(t, 'author_id', ''))
                 if bot_id and tweet_author == str(bot_id):
                     print(f"[Followed] Skipping self tweet {t.id}")
+                    continue
+                
+                # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+                if has_bot_replied_to_specific_tweet_id(t.id):
+                    print(f"[Followed] Skipping {t.id}: bot already replied to this specific tweet")
                     continue
                 
                 # Check if we've already replied to this user in this cycle
@@ -2320,6 +2395,13 @@ def fetch_and_process_mentions(user_id, username):
                         print(f"Skipping mention from self: {mention.text}")
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
+
+                    # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+                    elif has_bot_replied_to_specific_tweet_id(mention.id):
+                        print(f"[Mention] Skipping {mention.id}: bot already replied to this specific tweet")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
 
                     # 2) Check if we've already replied to this user in this cycle
                     elif target_author in replied_users_this_cycle:
