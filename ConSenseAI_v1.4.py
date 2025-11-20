@@ -941,6 +941,9 @@ def get_user_reply_counts():
     Count how many times each user has mentioned/replied to the bot.
     Only counts tweets that directly reply to (mention) the bot.
     Returns dict: {user_id: mention_count}
+    
+    Uses combined data from ancestor_chains.json and bot_tweets.json to ensure
+    accurate counting even when ancestor_id fields are missing.
     """
     user_counts = {}
     
@@ -952,6 +955,8 @@ def get_user_reply_counts():
         print("[Auto-Follow] No ancestor chains found")
         return user_counts
     
+    # Load bot tweets for fallback identification
+    bot_tweets = load_bot_tweets()
     bot_id = str(getid())
     
     for conv_id, conv_data in chains.items():
@@ -963,12 +968,10 @@ def get_user_reply_counts():
             chain = conv_data
             bot_replies = []
         
-        # Only process conversations where the bot participated
-        if not bot_replies and not any(str(get_attr(entry.get('tweet'), 'author_id')) == bot_id 
-                                       for entry in chain if entry and isinstance(entry, dict)):
-            continue
-        
-        # Count tweets that directly reply to the bot (in_reply_to_user_id == bot_id)
+        # Track which tweets are bot replies using two methods:
+        # Method 1: author_id matches bot_id
+        # Method 2: tweet_id exists in bot_tweets.json
+        bot_reply_ids = set()
         for entry in chain:
             if not entry or not isinstance(entry, dict):
                 continue
@@ -976,14 +979,47 @@ def get_user_reply_counts():
             if not tweet:
                 continue
             
-            author_id = str(get_attr(tweet, 'author_id', ''))
-            in_reply_to = str(get_attr(tweet, 'in_reply_to_user_id', ''))
+            tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
+            author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
             
-            # Count only if this tweet is a direct reply/mention to the bot
-            if author_id and author_id != bot_id and in_reply_to == bot_id:
+            # Mark as bot reply if either method confirms it
+            if (author_id and author_id == bot_id) or (tweet_id and tweet_id in bot_tweets):
+                if tweet_id:
+                    bot_reply_ids.add(tweet_id)
+        
+        # Also check bot_replies list
+        for br in bot_replies:
+            br_id = str(br.get('id')) if br.get('id') else None
+            if br_id:
+                bot_reply_ids.add(br_id)
+        
+        # Skip conversations where bot hasn't participated
+        if not bot_reply_ids:
+            continue
+        
+        # Now count user tweets that the bot replied to
+        # Look for tweets where in_reply_to_user_id == bot_id (user replying to bot)
+        for entry in chain:
+            if not entry or not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet')
+            if not tweet:
+                continue
+            
+            tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
+            author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
+            in_reply_to = str(tweet.get('in_reply_to_user_id')) if isinstance(tweet, dict) and tweet.get('in_reply_to_user_id') else None
+            
+            # Count only if:
+            # 1. This is NOT a bot tweet
+            # 2. This tweet replies to the bot (in_reply_to_user_id == bot_id)
+            # 3. Has valid author_id
+            if tweet_id not in bot_reply_ids and author_id and author_id != bot_id and in_reply_to == bot_id:
                 user_counts[author_id] = user_counts.get(author_id, 0) + 1
     
     print(f"[Auto-Follow] Counted mentions from {len(user_counts)} unique users across {len(chains)} conversations")
+    for user_id, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
+        print(f"[Auto-Follow] User {user_id}: {count} replies")
     return user_counts
 
 def get_followed_users():
