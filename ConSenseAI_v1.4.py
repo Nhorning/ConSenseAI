@@ -977,7 +977,7 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
         print(f"[Per-User Count] Missing conversation_id or target_user_id, returning 0")
         return 0
     cid = str(conversation_id)
-    count = 0
+    counted_tweet_ids = set()  # Track which tweet IDs we've already counted to avoid duplicates
     bot_tweets = load_bot_tweets()
     
     print(f"[Per-User Count] Checking replies to user {target_user_id} in conversation {cid}")
@@ -1006,8 +1006,9 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
             is_bot_tweet_method2 = (tid and tid in bot_tweets)
             
             if (is_bot_tweet_method1 or is_bot_tweet_method2) and t_in_reply_to and str(t_in_reply_to) == str(target_user_id):
-                count += 1
-                print(f"[Per-User Count] Counted bot reply {tid} to user {target_user_id} (count now: {count})")
+                if tid and tid not in counted_tweet_ids:  # Only count if not already counted
+                    counted_tweet_ids.add(tid)
+                    print(f"[Per-User Count] Counted bot reply {tid} to user {target_user_id} (count now: {len(counted_tweet_ids)})")
 
         # Also inspect cached bot_replies list if present
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
@@ -1015,11 +1016,11 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
             for br in cached_data['bot_replies']:
                 br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
                 br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
+                br_id = str(br.get('id')) if br.get('id') is not None else None
                 if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
-                    br_id = str(br.get('id')) if br.get('id') is not None else None
-                    if br_id is None or br_id in bot_tweets:
-                        count += 1
-                        print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {count})")
+                    if br_id and br_id not in counted_tweet_ids and (br_id is None or br_id in bot_tweets):
+                        counted_tweet_ids.add(br_id)
+                        print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {len(counted_tweet_ids)})")
     else:
         print(f"[Per-User Count] No cached data found for conversation {cid}")
 
@@ -1034,13 +1035,15 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
                 br_in_reply_to = br.get('in_reply_to_user_id')
             else:
                 br_in_reply_to = getattr(br, 'in_reply_to_user_id', None)
+            br_id = br.get('id') if isinstance(br, dict) else getattr(br, 'id', None)
+            br_id_str = str(br_id) if br_id is not None else None
             if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
-                br_id = br.get('id') if isinstance(br, dict) else getattr(br, 'id', None)
-                if br_id is None or str(br_id) in bot_tweets:
-                    count += 1
-                    print(f"[Per-User Count] Counted bot reply {br_id} from API results (count now: {count})")
+                if br_id_str and br_id_str not in counted_tweet_ids and (br_id is None or br_id_str in bot_tweets):
+                    counted_tweet_ids.add(br_id_str)
+                    print(f"[Per-User Count] Counted bot reply {br_id_str} from API results (count now: {len(counted_tweet_ids)})")
 
-    print(f"[Per-User Count] FINAL COUNT: {count} replies to user {target_user_id} in conversation {cid}")
+    count = len(counted_tweet_ids)
+    print(f"[Per-User Count] FINAL COUNT: {count} unique replies to user {target_user_id} in conversation {cid}")
     return count
 
 def save_bot_tweet(tweet_id, full_content):
