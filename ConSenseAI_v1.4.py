@@ -3312,7 +3312,7 @@ parser.add_argument('--check_followed_users', type=bool, help='If True, periodic
 parser.add_argument('--followed_users_max_tweets', type=int, help='Max tweets to check per followed user per cycle (default 5)', default=5)
 parser.add_argument('--followed_users_daily_cap', type=int, help='Max automated replies per day from followed users (default 10)', default=10)
 parser.add_argument('--followed_users_per_cycle', type=int, help='Max followed users to check per cycle for rotation (default 3)', default=3)
-args, unknown = parser.parse_known_args()  # Ignore unrecognized arguments (e.g., Jupyter's -f)
+args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
 if args.username:
