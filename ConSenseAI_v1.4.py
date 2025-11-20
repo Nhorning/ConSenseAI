@@ -1112,6 +1112,14 @@ def get_user_reply_counts():
             if not tweet:
                 continue
             
+            # Handle both dict and string representations
+            if isinstance(tweet, str):
+                try:
+                    import ast
+                    tweet = ast.literal_eval(tweet)
+                except:
+                    continue
+            
             tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
             author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
             
@@ -1122,6 +1130,17 @@ def get_user_reply_counts():
         
         # Also check bot_replies list
         for br in bot_replies:
+            # Handle both dict and string representations
+            if isinstance(br, str):
+                try:
+                    import ast
+                    br = ast.literal_eval(br)
+                except:
+                    continue
+            
+            if not isinstance(br, dict):
+                continue
+                
             br_id = str(br.get('id')) if br.get('id') else None
             if br_id:
                 bot_reply_ids.add(br_id)
@@ -1138,6 +1157,14 @@ def get_user_reply_counts():
             tweet = entry.get('tweet')
             if not tweet:
                 continue
+            
+            # Handle both dict and string representations
+            if isinstance(tweet, str):
+                try:
+                    import ast
+                    tweet = ast.literal_eval(tweet)
+                except:
+                    continue
             
             tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
             author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
