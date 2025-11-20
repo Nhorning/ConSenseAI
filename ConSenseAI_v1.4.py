@@ -358,6 +358,12 @@ def fetch_and_process_search(search_term: str, user_id=None):
             print(f"[Search Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this search cycle")
             continue
         
+        # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+        original_conv_id = context.get('original_conversation_id')
+        if original_conv_id and original_conv_id in replied_users_this_cycle:
+            print(f"[Search Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
+            continue
+        
         # Check if bot has already replied to this conversation (conversation-level dedupe)
         # Check both the cache AND the context we just built
         conv_id = str(getattr(t, 'conversation_id', ''))
@@ -449,6 +455,12 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 # Track that we replied to this user in this cycle
                 replied_users_this_cycle.add(tweet_author)
                 print(f"[Search Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                
+                # Also track the original conversation ID if this is a retweet, to prevent multiple replies to different retweets of the same original
+                original_conv_id = context.get('original_conversation_id')
+                if original_conv_id:
+                    replied_users_this_cycle.add(original_conv_id)
+                    print(f"[Search Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                 
                 _add_sent_hash(reply_text)
                 _increment_daily_count()
@@ -622,6 +634,12 @@ def fetch_and_process_followed_users():
                     print(f"[Followed Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this cycle")
                     continue
                 
+                # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+                original_conv_id = context.get('original_conversation_id')
+                if original_conv_id and original_conv_id in replied_users_this_cycle:
+                    print(f"[Followed Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
+                    continue
+                
                 # Check if bot already replied to this conversation
                 conv_id = str(getattr(t, 'conversation_id', ''))
                 if _has_replied_to_conversation_via_search(conv_id, bot_id):
@@ -690,6 +708,12 @@ def fetch_and_process_followed_users():
                         # Track that we replied to this user in this cycle
                         replied_users_this_cycle.add(tweet_author)
                         print(f"[Followed Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                        
+                        # Also track the original conversation ID if this is a retweet
+                        original_conv_id = context.get('original_conversation_id')
+                        if original_conv_id:
+                            replied_users_this_cycle.add(original_conv_id)
+                            print(f"[Followed Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                         
                         _add_sent_hash(reply_text)
                         _increment_followed_daily_count()
@@ -2302,6 +2326,14 @@ def fetch_and_process_mentions(user_id, username):
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
                         continue
+                    
+                    # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+                    elif context.get('original_conversation_id') and context.get('original_conversation_id') in replied_users_this_cycle:
+                        original_conv_id = context.get('original_conversation_id')
+                        print(f"[Mention Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
 
                     else:
                         # 2) Count prior bot replies using ancestor cache + API-provided bot replies
@@ -2331,6 +2363,12 @@ def fetch_and_process_mentions(user_id, username):
                             # Track that we replied to this user in this cycle
                             replied_users_this_cycle.add(target_author)
                             print(f"[Mention Cycle Limit] Replied to user {target_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                            
+                            # Also track the original conversation ID if this is a retweet
+                            original_conv_id = context.get('original_conversation_id')
+                            if original_conv_id:
+                                replied_users_this_cycle.add(original_conv_id)
+                                print(f"[Mention Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                             
                             last_tweet_id = max(last_tweet_id, mention.id)
                             write_last_tweet_id(last_tweet_id)
