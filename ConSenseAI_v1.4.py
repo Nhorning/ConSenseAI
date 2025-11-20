@@ -641,13 +641,17 @@ def fetch_and_process_followed_users():
     
     print(f"[Followed] Total followed users: {followed_users}")
     
-    # Check separate daily cap for followed users
+    # Check separate daily cap for followed users (uses same dynamic cap logic as search)
     today_count = _get_followed_today_count()
-    daily_cap = getattr(args, 'followed_users_daily_cap', 10)
-    print(f"[Followed] Today's followed-user replies: {today_count}/{daily_cap}")
-    if today_count >= daily_cap:
-        print(f"[Followed] Daily cap reached ({today_count}/{daily_cap}), skipping")
+    max_daily_cap = getattr(args, 'followed_users_daily_cap', 10)
+    start_time = args.cap_increase_time
+    interval_hours = int(args.search_cap_interval_hours)
+    current_cap = get_current_search_cap(max_daily_cap, interval_hours, start_time)
+    print(f"[Followed] Today's followed-user replies: {today_count}/{current_cap} (max: {max_daily_cap}, increases every {interval_hours}h starting at {start_time})")
+    if today_count >= current_cap:
+        print(f"[Followed] Current cap reached ({today_count}/{current_cap}), skipping")
         return
+    daily_cap = current_cap  # Use current dynamic cap for subsequent checks
     
     # Load rotation state
     rotation_state = _get_rotation_state()
