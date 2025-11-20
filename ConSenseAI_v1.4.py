@@ -103,24 +103,36 @@ sys.stdout = LoggerWriter('output.log')
 sys.stderr = LoggerWriter('output.log')
 
 def read_last_search_id(search_term: str):
+    """Read the last processed tweet ID for a search term from JSON storage.
+    Falls back to old text file format for backward compatibility."""
+    # First try new JSON format
+    data = _load_json_file(_get_auto_search_file(), {})
+    last_ids = data.get('last_search_ids', {})
+    if search_term in last_ids:
+        return int(last_ids[search_term])
+    
+    # Fall back to old text file format for backward compatibility
     fn = _search_last_filename(search_term)
     if os.path.exists(fn):
         try:
             with open(fn, 'r') as f:
                 v = f.read().strip()
                 if v:
-                    return int(v)
+                    tweet_id = int(v)
+                    # Migrate to new format
+                    write_last_search_id(search_term, tweet_id)
+                    return tweet_id
         except Exception:
             pass
     return None
 
 def write_last_search_id(search_term: str, tweet_id):
-    fn = _search_last_filename(search_term)
-    try:
-        with open(fn, 'w') as f:
-            f.write(str(tweet_id))
-    except Exception as e:
-        print(f"Error writing last search id to {fn}: {e}")
+    """Write the last processed tweet ID for a search term to JSON storage."""
+    data = _load_json_file(_get_auto_search_file(), {})
+    if 'last_search_ids' not in data:
+        data['last_search_ids'] = {}
+    data['last_search_ids'][search_term] = str(tweet_id)
+    _save_json_file(_get_auto_search_file(), data)
 
 def _load_json_file(path, default):
     try:
@@ -150,6 +162,45 @@ def _get_today_count():
     data = _load_json_file(SEARCH_REPLY_COUNT_FILE, {})
     today = datetime.date.today().isoformat()
     return int(data.get(today, 0))
+
+# Auto search terms persistence
+def _get_auto_search_file():
+    """Get filename for storing auto-generated search terms and last search IDs."""
+    return f'auto_search_terms_{username}.json'
+
+def load_auto_search_state():
+    """Load current search term, history of used terms, and last search IDs.
+    
+    Returns:
+        tuple: (current_term, used_terms_list, last_search_ids_dict)
+    """
+    data = _load_json_file(_get_auto_search_file(), {})
+    current = data.get('current_term', None)
+    used = data.get('used_terms', [])
+    last_ids = data.get('last_search_ids', {})
+    if current and used:
+        print(f"[Auto Search] Loaded persistent state: current='{current}', {len(used)} used terms, {len(last_ids)} search IDs")
+    return current, used, last_ids
+
+def save_auto_search_state(current_term, used_terms, last_search_ids=None):
+    """Save current search term, history, and last search IDs.
+    
+    Args:
+        current_term: The currently active search term
+        used_terms: List of all search terms used (including current)
+        last_search_ids: Dict mapping search terms to their last processed tweet IDs (optional)
+    """
+    # Load existing data to preserve last_search_ids if not provided
+    existing_data = _load_json_file(_get_auto_search_file(), {})
+    
+    data = {
+        'current_term': current_term,
+        'used_terms': used_terms,
+        'last_search_ids': last_search_ids if last_search_ids is not None else existing_data.get('last_search_ids', {}),
+        'last_updated': datetime.datetime.now().isoformat()
+    }
+    _save_json_file(_get_auto_search_file(), data)
+    print(f"[Auto Search] Saved state: current='{current_term}', {len(used_terms)} total used terms")
 
 # Compute current search cap based on interval
 def get_current_search_cap(max_daily_cap, interval_hours, cap_increase_time='10:00'):
@@ -3314,7 +3365,15 @@ def main():
     if getattr(args, 'search_term', None):
         if args.search_term.lower() == 'auto':
             auto_search_mode = True
-            print("[Main] Auto search mode enabled - will generate search terms after reflections")
+            print("[Main] Auto search mode enabled - will load or generate search terms")
+            # Load persistent state if available
+            loaded_current, loaded_used, loaded_ids = load_auto_search_state()
+            if loaded_current:
+                current_search_term = loaded_current
+                used_search_terms = loaded_used
+                print(f"[Main] Loaded persistent search term: '{current_search_term}' ({len(used_search_terms)} terms in history)")
+            else:
+                print("[Main] No persistent search terms found - will generate initial term")
         else:
             current_search_term = args.search_term
             used_search_terms.append(current_search_term)
@@ -3330,6 +3389,7 @@ def main():
             current_search_term = generate_auto_search_term(current_term=None, used_terms=used_search_terms)
             if current_search_term:
                 used_search_terms.append(current_search_term)
+                save_auto_search_state(current_search_term, used_search_terms)
                 print(f"[Main] Generated initial search term: {current_search_term}")
             else:
                 print("[Main] Warning: Failed to generate initial search term, will retry after first reflection")
@@ -3412,6 +3472,7 @@ def main():
                                 if new_term:
                                     current_search_term = new_term
                                     used_search_terms.append(new_term)
+                                    save_auto_search_state(current_search_term, used_search_terms)
                                     print(f"[Main] Updated search term to: {current_search_term}")
                                     print(f"[Main] All used search terms this run: {used_search_terms}")
                                 else:
