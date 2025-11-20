@@ -33,6 +33,52 @@ def get_full_text_twitterapiio(tweet_id, api_key):
         print(f"Error fetching tweet {tweet_id} from twitterapi.io: {e}")
         return ""
 
+def get_tweet_data_twitterapiio(tweet_id, api_key):
+    """
+    Fetch full tweet data from twitterapi.io as a fallback when rate limited.
+    Returns a dict that mimics Tweepy's tweet structure for ancestor chain building.
+    """
+    print(f'[twitterapi.io Fallback] Fetching tweet {tweet_id} from twitterapi.io')
+    url = "https://api.twitterapi.io/twitter/tweets"
+    querystring = {"tweet_ids": f"{tweet_id}"}
+    headers = {"X-API-Key": f"{api_key}"}
+    try:
+        response = requests.get(url, headers=headers, params=querystring)
+        response.raise_for_status()
+        data = response.json()
+        tweets = data.get("tweets", [])
+        if tweets and isinstance(tweets, list) and len(tweets) > 0:
+            tweet_data = tweets[0]
+            
+            # Convert referenced_tweets to objects with .type and .id attributes
+            # Twitter API format: [{"type": "replied_to", "id": "123"}, ...]
+            referenced_tweets = []
+            for ref in tweet_data.get('referenced_tweets', []):
+                if isinstance(ref, dict):
+                    class RefObj:
+                        def __init__(self, ref_dict):
+                            self.type = ref_dict.get('type')
+                            self.id = ref_dict.get('id')
+                    referenced_tweets.append(RefObj(ref))
+            
+            # Create a simple dict that has the fields we need for ancestor chain building
+            return {
+                'id': tweet_data.get('id'),
+                'text': tweet_data.get('text', ''),
+                'author_id': tweet_data.get('author_id'),
+                'created_at': tweet_data.get('created_at'),
+                'conversation_id': tweet_data.get('conversation_id'),
+                'in_reply_to_user_id': tweet_data.get('in_reply_to_user_id'),
+                'referenced_tweets': referenced_tweets,
+                'entities': tweet_data.get('entities'),
+                'attachments': tweet_data.get('attachments')
+            }
+        print(f"[twitterapi.io Fallback] No tweet data found for id {tweet_id}")
+        return None
+    except requests.RequestException as e:
+        print(f"[twitterapi.io Fallback] Error fetching tweet {tweet_id}: {e}")
+        return None
+
 import json
 import os
 import time
@@ -1065,13 +1111,28 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
             print(f"[Per-User Count] Checking cached bot_replies list ({len(cached_data['bot_replies'])} entries)")
             for br in cached_data['bot_replies']:
-                br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
-                br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
-                br_id = str(br.get('id')) if br.get('id') is not None else None
-                if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
-                    if br_id and br_id not in counted_tweet_ids and (br_id is None or br_id in bot_tweets):
-                        counted_tweet_ids.add(br_id)
-                        print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {len(counted_tweet_ids)})")
+                # bot_replies can contain strings (tweet IDs) or dict objects
+                if isinstance(br, str):
+                    # Just a tweet ID string - we can't determine if it replied to this user without more info
+                    # So we skip it (it's already handled in the chain iteration above)
+                    continue
+                elif isinstance(br, dict):
+                    br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
+                    br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
+                    br_id = str(br.get('id')) if br.get('id') is not None else None
+                    if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
+                        if br_id and br_id not in counted_tweet_ids and (br_id is None or br_id in bot_tweets):
+                            counted_tweet_ids.add(br_id)
+                            print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {len(counted_tweet_ids)})")
+                else:
+                    # Tweepy object - try getattr
+                    br_author = getattr(br, 'author_id', None)
+                    br_in_reply_to = getattr(br, 'in_reply_to_user_id', None)
+                    br_id = str(getattr(br, 'id', None)) if getattr(br, 'id', None) is not None else None
+                    if br_author and bot_user_id and str(br_author) == str(bot_user_id) and br_in_reply_to and str(br_in_reply_to) == str(target_user_id):
+                        if br_id and br_id not in counted_tweet_ids and (br_id is None or br_id in bot_tweets):
+                            counted_tweet_ids.add(br_id)
+                            print(f"[Per-User Count] Counted bot reply {br_id} from cached bot_replies (count now: {len(counted_tweet_ids)})")
     else:
         print(f"[Per-User Count] No cached data found for conversation {cid}")
 
@@ -2957,18 +3018,42 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             # This prevents duplicate API calls if an exception occurs and we retry
             visited.add(parent_id)
             
-            parent_response = read_client.get_tweet(
-                id=parent_id,
-                tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
-                expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
-            )
-            if parent_response.data:
-                current_tweet = parent_response.data
-                print(f"[API Debug] Fetched parent tweet {parent_id}, text length: {len(current_tweet.text)} chars")
-                print(f"[API Debug] First 100 chars: {current_tweet.text[:100]}")
-                print(f"[API Debug] Last 100 chars: {current_tweet.text[-100:]}")
-            else:
+            try:
+                parent_response = read_client.get_tweet(
+                    id=parent_id,
+                    tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
+                    expansions=["referenced_tweets.id", "attachments.media_keys"],
+                    media_fields=["type", "url", "preview_image_url", "alt_text"]
+                )
+                if parent_response.data:
+                    current_tweet = parent_response.data
+                    print(f"[API Debug] Fetched parent tweet {parent_id}, text length: {len(current_tweet.text)} chars")
+                    print(f"[API Debug] First 100 chars: {current_tweet.text[:100]}")
+                    print(f"[API Debug] Last 100 chars: {current_tweet.text[-100:]}")
+                else:
+                    break
+            except tweepy.TooManyRequests as e:
+                # Rate limit hit - try twitterapi.io as fallback
+                print(f"[Ancestor Build] Rate limit hit, falling back to twitterapi.io for tweet {parent_id}")
+                api_key = keys.get('TWITTERAPIIO_KEY')
+                if api_key:
+                    tweet_dict = get_tweet_data_twitterapiio(parent_id, api_key)
+                    if tweet_dict:
+                        # Convert dict to a simple object with attributes we can access
+                        class TweetObj:
+                            def __init__(self, data):
+                                for key, value in data.items():
+                                    setattr(self, key, value)
+                        current_tweet = TweetObj(tweet_dict)
+                        print(f"[twitterapi.io Fallback] Successfully fetched parent tweet {parent_id}")
+                    else:
+                        print(f"[twitterapi.io Fallback] Failed to fetch tweet {parent_id}, stopping chain build")
+                        break
+                else:
+                    print(f"[Ancestor Build] No TWITTERAPIIO_KEY available, cannot continue chain build")
+                    break
+            except tweepy.TweepyException as te:
+                print(f"[Ancestor Build] API error fetching parent {parent_id}: {te}")
                 break
     except tweepy.TweepyException as e:
         print(f"Error building ancestor chain: {e}")
