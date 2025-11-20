@@ -2546,8 +2546,11 @@ def fetch_and_process_mentions(user_id, username):
                                 print(f"[Mention Threshold] THRESHOLD REACHED for user {target_author}: {prior_replies_to_user} == {reply_threshold}")
                                 print(f"[Mention Threshold] Posting threshold notification to user {target_author} in thread {conv_id}")
                                 # Add threshold notification instructions to context
-                                context['context_instructions'] = f"\nPrompt: Politely inform the user that you've reached your reply limit of {reply_threshold} responses per conversation with them. Thank them for the engaging discussion"
-                                "Encourage them to follow the bot and or consider donating to AI against Autocracy if they support it's mission."
+                                context['context_instructions'] = (
+                                    f"\nPrompt: Politely inform the user that you've reached your reply limit of {reply_threshold} responses per conversation with them. "
+                                    "Thank them for the engaging discussion. "
+                                    "Encourage them to follow the bot and/or consider donating to AI Against Autocracy if they support its mission."
+                                )
                                 # Post the threshold notification
                                 success = fact_check(mention.text, mention.id, context)
                                 write_last_tweet_id(mention.id)
@@ -2567,7 +2570,10 @@ def fetch_and_process_mentions(user_id, username):
                                 print(f"[Mention Threshold] THRESHOLD REACHED for thread {conv_id}: {prior_replies} == {reply_threshold}")
                                 print(f"[Mention Threshold] Posting threshold notification to thread {conv_id}")
                                 # Add threshold notification instructions to context
-                                context['context_instructions'] = f"\nPrompt: Politely inform the participants that you've reached your reply limit of {reply_threshold} responses for this conversation thread. Thank everyone for the engaging discussion and encourage them to continue exploring the topic independently."
+                                context['context_instructions'] = (
+                                    f"\nPrompt: Politely inform the participants that you've reached your reply limit of {reply_threshold} responses for this conversation thread. "
+                                    "Thank everyone for the engaging discussion and encourage them to continue exploring the topic independently."
+                                )
                                 # Post the threshold notification
                                 success = fact_check(mention.text, mention.id, context)
                                 write_last_tweet_id(mention.id)
