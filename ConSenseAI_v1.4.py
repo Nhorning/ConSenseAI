@@ -257,6 +257,16 @@ def has_bot_replied_to_specific_tweet_id(target_tweet_id):
             if not isinstance(entry, dict):
                 continue
             tweet = entry.get('tweet', {})
+            
+            # Handle both dict and string representations
+            if isinstance(tweet, str):
+                # Try to parse string representation
+                try:
+                    import ast
+                    tweet = ast.literal_eval(tweet)
+                except:
+                    continue
+            
             if not isinstance(tweet, dict):
                 continue
             
@@ -284,6 +294,14 @@ def has_bot_replied_to_specific_tweet_id(target_tweet_id):
         # Also check bot_replies list
         bot_replies = cache_entry.get('bot_replies', [])
         for br in bot_replies:
+            # Handle both dict and string representations
+            if isinstance(br, str):
+                try:
+                    import ast
+                    br = ast.literal_eval(br)
+                except:
+                    continue
+            
             if not isinstance(br, dict):
                 continue
             
@@ -293,6 +311,16 @@ def has_bot_replied_to_specific_tweet_id(target_tweet_id):
                 br_id = str(br.get('id', 'unknown'))
                 print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} (found in bot_replies: {br_id})")
                 return True
+            
+            # Also check referenced_tweets in bot_replies
+            ref_tweets = br.get('referenced_tweets', [])
+            if ref_tweets:
+                for ref in ref_tweets:
+                    if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                        if str(ref.get('id', '')) == target_id_str:
+                            br_id = str(br.get('id', 'unknown'))
+                            print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} (found in bot_replies: {br_id})")
+                            return True
     
     return False
 
