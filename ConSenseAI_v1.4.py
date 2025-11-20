@@ -2659,8 +2659,21 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
         if context['ancestor_chain']:
             context["original_tweet"] = context['ancestor_chain'][0]['tweet']  # Root is original
 
-        # If we have everything from cache, return early
-        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
+        # Validate cached ancestor chain - check if any entries are blank/incomplete
+        has_blank_entries = False
+        if context['ancestor_chain']:
+            for entry in context['ancestor_chain']:
+                if not isinstance(entry, dict):
+                    continue
+                t = entry.get('tweet')
+                tweet_id = get_attr(t, 'id')
+                if not tweet_id:
+                    has_blank_entries = True
+                    print(f"[Context Cache] Found blank entry in cached ancestor chain")
+                    break
+
+        # If we have everything from cache AND no blank entries, return early
+        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain'] and not has_blank_entries:
             print("[Context Cache] All context loaded from cache - skipping API calls")
             context['from_cache'] = True  # Mark that this context was loaded from cache
             # Still collect media from mention if not in chain
