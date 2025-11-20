@@ -2541,8 +2541,20 @@ def fetch_and_process_mentions(user_id, username):
                             print(f"[Mention Threshold] Checking per-user threshold for user {target_author} in conversation {conv_id}")
                             prior_replies_to_user = count_bot_replies_by_user_in_conversation(conv_id, bot_user_id, target_author, api_bot_replies)
                             print(f"[Mention Threshold] User {target_author}: {prior_replies_to_user} replies / {reply_threshold} threshold")
-                            if prior_replies_to_user >= reply_threshold:
-                                print(f"[Mention Threshold] SKIPPING reply to thread {conv_id}: bot already replied to user {target_author} {prior_replies_to_user} times (threshold={reply_threshold})")
+                            if prior_replies_to_user == reply_threshold:
+                                # Exactly at threshold - post notification ONCE
+                                print(f"[Mention Threshold] THRESHOLD REACHED for user {target_author}: {prior_replies_to_user} == {reply_threshold}")
+                                print(f"[Mention Threshold] Posting threshold notification to user {target_author} in thread {conv_id}")
+                                # Add threshold notification instructions to context
+                                context['context_instructions'] = f"\nPrompt: Politely inform the user that you've reached your reply limit of {reply_threshold} responses per conversation with them. Thank them for the engaging discussion"
+                                "Encourage them to follow the bot and or consider donating to AI against Autocracy if they support it's mission."
+                                # Post the threshold notification
+                                success = fact_check(mention.text, mention.id, context)
+                                write_last_tweet_id(mention.id)
+                                continue
+                            elif prior_replies_to_user > reply_threshold:
+                                # Already past threshold - silent skip (notification already sent)
+                                print(f"[Mention Threshold] Already notified user {target_author} (count: {prior_replies_to_user}), silently skipping")
                                 success = dryruncheck()
                                 write_last_tweet_id(mention.id)
                                 continue
@@ -2550,8 +2562,19 @@ def fetch_and_process_mentions(user_id, username):
                                 print(f"[Mention Threshold] PROCEEDING with reply to user {target_author} ({prior_replies_to_user} < {reply_threshold})")
                         else:
                             prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
-                            if prior_replies >= reply_threshold:
-                                print(f"Skipping reply to thread {conv_id}: bot already replied {prior_replies} times (threshold={reply_threshold})")
+                            if prior_replies == reply_threshold:
+                                # Exactly at threshold - post notification ONCE
+                                print(f"[Mention Threshold] THRESHOLD REACHED for thread {conv_id}: {prior_replies} == {reply_threshold}")
+                                print(f"[Mention Threshold] Posting threshold notification to thread {conv_id}")
+                                # Add threshold notification instructions to context
+                                context['context_instructions'] = f"\nPrompt: Politely inform the participants that you've reached your reply limit of {reply_threshold} responses for this conversation thread. Thank everyone for the engaging discussion and encourage them to continue exploring the topic independently."
+                                # Post the threshold notification
+                                success = fact_check(mention.text, mention.id, context)
+                                write_last_tweet_id(mention.id)
+                                continue
+                            elif prior_replies > reply_threshold:
+                                # Already past threshold - silent skip (notification already sent)
+                                print(f"[Mention Threshold] Already notified thread {conv_id} (count: {prior_replies}), silently skipping")
                                 success = dryruncheck()
                                 write_last_tweet_id(mention.id)
                                 continue
