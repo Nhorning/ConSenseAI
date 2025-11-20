@@ -2159,7 +2159,8 @@ def authenticate():
     keys = load_keys()
     
     # Always use bearer for read_client (app-only, basic-tier app)
-    read_client = tweepy.Client(bearer_token=keys['bearer_token'], wait_on_rate_limit=True)
+    # Note: wait_on_rate_limit=False so we can handle rate limits ourselves with proper loop breaking
+    read_client = tweepy.Client(bearer_token=keys['bearer_token'], wait_on_rate_limit=False)
     print("Read client authenticated with Bearer Token (app-only, basic tier).")
     print(f"[DEBUG] Bearer token (first 20 chars): {keys['bearer_token'][:20]}...")
     print("[DEBUG] Please verify this bearer token matches your Basic tier app in the Twitter Developer Portal")
@@ -2173,7 +2174,7 @@ def authenticate():
                 consumer_secret=keys['XAPI_secret'],
                 access_token=keys['access_token'],
                 access_token_secret=keys['access_token_secret'],
-                wait_on_rate_limit=True
+                wait_on_rate_limit=False
             )
             user = post_client.get_me()
             print(f"Post client authenticated as @{user.data.username} (free tier).")
@@ -2712,6 +2713,11 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                         break
             if parent_id is None or parent_id in visited:
                 break
+            
+            # Add parent_id to visited BEFORE making the API call
+            # This prevents duplicate API calls if an exception occurs and we retry
+            visited.add(parent_id)
+            
             parent_response = read_client.get_tweet(
                 id=parent_id,
                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
