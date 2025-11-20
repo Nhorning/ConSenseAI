@@ -3053,13 +3053,15 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False, verbose=Tru
                 
                 # Only try twitterapi.io if text might be truncated AND not from cache
                 if not from_cache and 180 <= len(qt_text) <= 280:
-                    try:
-                        full_text = get_full_text_twitterapiio(qt_id, api_key)
-                        if full_text:
-                            qt_text = full_text
-                    except Exception as e:
-                        if verbose:
-                            print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
+                    api_key = keys.get('TWITTERAPIIO_KEY')
+                    if api_key:
+                        try:
+                            full_text = get_full_text_twitterapiio(qt_id, api_key)
+                            if full_text:
+                                qt_text = full_text
+                        except Exception as e:
+                            if verbose:
+                                print(f"[Ancestor Chain] Error fetching quoted tweet {qt_id} from twitterapi.io: {e}")
             out += "  " * (indent + 1) + f"> {qt_text}{qt_author}\n"
         indent += 1
     return out

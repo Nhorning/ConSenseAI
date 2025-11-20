@@ -100776,5 +100776,2525 @@
     ],
     "thread_tweets": [],
     "bot_replies": []
+  },
+  "1990174298783269154": {
+    "chain": [
+      {
+        "tweet": {
+          "text": "BBC\u2019s Actions are Equivalent to AI or CGI. It was deliberate, attempted election interference. It was an assault on America\u2019s Free Election Process. https://t.co/jdv5x5hK1n",
+          "referenced_tweets": [
+            {
+              "type": "quoted",
+              "id": "1989492119241678948"
+            }
+          ],
+          "id": "1990174298783269154",
+          "edit_history_tweet_ids": [
+            "1990174298783269154"
+          ],
+          "entities": {
+            "urls": [
+              {
+                "start": 149,
+                "end": 172,
+                "url": "https://t.co/jdv5x5hK1n",
+                "expanded_url": "https://twitter.com/addicted2newz/status/1989492119241678948",
+                "display_url": "x.com/addicted2newz/\u2026"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 0,
+                "end": 2,
+                "probability": 0.9606,
+                "type": "Organization",
+                "normalized_text": "BBC"
+              },
+              {
+                "start": 4,
+                "end": 4,
+                "probability": 0.6488,
+                "type": "Organization",
+                "normalized_text": "s"
+              },
+              {
+                "start": 32,
+                "end": 33,
+                "probability": 0.8079,
+                "type": "Organization",
+                "normalized_text": "AI"
+              },
+              {
+                "start": 38,
+                "end": 40,
+                "probability": 0.699,
+                "type": "Organization",
+                "normalized_text": "CGI"
+              },
+              {
+                "start": 116,
+                "end": 122,
+                "probability": 0.8877,
+                "type": "Place",
+                "normalized_text": "America"
+              }
+            ]
+          },
+          "author_id": "1519321973708537858",
+          "conversation_id": "1990174298783269154"
+        },
+        "quoted_tweets": [
+          {
+            "entities": {
+              "annotations": [
+                {
+                  "start": 11,
+                  "end": 13,
+                  "probability": 0.9096,
+                  "type": "Organization",
+                  "normalized_text": "BBC"
+                },
+                {
+                  "start": 66,
+                  "end": 68,
+                  "probability": 0.9259,
+                  "type": "Organization",
+                  "normalized_text": "BBC"
+                },
+                {
+                  "start": 76,
+                  "end": 80,
+                  "probability": 0.9733,
+                  "type": "Person",
+                  "normalized_text": "Trump"
+                },
+                {
+                  "start": 113,
+                  "end": 115,
+                  "probability": 0.9158,
+                  "type": "Organization",
+                  "normalized_text": "BBC"
+                },
+                {
+                  "start": 229,
+                  "end": 231,
+                  "probability": 0.9226,
+                  "type": "Organization",
+                  "normalized_text": "BBC"
+                }
+              ],
+              "urls": [
+                {
+                  "start": 234,
+                  "end": 257,
+                  "url": "https://t.co/a1LA4xKL78",
+                  "expanded_url": "https://x.com/addicted2newz/status/1989492119241678948/video/1",
+                  "display_url": "pic.x.com/a1LA4xKL78",
+                  "media_key": "13_1989490480296665088"
+                }
+              ]
+            },
+            "edit_history_tweet_ids": [
+              "1989491843411972503",
+              "1989492119241678948"
+            ],
+            "id": "1989492119241678948",
+            "created_at": "2025-11-15T00:34:18.000Z",
+            "author_id": "2954167529",
+            "attachments": {
+              "media_keys": [
+                "13_1989490480296665088"
+              ]
+            },
+            "text": "\ud83d\udea8HUGE: The BBC deadline has passed and after the SECOND deceitful BBC edit, Trump confirms he's going to sue the BBC for *up to $5 BILLION* some time next week.\n\nWonderful. This is what consequences look like.\n\nIt's over for the BBC. https://t.co/a1LA4xKL78"
+          }
+        ],
+        "media": [
+          {
+            "type": "video",
+            "url": null,
+            "alt_text": null
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "id": "1991386859726131486",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "I need to search for information about this BBC controversy and Trump's threatened lawsuit to provide an accurate response. Based on the search results, I can now provide an informed response:\n\nThe BBC did make a significant editorial error: they spliced together parts of Trump's January 6 speech that were over 50 minutes apart , creating a misleading impression. The BBC has apologized and its director-general and head of news both resigned .\n\nHowever, the characterization as \"deliberate election interference\" lacks supporting evidence. The BBC's legal team states the edit was made to \"shorten a long speech,\" not to mislead viewers , and there's no indication it was malicious or intended to interfere with the U.S. election . The BBC accepted the edit \"gave the mistaken impression that President Trump had made a direct call for violent action\" but maintains it was unintentional.\n\nCalling this equivalent to AI or CGI manipulation overstates the case. This was clumsy editing that violated journalistic standards\u2014serious but fundamentally different from fabricated content. Whether Trump's threatened lawsuit succeeds remains uncertain, as he faces steep legal hurdles including proving actual malice .\n\nGenerated by: gpt-5-mini,  grok-4-fast-reasoning,  claude-haiku-4-5, \nCombined by: claude-sonnet-4-5"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [],
+    "bot_replies": []
+  },
+  "1991266164253544570": {
+    "chain": [
+      {
+        "tweet": {
+          "author_id": "1151913018936053760",
+          "text": "\ud83d\udea8\ud83c\uddee\ud83c\uddf7 BREAKING: Iranian exports to Africa DOUBLE in six months, reaching almost $700 billion in total value. https://t.co/eZWuYX3yxs",
+          "entities": {
+            "annotations": [
+              {
+                "start": 33,
+                "end": 38,
+                "probability": 0.9641,
+                "type": "Place",
+                "normalized_text": "Africa"
+              }
+            ],
+            "urls": [
+              {
+                "start": 107,
+                "end": 130,
+                "url": "https://t.co/eZWuYX3yxs",
+                "expanded_url": "https://x.com/jacksonhinklle/status/1991266164253544570/photo/1",
+                "display_url": "pic.x.com/eZWuYX3yxs",
+                "media_key": "3_1991266159149170689"
+              }
+            ]
+          },
+          "edit_history_tweet_ids": [
+            "1991266164253544570"
+          ],
+          "id": "1991266164253544570",
+          "attachments": {
+            "media_keys": [
+              "3_1991266159149170689"
+            ]
+          },
+          "conversation_id": "1991266164253544570"
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "id": "1991387073216147529",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "That headline is off by three orders of magnitude. It\u2019s about $700 million, not $700 billion. Iran\u2019s Trade Promotion Organization and Mehr report non\u2011oil exports to Africa at roughly $675 million in the first half, about double year\u2011over\u2011year. An uptick, yes\u2014but small in scale and not proof Iran\u2019s economy is \u201cdoing very well\u201d under sanctions.\n\nGenerated by: claude-haiku-4-5,  gpt-5-mini,  grok-4-fast-reasoning, \nCombined by: gpt-5"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 26,
+              "end": 29,
+              "probability": 0.9646,
+              "type": "Place",
+              "normalized_text": "Iran"
+            },
+            {
+              "start": 46,
+              "end": 51,
+              "probability": 0.9684,
+              "type": "Place",
+              "normalized_text": "Africa"
+            },
+            {
+              "start": 93,
+              "end": 97,
+              "probability": 0.9868,
+              "type": "Place",
+              "normalized_text": "Sudan"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle Thank you Iran for caring for Africa, we need to send aid workers there too. Sudan very much in my mind. Thk you.",
+        "edit_history_tweet_ids": [
+          "1991386833750749267"
+        ],
+        "author_id": "1962078895907205120",
+        "id": "1991386833750749267",
+        "created_at": "2025-11-20T06:03:14.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 130,
+              "end": 133,
+              "probability": 0.8675,
+              "type": "Place",
+              "normalized_text": "Iran"
+            },
+            {
+              "start": 143,
+              "end": 164,
+              "probability": 0.4048,
+              "type": "Other",
+              "normalized_text": "Promotion Organization"
+            },
+            {
+              "start": 183,
+              "end": 191,
+              "probability": 0.6172,
+              "type": "Other",
+              "normalized_text": "Mehr News"
+            },
+            {
+              "start": 220,
+              "end": 225,
+              "probability": 0.9681,
+              "type": "Place",
+              "normalized_text": "Africa"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "charliedubai",
+              "id": "20166133"
+            },
+            {
+              "start": 14,
+              "end": 29,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991385762940768748"
+          }
+        ],
+        "text": "@charliedubai @jacksonhinklle No, the $700 billion figure is incorrect\u2014it's a likely exaggeration or error. Reliable reports from Iran's Trade Promotion Organization and outlets like Mehr News confirm non-oil exports to Africa doubled to about $675 million in the first half of the current Iranian year",
+        "edit_history_tweet_ids": [
+          "1991385850509422853"
+        ],
+        "author_id": "1720665183188922368",
+        "id": "1991385850509422853",
+        "created_at": "2025-11-20T05:59:19.000Z",
+        "in_reply_to_user_id": "20166133"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle @grok is the number correct? There has been other reports sighting $700 million I think",
+        "edit_history_tweet_ids": [
+          "1991385762940768748"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            },
+            {
+              "start": 16,
+              "end": 21,
+              "username": "grok",
+              "id": "1720665183188922368"
+            }
+          ]
+        },
+        "author_id": "20166133",
+        "id": "1991385762940768748",
+        "created_at": "2025-11-20T05:58:58.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle Good",
+        "edit_history_tweet_ids": [
+          "1991382536656941420"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "author_id": "1590793995285839872",
+        "id": "1991382536656941420",
+        "created_at": "2025-11-20T05:46:09.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "entities": {
+          "urls": [
+            {
+              "start": 16,
+              "end": 39,
+              "url": "https://t.co/bMJwMSQCpd",
+              "expanded_url": "https://x.com/IYDKWSK/status/1991381405667061871/photo/1",
+              "display_url": "pic.x.com/bMJwMSQCpd",
+              "media_key": "3_1991381402882060288"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991381402882060288"
+          ]
+        },
+        "text": "@jacksonhinklle https://t.co/bMJwMSQCpd",
+        "edit_history_tweet_ids": [
+          "1991381405667061871"
+        ],
+        "author_id": "1605872553741918210",
+        "id": "1991381405667061871",
+        "created_at": "2025-11-20T05:41:39.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 43,
+              "end": 49,
+              "probability": 0.8716,
+              "type": "Person",
+              "normalized_text": "Abraham"
+            },
+            {
+              "start": 52,
+              "end": 56,
+              "probability": 0.8886,
+              "type": "Person",
+              "normalized_text": "Isaac"
+            },
+            {
+              "start": 63,
+              "end": 67,
+              "probability": 0.8699,
+              "type": "Person",
+              "normalized_text": "Jacob"
+            },
+            {
+              "start": 240,
+              "end": 245,
+              "probability": 0.8431,
+              "type": "Place",
+              "normalized_text": "Israel"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle Lord, our God - the God of Abraham, Isaac, and Jacob, Creator of the universe - bring justice with Your mighty hand.\nProtect the innocent, defend the righteous, and expose those who spread lies and false accusations against Israel and its people.\nLet truth rise above hatred, and",
+        "edit_history_tweet_ids": [
+          "1991376857107660808"
+        ],
+        "author_id": "1468555015472447489",
+        "id": "1991376857107660808",
+        "created_at": "2025-11-20T05:23:35.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 91,
+              "end": 95,
+              "probability": 0.974,
+              "type": "Place",
+              "normalized_text": "China"
+            },
+            {
+              "start": 118,
+              "end": 123,
+              "probability": 0.9638,
+              "type": "Place",
+              "normalized_text": "Africa"
+            },
+            {
+              "start": 144,
+              "end": 147,
+              "probability": 0.9535,
+              "type": "Place",
+              "normalized_text": "Iran"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "Zion_Report",
+              "id": "1396483090495774724"
+            },
+            {
+              "start": 13,
+              "end": 28,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991316713246486822"
+          }
+        ],
+        "text": "@Zion_Report @jacksonhinklle It's a self-contained cycle of countries that are sanctioned. China props up billions in Africa which then goes to Iran.",
+        "edit_history_tweet_ids": [
+          "1991371546334752930"
+        ],
+        "author_id": "1657771619098722304",
+        "id": "1991371546334752930",
+        "created_at": "2025-11-20T05:02:29.000Z",
+        "in_reply_to_user_id": "1396483090495774724"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 26,
+              "end": 31,
+              "probability": 0.5315,
+              "type": "Other",
+              "normalized_text": "bilion"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle Or 70,000 bilion, who wants to  count?",
+        "edit_history_tweet_ids": [
+          "1991370653900144712"
+        ],
+        "author_id": "1980805180158337024",
+        "id": "1991370653900144712",
+        "created_at": "2025-11-20T04:58:56.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 109,
+              "end": 114,
+              "probability": 0.9729,
+              "type": "Place",
+              "normalized_text": "Africa"
+            },
+            {
+              "start": 167,
+              "end": 170,
+              "probability": 0.9308,
+              "type": "Place",
+              "normalized_text": "Iran"
+            },
+            {
+              "start": 309,
+              "end": 312,
+              "probability": 0.9631,
+              "type": "Place",
+              "normalized_text": "Iran"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "wpDzfeBHMR6VBFE",
+              "id": "1302971949333786626"
+            },
+            {
+              "start": 17,
+              "end": 32,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991369846307934467"
+          }
+        ],
+        "text": "@wpDzfeBHMR6VBFE @jacksonhinklle No, the $700 billion figure is wildly exaggerated\u2014actual non-oil exports to Africa doubled to about $675 million in the first half of Iran's year. That's minor growth amid sanctions crippling the broader economy, with inflation exceeding 35% and GDP per capita around $4,000. Iran",
+        "edit_history_tweet_ids": [
+          "1991369936665727446"
+        ],
+        "author_id": "1720665183188922368",
+        "id": "1991369936665727446",
+        "created_at": "2025-11-20T04:56:05.000Z",
+        "in_reply_to_user_id": "1302971949333786626"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 37,
+              "end": 40,
+              "probability": 0.9491,
+              "type": "Place",
+              "normalized_text": "Iran"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            },
+            {
+              "start": 16,
+              "end": 21,
+              "username": "grok",
+              "id": "1720665183188922368"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991266164253544570"
+          }
+        ],
+        "text": "@jacksonhinklle @grok wow so I guess Iran is doing very well economically",
+        "edit_history_tweet_ids": [
+          "1991369846307934467"
+        ],
+        "author_id": "1302971949333786626",
+        "id": "1991369846307934467",
+        "created_at": "2025-11-20T04:55:43.000Z",
+        "in_reply_to_user_id": "1151913018936053760"
+      }
+    ],
+    "bot_replies": []
+  },
+  "1991293791777521684": {
+    "chain": [
+      {
+        "tweet": {
+          "entities": {
+            "urls": [
+              {
+                "start": 85,
+                "end": 108,
+                "url": "https://t.co/VNxwQrhsQb",
+                "expanded_url": "https://twitter.com/tatereeves/status/1991265064897376661",
+                "display_url": "x.com/tatereeves/sta\u2026"
+              }
+            ],
+            "mentions": [
+              {
+                "start": 73,
+                "end": 84,
+                "username": "JeffLandry",
+                "id": "235258843"
+              }
+            ]
+          },
+          "id": "1991293791777521684",
+          "text": "When you are getting outgoverned by Mississippi you are in a v bad place @JeffLandry https://t.co/VNxwQrhsQb",
+          "edit_history_tweet_ids": [
+            "1991293791777521684"
+          ],
+          "conversation_id": "1991293791777521684",
+          "referenced_tweets": [
+            {
+              "type": "quoted",
+              "id": "1991265064897376661"
+            }
+          ],
+          "author_id": "21348880"
+        },
+        "quoted_tweets": [
+          {
+            "entities": {
+              "mentions": [
+                {
+                  "start": 45,
+                  "end": 57,
+                  "username": "Lane_Kiffin",
+                  "id": "104374310"
+                },
+                {
+                  "start": 58,
+                  "end": 68,
+                  "username": "OleMissFB",
+                  "id": "323003569"
+                },
+                {
+                  "start": 72,
+                  "end": 82,
+                  "username": "Coach_Leb",
+                  "id": "951077645592203265"
+                },
+                {
+                  "start": 83,
+                  "end": 95,
+                  "username": "HailStateFB",
+                  "id": "157421383"
+                }
+              ],
+              "annotations": [
+                {
+                  "start": 127,
+                  "end": 134,
+                  "probability": 0.8721,
+                  "type": "Other",
+                  "normalized_text": "Egg Bowl"
+                },
+                {
+                  "start": 185,
+                  "end": 190,
+                  "probability": 0.7483,
+                  "type": "Organization",
+                  "normalized_text": "Toyota"
+                },
+                {
+                  "start": 195,
+                  "end": 206,
+                  "probability": 0.9462,
+                  "type": "Place",
+                  "normalized_text": "Blue Springs"
+                },
+                {
+                  "start": 209,
+                  "end": 210,
+                  "probability": 0.7982,
+                  "type": "Place",
+                  "normalized_text": "MS"
+                }
+              ]
+            },
+            "id": "1991265064897376661",
+            "author_id": "259341329",
+            "text": "BREAKING NEWS: \n\nNo - I have NOT spoken with @Lane_Kiffin @OleMissFB OR @Coach_Leb @HailStateFB in the last 48 hours about the Egg Bowl!\n\nBut I did announce a $125 million expansion by Toyota in Blue Springs, MS yesterday!\n\nAnd tomorrow we will be announcing another multi-billion",
+            "edit_history_tweet_ids": [
+              "1991265064897376661"
+            ],
+            "created_at": "2025-11-19T21:59:22.000Z"
+          }
+        ],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T04:34:00.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry This wins dumbest thing I\u2019ve seen all day \ud83e\udd23\ud83e\udd23",
+        "id": "1991364378403250610",
+        "edit_history_tweet_ids": [
+          "1991364378403250610"
+        ],
+        "author_id": "1229168786378502146"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991358543203885414"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "JohnKenned95817",
+              "id": "1817595985209475072"
+            },
+            {
+              "start": 17,
+              "end": 24,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 25,
+              "end": 36,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T04:14:42.000Z",
+        "in_reply_to_user_id": "1817595985209475072",
+        "text": "@JohnKenned95817 @Timodc @JeffLandry Damn straight!",
+        "id": "1991359522049519661",
+        "edit_history_tweet_ids": [
+          "1991359522049519661"
+        ],
+        "author_id": "1623160981579878401"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991357820286169482"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "LunaLion8308",
+              "id": "1623160981579878401"
+            },
+            {
+              "start": 14,
+              "end": 21,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 22,
+              "end": 33,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T04:10:49.000Z",
+        "in_reply_to_user_id": "1623160981579878401",
+        "text": "@LunaLion8308 @Timodc @JeffLandry That's right!",
+        "id": "1991358543203885414",
+        "edit_history_tweet_ids": [
+          "1991358543203885414"
+        ],
+        "author_id": "1817595985209475072"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 38,
+              "end": 50,
+              "probability": 0.9591,
+              "type": "Person",
+              "normalized_text": "Kamala Harris"
+            },
+            {
+              "start": 143,
+              "end": 153,
+              "probability": 0.9399,
+              "type": "Place",
+              "normalized_text": "Mississippi"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "created_at": "2025-11-20T04:07:56.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry Oh and you were a Kamala Harris supporter \ud83d\ude02\ud83e\udd23\ud83e\udd23\ud83e\udd23\ud83e\udd23\ud83e\udd23\ud83e\udd23\ud83e\udd23\nWhat a beta boy! I seriously feel sorry for you. Stay soy boy, and keep Mississippi out of your mouth!",
+        "id": "1991357820286169482",
+        "edit_history_tweet_ids": [
+          "1991357820286169482"
+        ],
+        "author_id": "1623160981579878401"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991326957909266817"
+          }
+        ],
+        "entities": {
+          "hashtags": [
+            {
+              "start": 52,
+              "end": 56,
+              "tag": "WPS"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "itsthejody",
+              "id": "933028941220253697"
+            },
+            {
+              "start": 12,
+              "end": 19,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 20,
+              "end": 31,
+              "username": "JeffLandry",
+              "id": "235258843"
+            },
+            {
+              "start": 37,
+              "end": 51,
+              "username": "SarahHuckabee",
+              "id": "5509762"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T03:50:44.000Z",
+        "in_reply_to_user_id": "933028941220253697",
+        "text": "@itsthejody @Timodc @JeffLandry Grrl @SarahHuckabee #WPS \ud83d\udc17",
+        "id": "1991353489419796943",
+        "edit_history_tweet_ids": [
+          "1991353489419796943"
+        ],
+        "author_id": "22787122"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T03:37:22.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry Quiet, piggy.",
+        "id": "1991350125420298390",
+        "edit_history_tweet_ids": [
+          "1991350125420298390"
+        ],
+        "author_id": "1974413594033790976"
+      },
+      {
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "created_at": "2025-11-20T03:17:35.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry Eat shit prick",
+        "id": "1991345148455002365",
+        "edit_history_tweet_ids": [
+          "1991345148455002365"
+        ],
+        "author_id": "1426178858647269378"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 51,
+              "end": 56,
+              "probability": 0.3822,
+              "type": "Place",
+              "normalized_text": "Cheney"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "created_at": "2025-11-20T02:22:03.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry The fuck are you attending the Cheney funeral? Dude was fucking awful",
+        "id": "1991331174531084431",
+        "edit_history_tweet_ids": [
+          "1991331174531084431"
+        ],
+        "author_id": "733513550329565185"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 44,
+              "end": 54,
+              "probability": 0.9843,
+              "type": "Place",
+              "normalized_text": "Mississippi"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "created_at": "2025-11-20T02:09:20.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry You have a problem with Mississippi? That\u2019s a backhanded comment.",
+        "id": "1991327974604566539",
+        "edit_history_tweet_ids": [
+          "1991327974604566539"
+        ],
+        "author_id": "1623160981579878401"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 25,
+              "end": 28,
+              "probability": 0.5925,
+              "type": "Person",
+              "normalized_text": "Tate"
+            },
+            {
+              "start": 34,
+              "end": 37,
+              "probability": 0.6365,
+              "type": "Person",
+              "normalized_text": "Jeff"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 19,
+              "username": "JeffLandry",
+              "id": "235258843"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991293791777521684"
+          }
+        ],
+        "created_at": "2025-11-20T02:05:18.000Z",
+        "in_reply_to_user_id": "21348880",
+        "text": "@Timodc @JeffLandry Both Tate and Jeff are fucking clowns. \ud83e\udd21",
+        "id": "1991326957909266817",
+        "edit_history_tweet_ids": [
+          "1991326957909266817"
+        ],
+        "author_id": "933028941220253697"
+      }
+    ],
+    "bot_replies": []
+  },
+  "1991304980699976044": {
+    "chain": [
+      {
+        "tweet": {
+          "entities": {
+            "urls": [
+              {
+                "start": 117,
+                "end": 140,
+                "url": "https://t.co/r24iGPBFab",
+                "expanded_url": "https://twitter.com/bulwarkonline/status/1991299549474791547",
+                "display_url": "x.com/bulwarkonline/\u2026"
+              }
+            ],
+            "mentions": [
+              {
+                "start": 6,
+                "end": 19,
+                "username": "KamalaHarris",
+                "id": "30354991"
+              }
+            ]
+          },
+          "id": "1991304980699976044",
+          "text": "Asked @KamalaHarris why the loyalty wasn\u2019t a two way street and whether that hampered her ability to win\u2026\n\n\u201cperhaps\u201d https://t.co/r24iGPBFab",
+          "edit_history_tweet_ids": [
+            "1991304980699976044"
+          ],
+          "conversation_id": "1991304980699976044",
+          "referenced_tweets": [
+            {
+              "type": "quoted",
+              "id": "1991299549474791547"
+            }
+          ],
+          "author_id": "21348880"
+        },
+        "quoted_tweets": [
+          {
+            "edit_history_tweet_ids": [
+              "1991299549474791547"
+            ],
+            "entities": {
+              "urls": [
+                {
+                  "start": 275,
+                  "end": 298,
+                  "url": "https://t.co/NJxW9bMu3R",
+                  "expanded_url": "https://x.com/BulwarkOnline/status/1991299549474791547/video/1",
+                  "display_url": "pic.x.com/NJxW9bMu3R",
+                  "media_key": "13_1991299392125415424"
+                }
+              ],
+              "mentions": [
+                {
+                  "start": 163,
+                  "end": 170,
+                  "username": "Timodc",
+                  "id": "21348880"
+                },
+                {
+                  "start": 177,
+                  "end": 190,
+                  "username": "KamalaHarris",
+                  "id": "30354991"
+                }
+              ],
+              "annotations": [
+                {
+                  "start": 195,
+                  "end": 199,
+                  "probability": 0.9414,
+                  "type": "Person",
+                  "normalized_text": "Biden"
+                }
+              ]
+            },
+            "attachments": {
+              "media_keys": [
+                "13_1991299392125415424"
+              ]
+            },
+            "author_id": "1049475664804532225",
+            "created_at": "2025-11-20T00:16:23.000Z",
+            "id": "1991299549474791547",
+            "text": "\"I feel like it was incumbent upon him to say... if you need to throw me under the bus on a few things, you go do that because we got to beat this motherfucker.\"\n\n@Timodc asked @KamalaHarris why Biden didn\u2019t give her the space to break with him when the stakes were so high. https://t.co/NJxW9bMu3R"
+          }
+        ],
+        "media": [
+          {
+            "type": "video",
+            "url": null,
+            "alt_text": null
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "id": "1991387280821649569",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "Error: Could not verify with grok-4.\n\nGenerated by: grok-4-fast-reasoning,  claude-haiku-4-5,  gpt-5-mini, \nCombined by: grok-4"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "in_reply_to_user_id": "21348880",
+        "id": "1991386933474533861",
+        "text": "@Timodc @KamalaHarris That\u2019s hilarious so you went and talked to the 1/3rd who didn\u2019t vote and spoke to the 75M who voted for the felon traitor with not one iota of accomplishment about why they didn\u2019t vote for Kamala Harris &amp; they all said it\u2019s b/c she didn\u2019t throw Biden under the bus? \ud83e\udd21\ud83d\ude02",
+        "edit_history_tweet_ids": [
+          "1991386933474533861"
+        ],
+        "entities": {
+          "annotations": [
+            {
+              "start": 211,
+              "end": 223,
+              "probability": 0.9381,
+              "type": "Person",
+              "normalized_text": "Kamala Harris"
+            },
+            {
+              "start": 271,
+              "end": 275,
+              "probability": 0.9564,
+              "type": "Person",
+              "normalized_text": "Biden"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991304980699976044"
+          }
+        ],
+        "author_id": "2162785953",
+        "created_at": "2025-11-20T06:03:37.000Z"
+      },
+      {
+        "in_reply_to_user_id": "1967577841018580992",
+        "id": "1991369859830329469",
+        "text": "@sofia3894050354 @Timodc @KamalaHarris @JoeBiden Take your meds",
+        "edit_history_tweet_ids": [
+          "1991369859830329469"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991341593614512317"
+          }
+        ],
+        "author_id": "1560870527761276929",
+        "created_at": "2025-11-20T04:55:47.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "sofia3894050354",
+              "id": "1967577841018580992"
+            },
+            {
+              "start": 17,
+              "end": 24,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 25,
+              "end": 38,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            },
+            {
+              "start": 39,
+              "end": 48,
+              "username": "JoeBiden",
+              "id": "939091"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "1665014918033055747",
+        "id": "1991369760685351211",
+        "text": "@IDoDeclare83 @Timodc @KamalaHarris You are saying alot of gibberish",
+        "edit_history_tweet_ids": [
+          "1991369760685351211"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991328836890284366"
+          }
+        ],
+        "author_id": "1560870527761276929",
+        "created_at": "2025-11-20T04:55:23.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "IDoDeclare83",
+              "id": "1665014918033055747"
+            },
+            {
+              "start": 14,
+              "end": 21,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 22,
+              "end": 35,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "755491002350264320",
+        "id": "1991369663260029139",
+        "text": "@cfthepodcast @Timodc @KamalaHarris She was vp. She didn't have full authority",
+        "edit_history_tweet_ids": [
+          "1991369663260029139"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991325835740213552"
+          }
+        ],
+        "author_id": "1560870527761276929",
+        "created_at": "2025-11-20T04:55:00.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "cfthepodcast",
+              "id": "755491002350264320"
+            },
+            {
+              "start": 14,
+              "end": 21,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 22,
+              "end": 35,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "551942146",
+        "id": "1991369507269669171",
+        "text": "@VotePragmatic @Timodc @KamalaHarris You lot love to complain",
+        "edit_history_tweet_ids": [
+          "1991369507269669171"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991306851716051420"
+          }
+        ],
+        "author_id": "1560870527761276929",
+        "created_at": "2025-11-20T04:54:23.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 14,
+              "username": "VotePragmatic",
+              "id": "551942146"
+            },
+            {
+              "start": 15,
+              "end": 22,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 23,
+              "end": 36,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "36079009",
+        "id": "1991369398763024497",
+        "text": "@wfenza @Timodc @KamalaHarris Because he had his supporters in the party.",
+        "edit_history_tweet_ids": [
+          "1991369398763024497"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991314048626094247"
+          }
+        ],
+        "author_id": "1560870527761276929",
+        "created_at": "2025-11-20T04:53:57.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "wfenza",
+              "id": "36079009"
+            },
+            {
+              "start": 8,
+              "end": 15,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 16,
+              "end": 29,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "21348880",
+        "id": "1991358236533092770",
+        "text": "@Timodc @KamalaHarris Most ppl didn\u2019t want her. She was the first one out when Biden won. Ppl don\u2019t connect to her for some reason .",
+        "edit_history_tweet_ids": [
+          "1991358236533092770"
+        ],
+        "entities": {
+          "annotations": [
+            {
+              "start": 79,
+              "end": 83,
+              "probability": 0.932,
+              "type": "Person",
+              "normalized_text": "Biden"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991304980699976044"
+          }
+        ],
+        "author_id": "42703989",
+        "created_at": "2025-11-20T04:09:35.000Z"
+      },
+      {
+        "in_reply_to_user_id": "21348880",
+        "id": "1991357722680520771",
+        "text": "@Timodc @KamalaHarris Not sure what the point of the 101st interview on her book tour was",
+        "edit_history_tweet_ids": [
+          "1991357722680520771"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991304980699976044"
+          }
+        ],
+        "author_id": "479244615",
+        "created_at": "2025-11-20T04:07:33.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "21348880",
+        "id": "1991353408809496693",
+        "text": "@Timodc @KamalaHarris Why are we reitigating this? Nothing else going on in the country? Slow news' day?",
+        "edit_history_tweet_ids": [
+          "1991353408809496693"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991304980699976044"
+          }
+        ],
+        "author_id": "1593932082132099072",
+        "created_at": "2025-11-20T03:50:24.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        }
+      },
+      {
+        "in_reply_to_user_id": "21348880",
+        "id": "1991352230323351970",
+        "text": "@Timodc @KamalaHarris @KamalaHarris , you continue to do interviews with scumbags that trash  Biden and that seek to draw division within the Dem Party. What\u2019s your angle? Cause that doesn\u2019t help Dems win elections.",
+        "edit_history_tweet_ids": [
+          "1991352230323351970"
+        ],
+        "entities": {
+          "annotations": [
+            {
+              "start": 94,
+              "end": 98,
+              "probability": 0.9589,
+              "type": "Person",
+              "normalized_text": "Biden"
+            },
+            {
+              "start": 142,
+              "end": 150,
+              "probability": 0.6263,
+              "type": "Organization",
+              "normalized_text": "Dem Party"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "Timodc",
+              "id": "21348880"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            },
+            {
+              "start": 22,
+              "end": 35,
+              "username": "KamalaHarris",
+              "id": "30354991"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991304980699976044"
+          }
+        ],
+        "author_id": "48145071",
+        "created_at": "2025-11-20T03:45:43.000Z"
+      }
+    ],
+    "bot_replies": []
+  },
+  "1991256094719770627": {
+    "chain": [
+      {
+        "tweet": {
+          "text": "Stephen Miller: It is insurrection, plainly, directly without question\u2026 These lawmakers should honestly resign in disgrace, and never return to public office again, for even daring to think, let alone to say these words and to say them proudly. https://t.co/ezypuUbBwE",
+          "id": "1991256094719770627",
+          "entities": {
+            "annotations": [
+              {
+                "start": 0,
+                "end": 13,
+                "probability": 0.982,
+                "type": "Person",
+                "normalized_text": "Stephen Miller"
+              }
+            ],
+            "urls": [
+              {
+                "start": 245,
+                "end": 268,
+                "url": "https://t.co/ezypuUbBwE",
+                "expanded_url": "https://x.com/Acyn/status/1991256094719770627/video/1",
+                "display_url": "pic.x.com/ezypuUbBwE",
+                "media_key": "13_1991256056878739456"
+              }
+            ]
+          },
+          "author_id": "16635277",
+          "edit_history_tweet_ids": [
+            "1991256094719770627"
+          ],
+          "attachments": {
+            "media_keys": [
+              "13_1991256056878739456"
+            ]
+          },
+          "created_at": "2025-11-19T21:23:43.000Z"
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": null,
+            "alt_text": null
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "edit_history_tweet_ids": [
+            "1991382307681538096"
+          ],
+          "author_id": "2569714638",
+          "text": "@Acyn Doesn\u2019t he look like someone who would definitely eat a baby if given the chance?",
+          "id": "1991382307681538096",
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 5,
+                "username": "Acyn",
+                "id": "16635277"
+              }
+            ]
+          },
+          "conversation_id": "1991256094719770627",
+          "in_reply_to_user_id": "16635277",
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "1991256094719770627"
+            }
+          ]
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "id": "1991388161487040888",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "I understand the frustration, but personal attacks distract from the actual issue. Military personnel are legally obligated to refuse unlawful orders under UCMJ. Miller's characterization of this constitutional duty as \"insurrection\" is what deserves scrutiny. Focus on the dangerous policy implications, not appearance.\n\nGenerated by: claude-haiku-4-5,  gpt-5-mini,  grok-4-fast-reasoning, \nCombined by: claude-sonnet-4-5"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "text": "@dvillella @Acyn I made this one and thought you might like to have it: https://t.co/EbtO4tmuLX",
+        "author_id": "1894084206197923840",
+        "created_at": "2025-11-20T06:06:59.000Z",
+        "in_reply_to_user_id": "43014978",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 10,
+              "username": "dvillella",
+              "id": "43014978"
+            },
+            {
+              "start": 11,
+              "end": 16,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ],
+          "urls": [
+            {
+              "start": 72,
+              "end": 95,
+              "url": "https://t.co/EbtO4tmuLX",
+              "expanded_url": "https://x.com/PixelmanLJ/status/1991387780170272825/photo/1",
+              "display_url": "pic.x.com/EbtO4tmuLX",
+              "media_key": "3_1991387765926240256"
+            }
+          ]
+        },
+        "id": "1991387780170272825",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991364963353653281"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991387765926240256"
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "1991387780170272825"
+        ]
+      },
+      {
+        "text": "@inflightpro44 @Acyn Exactly. https://t.co/F5S4bBNyOf",
+        "author_id": "1894084206197923840",
+        "created_at": "2025-11-20T06:00:35.000Z",
+        "in_reply_to_user_id": "1595190713544855552",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 14,
+              "username": "inflightpro44",
+              "id": "1595190713544855552"
+            },
+            {
+              "start": 15,
+              "end": 20,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ],
+          "urls": [
+            {
+              "start": 30,
+              "end": 53,
+              "url": "https://t.co/F5S4bBNyOf",
+              "expanded_url": "https://x.com/PixelmanLJ/status/1991386167867240870/photo/1",
+              "display_url": "pic.x.com/F5S4bBNyOf",
+              "media_key": "3_1991386136371920896"
+            }
+          ]
+        },
+        "id": "1991386167867240870",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991362221956559237"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991386136371920896"
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "1991386167867240870"
+        ]
+      },
+      {
+        "text": "@BDeMayo @Acyn https://t.co/Y7Y0jUc3l9",
+        "author_id": "1894084206197923840",
+        "created_at": "2025-11-20T05:59:55.000Z",
+        "in_reply_to_user_id": "220849777",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "BDeMayo",
+              "id": "220849777"
+            },
+            {
+              "start": 9,
+              "end": 14,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ],
+          "urls": [
+            {
+              "start": 15,
+              "end": 38,
+              "url": "https://t.co/Y7Y0jUc3l9",
+              "expanded_url": "https://x.com/PixelmanLJ/status/1991386000699060739/photo/1",
+              "display_url": "pic.x.com/Y7Y0jUc3l9",
+              "media_key": "3_1991385995858657280"
+            }
+          ]
+        },
+        "id": "1991386000699060739",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256894745284893"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991385995858657280"
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "1991386000699060739"
+        ]
+      },
+      {
+        "text": "@GreekViking99 @Acyn Pee Wee German knows that the low IQ MAGAts who watch Fox will believe his lies.\n\nBut anyone with a brain knows that they just stated the obvious truth &amp; the facts, that all members of the military MUST disobey all illegal &amp; unConstitutional orders. https://t.co/EESFr7rzQU",
+        "entities": {
+          "annotations": [
+            {
+              "start": 25,
+              "end": 27,
+              "probability": 0.4781,
+              "type": "Person",
+              "normalized_text": "Wee"
+            },
+            {
+              "start": 75,
+              "end": 77,
+              "probability": 0.3324,
+              "type": "Person",
+              "normalized_text": "Fox"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 14,
+              "username": "GreekViking99",
+              "id": "1545291739908358144"
+            },
+            {
+              "start": 15,
+              "end": 20,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ],
+          "urls": [
+            {
+              "start": 279,
+              "end": 302,
+              "url": "https://t.co/EESFr7rzQU",
+              "expanded_url": "https://x.com/PixelmanLJ/status/1991385693646647558/photo/1",
+              "display_url": "pic.x.com/EESFr7rzQU",
+              "media_key": "3_1991385669252284416"
+            }
+          ]
+        },
+        "author_id": "1894084206197923840",
+        "created_at": "2025-11-20T05:58:42.000Z",
+        "in_reply_to_user_id": "1545291739908358144",
+        "id": "1991385693646647558",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991263677647839663"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991385669252284416"
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "1991385693646647558"
+        ]
+      },
+      {
+        "text": "@Acyn Pee Wee German knows that the low IQ MAGAts who watch Fox will believe his lies.\n\nBut anyone with a brain knows that they just stated the obvious truth &amp; the facts, that all members of the military MUST disobey all illegal &amp; unConstitutional orders. https://t.co/VqeFFpCtKA",
+        "entities": {
+          "annotations": [
+            {
+              "start": 10,
+              "end": 12,
+              "probability": 0.319,
+              "type": "Person",
+              "normalized_text": "Wee"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ],
+          "urls": [
+            {
+              "start": 264,
+              "end": 287,
+              "url": "https://t.co/VqeFFpCtKA",
+              "expanded_url": "https://x.com/PixelmanLJ/status/1991385541225664811/photo/1",
+              "display_url": "pic.x.com/VqeFFpCtKA",
+              "media_key": "3_1991385531725361152"
+            }
+          ]
+        },
+        "author_id": "1894084206197923840",
+        "created_at": "2025-11-20T05:58:05.000Z",
+        "in_reply_to_user_id": "16635277",
+        "id": "1991385541225664811",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_1991385531725361152"
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "1991385541225664811"
+        ]
+      },
+      {
+        "text": "@Acyn Using the military and secret police on civilians is high treason.\n\nContext matters.",
+        "author_id": "1721027852064219136",
+        "created_at": "2025-11-20T05:57:59.000Z",
+        "in_reply_to_user_id": "16635277",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ]
+        },
+        "id": "1991385516584104439",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "1991385516584104439"
+        ]
+      },
+      {
+        "text": "@Acyn There's supposed to the word \"illegal\" between the words \"REFUSE\" and \"ORDERS\".\ud83e\udd21\ud83e\udd21",
+        "author_id": "252317703",
+        "created_at": "2025-11-20T05:47:32.000Z",
+        "in_reply_to_user_id": "16635277",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ]
+        },
+        "id": "1991382884662534149",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "1991382884662534149"
+        ]
+      },
+      {
+        "text": "@Acyn Killing non-combatants. He fired the military legal people, and the admiral in charge resigned. Red flags all over the place.",
+        "author_id": "1128099459353571328",
+        "created_at": "2025-11-20T05:47:19.000Z",
+        "in_reply_to_user_id": "16635277",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ]
+        },
+        "id": "1991382830728003768",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "1991382830728003768"
+        ]
+      },
+      {
+        "text": "@Acyn Doesn\u2019t he look like someone who would definitely eat a baby if given the chance?",
+        "author_id": "2569714638",
+        "created_at": "2025-11-20T05:45:14.000Z",
+        "in_reply_to_user_id": "16635277",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            }
+          ]
+        },
+        "id": "1991382307681538096",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "1991382307681538096"
+        ]
+      },
+      {
+        "text": "@Acyn Hey @StephenM if there are no illegal orders, then they won\u2019t object. Pretty simple.",
+        "author_id": "824502458554519552",
+        "created_at": "2025-11-20T05:36:21.000Z",
+        "in_reply_to_user_id": "16635277",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "Acyn",
+              "id": "16635277"
+            },
+            {
+              "start": 10,
+              "end": 19,
+              "username": "StephenM",
+              "id": "1329891389430243330"
+            }
+          ]
+        },
+        "id": "1991380069567418763",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991256094719770627"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "1991380069567418763"
+        ]
+      }
+    ],
+    "bot_replies": []
+  },
+  "1991195340951703890": {
+    "chain": [
+      {
+        "tweet": {
+          "entities": {
+            "urls": [
+              {
+                "start": 66,
+                "end": 89,
+                "url": "https://t.co/DES0Msci9D",
+                "expanded_url": "https://x.com/chefsevenn/status/1991195340951703890/photo/1",
+                "display_url": "pic.x.com/DES0Msci9D",
+                "media_key": "3_1991195330273013761"
+              }
+            ]
+          },
+          "text": "The restaurant said that this is medium rare. What do you think ? https://t.co/DES0Msci9D",
+          "edit_history_tweet_ids": [
+            "1991195340951703890"
+          ],
+          "id": "1991195340951703890",
+          "author_id": "734167130053201920",
+          "created_at": "2025-11-19T17:22:18.000Z",
+          "attachments": {
+            "media_keys": [
+              "3_1991195330273013761"
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G6IlmmNW8AEV8bM.jpg",
+            "alt_text": null
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "id": "1991280917160333769",
+          "text": "@chefsevenn The only way I'll eat food.\n\nNo blood or red thank you.",
+          "in_reply_to_user_id": "734167130053201920",
+          "conversation_id": "1991195340951703890",
+          "edit_history_tweet_ids": [
+            "1991280917160333769"
+          ],
+          "author_id": "2974917903",
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "1991195340951703890"
+            }
+          ],
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 11,
+                "username": "chefsevenn",
+                "id": "734167130053201920"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "created_at": "2025-11-20T06:07:58.000Z",
+        "edit_history_tweet_ids": [
+          "1991388027462254596"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991388027462254596",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "3071523231",
+        "text": "@chefsevenn Medium well",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:07:50.000Z",
+        "edit_history_tweet_ids": [
+          "1991387994092367915"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387994092367915",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1442044514508558336",
+        "text": "@chefsevenn bloody hell",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:07:38.000Z",
+        "edit_history_tweet_ids": [
+          "1991387943341289496"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387943341289496",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1920949041518833667",
+        "text": "@chefsevenn It\u2019s over done this is well done",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:07:32.000Z",
+        "edit_history_tweet_ids": [
+          "1991387916241920298"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387916241920298",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1747447611919929344",
+        "text": "@chefsevenn I say it's medium",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:07:03.000Z",
+        "edit_history_tweet_ids": [
+          "1991387795827618011"
+        ],
+        "attachments": {
+          "media_keys": [
+            "16_1991387787686240257"
+          ]
+        },
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387795827618011",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ],
+          "urls": [
+            {
+              "start": 12,
+              "end": 35,
+              "url": "https://t.co/Ccclad0IpV",
+              "expanded_url": "https://x.com/JenniferMc79706/status/1991387795827618011/photo/1",
+              "display_url": "pic.x.com/Ccclad0IpV",
+              "media_key": "16_1991387787686240257"
+            }
+          ]
+        },
+        "author_id": "1844056498067947520",
+        "text": "@chefsevenn https://t.co/Ccclad0IpV",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:06:50.000Z",
+        "edit_history_tweet_ids": [
+          "1991387741213630672"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387741213630672",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "20436728",
+        "text": "@chefsevenn This looks almost well,well done",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:05:00.000Z",
+        "edit_history_tweet_ids": [
+          "1991387279441732068"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387279441732068",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "48472949",
+        "text": "@chefsevenn Someone\u2019s thermometer \ud83c\udf21\ufe0f is broken! \ud83d\ude20",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:04:43.000Z",
+        "edit_history_tweet_ids": [
+          "1991387207828226265"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387207828226265",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1435946118572036096",
+        "text": "@chefsevenn Oh no it isn\u2019t. A saying goes you can\u2019t believe everything people tell you.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:04:06.000Z",
+        "edit_history_tweet_ids": [
+          "1991387051942637589"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991387051942637589",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1498727525991735302",
+        "text": "@chefsevenn Nothing like it... that's well done, I would say.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      },
+      {
+        "created_at": "2025-11-20T06:03:03.000Z",
+        "edit_history_tweet_ids": [
+          "1991386790650110151"
+        ],
+        "in_reply_to_user_id": "734167130053201920",
+        "id": "1991386790650110151",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "chefsevenn",
+              "id": "734167130053201920"
+            }
+          ]
+        },
+        "author_id": "1912684401961627652",
+        "text": "@chefsevenn I would be asking if the chef is colorblind.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "1991195340951703890"
+          }
+        ]
+      }
+    ],
+    "bot_replies": []
   }
 }
