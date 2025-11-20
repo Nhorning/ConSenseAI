@@ -4,7 +4,9 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 
 ## Project Structure
 
-**Current implementation:** `ConSenseAI_v1.3.py` (single-file bot, ~2059 lines)
+**Current implementation:** `ConSenseAI_v1.4.py` (single-file bot, ~3195 lines)
+
+**Current branch:** `fix-autofollow` - Reverted to commit 62250d7 (before problematic ancestor chain append changes that caused infinite loop)
 
 ### Core Components
 - Authentication and API client setup (`authenticate()`)
@@ -21,18 +23,27 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 - `last_tweet_id_{username}.txt` — Last processed mention ID
 - `last_search_id_{username}_{search_term}.txt` — Last processed search result ID per term
 - `search_reply_count_{username}.json` — Daily search reply counts (for dynamic caps)
+- `followed_reply_count_{username}.json` — Daily reply counts for followed users (separate cap)
+- `followed_rotation_{username}.json` — Rotation state for followed users checking
 - `sent_reply_hashes_{username}.json` — Reply deduplication hashes
 - `approval_queue_{username}.json` — Human approval queue (when enabled)
 - `output.log` — Rotating log file (rotates at LOG_MAX_SIZE_MB=10MB, keeps LOG_MAX_ROTATIONS=5 files)
 
 ## Key Features
 
-### Dual Processing Paths
+### Triple Processing Paths
 1. **Mention-based** (`fetch_and_process_mentions()`): Monitors @mentions of the bot
 2. **Search-based** (`fetch_and_process_search()`): Proactively searches for keywords (e.g., "fascism")
    - Dynamic daily caps that increase hourly (`get_current_search_cap()`)
    - Deduplication within configurable window (`--dedupe_window_hours`)
    - Optional human approval queue (`--enable_human_approval`)
+   - Optional AI-generated search terms when `--search_term "auto"` is used
+3. **Followed Users** (`fetch_and_process_followed_users()`): Checks tweets from users the bot follows
+   - **Rotation system**: Cycles through N users per cycle (default 3) to avoid overwhelming rate limits
+   - **Separate daily cap**: Independent from search cap (default 10 replies/day)
+   - **State tracking**: `followed_rotation_{username}.json` tracks position in followers list
+   - **Cap tracking**: `followed_reply_count_{username}.json` tracks daily reply counts
+   - Introduced in commit 62250d7
 
 ### Context Building (`get_tweet_context()`)
 - **Caching strategy**: Prioritizes `ancestor_chains.json` cache before API calls
@@ -87,15 +98,19 @@ access_token_secret=your_access_token_secret
 
 ### Running the Bot
 ```bash
-python ConSenseAI_v1.3.py \
+python ConSenseAI_v1.4.py \
   --username consenseai \
   --delay 3 \
   --dryrun False \
-  --search_term "fascism" \
-  --search_daily_cap 12 \
+  --search_term "auto" \
+  --search_daily_cap 14 \
   --search_cap_interval_hours 1 \
+  --cap_increase_time 6:00 \
   --reply_threshold 10 \
   --per_user_threshold True \
+  --check_followed_users True \
+  --followed_users_daily_cap 10 \
+  --followed_users_per_cycle 3 \
   --post_interval 10
 ```
 
@@ -106,7 +121,7 @@ python ConSenseAI_v1.3.py \
 - `--fetchthread`: Fetch full conversation context (default: True)
 - `--reply_threshold`: Max replies per thread or per-user-per-thread (default: 5)
 - `--per_user_threshold`: If True, enforce threshold per user; if False, per thread (default: True)
-- `--search_term`: Keyword to search for proactive responses (default: None)
+- `--search_term`: Keyword to search for proactive responses, or "auto" for AI-generated terms (default: None)
 - `--search_max_results`: Max results per search query (default: 10)
 - `--search_daily_cap`: Max automated search replies per day (default: 5)
 - `--search_cap_interval_hours`: Hours between cap increases (default: 2)
@@ -114,6 +129,10 @@ python ConSenseAI_v1.3.py \
 - `--dedupe_window_hours`: Deduplication window in hours (default: 24.0)
 - `--enable_human_approval`: Queue replies for approval instead of auto-posting (default: False)
 - `--post_interval`: Number of replies between reflection posts (default: 10)
+- `--check_followed_users`: Enable checking tweets from followed users (default: False)
+- `--followed_users_daily_cap`: Max replies to followed users per day (default: 10)
+- `--followed_users_per_cycle`: Number of followed users to check per cycle (rotation) (default: 3)
+- `--followed_users_max_tweets`: Max tweets to fetch per followed user (default: 5)
 
 ## Architecture & Flow
 
@@ -129,6 +148,7 @@ python ConSenseAI_v1.3.py \
 2. **Each cycle:**
    - Call `fetch_and_process_mentions()` — check for new @mentions
    - Call `fetch_and_process_search()` (if `--search_term` provided) — proactive discovery
+   - Call `fetch_and_process_followed_users()` (if `--check_followed_users` enabled) — check followed users' tweets
    - Check if reflection post should be triggered (based on `--post_interval`)
    - Sleep for `delay * backoff_multiplier` minutes
 3. **On critical error:** Auto-restart after RESTART_DELAY
@@ -196,6 +216,77 @@ python ConSenseAI_v1.3.py \
 - Consider reordering fallbacks to prefer Tweepy includes before external provider
 - Add explicit logging showing which source provided final text for each mention
 
+### 4. Auto-Follow System Not Working (FIXED)
+**Symptoms:** Users with 5+ direct replies to bot are not being auto-followed; `get_user_reply_counts()` returns 0 for all users.
+
+**Root cause:** `get_user_reply_counts()` only checked `ancestor_chains.json` for user replies, but old entries had `author_id: None` or missing fields. The function didn't use the same fallback logic as `count_bot_replies_by_user_in_conversation()`.
+
+**Fix applied:** Enhanced `get_user_reply_counts()` to combine data from both `ancestor_chains.json` AND `bot_tweets.json`:
+- First pass: Build set of bot reply tweet IDs using two methods:
+  - Method 1: `author_id == bot_id` (explicit field match)
+  - Method 2: `tweet_id in bot_tweets.json` (fallback for old entries)
+- Second pass: Count user tweets where `in_reply_to_user_id == bot_id` AND `tweet_id NOT in bot_reply_ids`
+- This mirrors the logic in `count_bot_replies_by_user_in_conversation()` but works across all conversations
+
+**Status:** Fixed on fix-autofollow branch without modifying ancestor chain caching logic.
+
+### 5. Infinite Loop on Deep Conversation Threads (CRITICAL BUG)
+**Symptoms:** Bot hit rate limit 28 times in one day on a single deep conversation thread. Logs show same tweet IDs being fetched repeatedly. ancestor_chains.json was corrupted/wiped to 2 bytes at 18:31.
+
+**Root cause:** In `get_tweet_context()` lines ~2615-2654, the ancestor chain building loop has exception handling that catches `tweepy.TweepyException`, prints error message, but **continues the loop** instead of breaking:
+```python
+while True:
+    try:
+        parent_tweet = read_client.get_tweet(...)
+        # ... process parent ...
+    except tweepy.TweepyException as e:
+        print(f"Error building ancestor chain: {e}")
+        # BUG: No break statement! Loop continues infinitely
+```
+
+**Trigger:** Deep conversation threads (50+ reply levels) on politically charged topics (Turkey/Greece geopolitics in observed case).
+
+**Impact:**
+- Rate limit exhausted (Twitter API ~900 requests/15min)
+- Bot sleeps 899 seconds, then immediately hits same tweets again
+- Potential file corruption (ancestor_chains.json reduced to 2 bytes: `{}`)
+- Service downtime
+
+**Current status:** Bug still present in code on fix-autofollow branch. Emergency rollback avoided triggering it, but underlying issue not fixed.
+
+**Recommended fix:**
+```python
+MAX_ANCESTOR_DEPTH = 20  # Add depth limit constant
+
+while True:
+    if len(ancestor_chain) >= MAX_ANCESTOR_DEPTH:
+        print(f"[Ancestor Chain] Hit depth limit ({MAX_ANCESTOR_DEPTH}), stopping build")
+        break
+    
+    try:
+        parent_tweet = read_client.get_tweet(...)
+        # ... process parent ...
+    except tweepy.TweepyException as e:
+        print(f"Error building ancestor chain: {e}")
+        break  # CRITICAL: Break loop on API errors
+```
+
+### 6. Duplicate Reply Prevention Not Working (KNOWN ISSUE)
+**Symptoms:** Bot replies to same user multiple times in same conversation, hours apart.
+
+**Root cause:** `count_bot_replies_by_user_in_conversation()` shows "FINAL COUNT: 0" despite prior replies existing. Two issues:
+- Old entries in ancestor_chains.json have `author_id: None`, so counting logic fails to identify them
+- Cached `bot_replies` list is empty (0 entries) even when bot has replied before
+
+**Attempted fix (REVERTED):** Added fallback to check if tweet_id exists in bot_tweets.json. This was part of the commit that caused infinite loop bug, so reverted.
+
+**Current status:** Duplicate prevention is broken on fix-autofollow branch.
+
+**Alternative approaches:**
+- Separate tracking file: `conversation_replies_{username}.json` with format `{conversation_id: {user_id: reply_count}}`
+- Update after each successful reply, independent of ancestor_chains.json parsing
+- Simple counter increment, no complex chain traversal required
+
 ## Project Conventions
 
 ### Code Style
@@ -253,7 +344,7 @@ python ConSenseAI_v1.3.py \
 
 ### Dry-Run Testing
 ```bash
-python ConSenseAI_v1.3.py --dryrun True --delay 1 --search_term "test"
+python ConSenseAI_v1.4.py --dryrun True --delay 1 --search_term "test"
 ```
 - Exercises full pipeline without posting
 - Prints generated responses to console
@@ -299,7 +390,7 @@ my_client = openai.OpenAI(api_key=keys.get('MY_MODEL_API_KEY'), base_url="https:
 ```
 
 ### Change Storage Filenames
-Edit constants near top of `ConSenseAI_v1.3.py`:
+Edit constants near top of `ConSenseAI_v1.4.py`:
 ```python
 TWEETS_FILE = 'bot_tweets.json'
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'

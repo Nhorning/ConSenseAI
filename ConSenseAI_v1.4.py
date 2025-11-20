@@ -231,6 +231,99 @@ def queue_for_approval(item: dict):
     queue.append(item)
     _save_json_file(APPROVAL_QUEUE_FILE, queue)
 
+def has_bot_replied_to_specific_tweet_id(target_tweet_id):
+    """Check if bot has already replied directly to this specific tweet ID.
+    
+    This is more strict than conversation-level checks - it verifies the bot 
+    hasn't already replied to THIS EXACT TWEET before.
+    """
+    if not target_tweet_id:
+        return False
+    
+    target_id_str = str(target_tweet_id)
+    bot_id_str = str(BOT_USER_ID)
+    
+    # Load ancestor chains to check for bot replies to this specific tweet
+    chains = load_ancestor_chains()
+    bot_tweets = load_bot_tweets()
+    
+    for conv_id, cache_entry in chains.items():
+        if not isinstance(cache_entry, dict):
+            continue
+        
+        # Check the ancestor chain for bot tweets that are direct replies to our target
+        chain = cache_entry.get('chain', [])
+        for entry in chain:
+            if not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet', {})
+            
+            # Handle both dict and string representations
+            if isinstance(tweet, str):
+                # Try to parse string representation
+                try:
+                    import ast
+                    tweet = ast.literal_eval(tweet)
+                except:
+                    continue
+            
+            if not isinstance(tweet, dict):
+                continue
+            
+            tweet_id = str(tweet.get('id', ''))
+            author_id = str(tweet.get('author_id', ''))
+            
+            # Is this a bot tweet?
+            if author_id == bot_id_str or tweet_id in bot_tweets:
+                # Check if it's replying to our target tweet
+                # Look for in_reply_to_status_id or check referenced_tweets
+                in_reply_to = tweet.get('in_reply_to_status_id')
+                if in_reply_to and str(in_reply_to) == target_id_str:
+                    print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} with reply {tweet_id}")
+                    return True
+                
+                # Also check referenced_tweets for reply relationship
+                ref_tweets = tweet.get('referenced_tweets', [])
+                if ref_tweets:
+                    for ref in ref_tweets:
+                        if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                            if str(ref.get('id', '')) == target_id_str:
+                                print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} with reply {tweet_id}")
+                                return True
+        
+        # Also check bot_replies list
+        bot_replies = cache_entry.get('bot_replies', [])
+        for br in bot_replies:
+            # Handle both dict and string representations
+            if isinstance(br, str):
+                try:
+                    import ast
+                    br = ast.literal_eval(br)
+                except:
+                    continue
+            
+            if not isinstance(br, dict):
+                continue
+            
+            # Check in_reply_to_status_id
+            in_reply_to = br.get('in_reply_to_status_id')
+            if in_reply_to and str(in_reply_to) == target_id_str:
+                br_id = str(br.get('id', 'unknown'))
+                print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} (found in bot_replies: {br_id})")
+                return True
+            
+            # Also check referenced_tweets in bot_replies
+            ref_tweets = br.get('referenced_tweets', [])
+            if ref_tweets:
+                for ref in ref_tweets:
+                    if isinstance(ref, dict) and ref.get('type') == 'replied_to':
+                        if str(ref.get('id', '')) == target_id_str:
+                            br_id = str(br.get('id', 'unknown'))
+                            print(f"[Tweet-Level Dedupe] Bot already replied to tweet {target_id_str} (found in bot_replies: {br_id})")
+                            return True
+    
+    return False
+
 def has_bot_replied_to_tweet(tweet_id):
     """Check if bot has already replied to a specific tweet by checking bot_tweets.json for reply target tracking."""
     if not tweet_id:
@@ -353,9 +446,20 @@ def fetch_and_process_search(search_term: str, user_id=None):
             print(f"[Search] Skipping self tweet {t.id}")
             continue
         
+        # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+        if has_bot_replied_to_specific_tweet_id(t.id):
+            print(f"[Search] Skipping {t.id}: bot already replied to this specific tweet")
+            continue
+        
         # Check if we've already replied to this user in this search cycle
         if tweet_author in replied_users_this_cycle:
             print(f"[Search Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this search cycle")
+            continue
+        
+        # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+        original_conv_id = context.get('original_conversation_id')
+        if original_conv_id and original_conv_id in replied_users_this_cycle:
+            print(f"[Search Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
             continue
         
         # Check if bot has already replied to this conversation (conversation-level dedupe)
@@ -449,6 +553,12 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 # Track that we replied to this user in this cycle
                 replied_users_this_cycle.add(tweet_author)
                 print(f"[Search Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                
+                # Also track the original conversation ID if this is a retweet, to prevent multiple replies to different retweets of the same original
+                original_conv_id = context.get('original_conversation_id')
+                if original_conv_id:
+                    replied_users_this_cycle.add(original_conv_id)
+                    print(f"[Search Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                 
                 _add_sent_hash(reply_text)
                 _increment_daily_count()
@@ -617,9 +727,20 @@ def fetch_and_process_followed_users():
                     print(f"[Followed] Skipping self tweet {t.id}")
                     continue
                 
+                # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+                if has_bot_replied_to_specific_tweet_id(t.id):
+                    print(f"[Followed] Skipping {t.id}: bot already replied to this specific tweet")
+                    continue
+                
                 # Check if we've already replied to this user in this cycle
                 if tweet_author in replied_users_this_cycle:
                     print(f"[Followed Cycle Limit] SKIPPING: Already replied to user {tweet_author} in this cycle")
+                    continue
+                
+                # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+                original_conv_id = context.get('original_conversation_id')
+                if original_conv_id and original_conv_id in replied_users_this_cycle:
+                    print(f"[Followed Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
                     continue
                 
                 # Check if bot already replied to this conversation
@@ -690,6 +811,12 @@ def fetch_and_process_followed_users():
                         # Track that we replied to this user in this cycle
                         replied_users_this_cycle.add(tweet_author)
                         print(f"[Followed Cycle Limit] Replied to user {tweet_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                        
+                        # Also track the original conversation ID if this is a retweet
+                        original_conv_id = context.get('original_conversation_id')
+                        if original_conv_id:
+                            replied_users_this_cycle.add(original_conv_id)
+                            print(f"[Followed Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                         
                         _add_sent_hash(reply_text)
                         _increment_followed_daily_count()
@@ -941,6 +1068,9 @@ def get_user_reply_counts():
     Count how many times each user has mentioned/replied to the bot.
     Only counts tweets that directly reply to (mention) the bot.
     Returns dict: {user_id: mention_count}
+    
+    Uses combined data from ancestor_chains.json and bot_tweets.json to ensure
+    accurate counting even when ancestor_id fields are missing.
     """
     user_counts = {}
     
@@ -952,6 +1082,8 @@ def get_user_reply_counts():
         print("[Auto-Follow] No ancestor chains found")
         return user_counts
     
+    # Load bot tweets for fallback identification
+    bot_tweets = load_bot_tweets()
     bot_id = str(getid())
     
     for conv_id, conv_data in chains.items():
@@ -963,12 +1095,10 @@ def get_user_reply_counts():
             chain = conv_data
             bot_replies = []
         
-        # Only process conversations where the bot participated
-        if not bot_replies and not any(str(get_attr(entry.get('tweet'), 'author_id')) == bot_id 
-                                       for entry in chain if entry and isinstance(entry, dict)):
-            continue
-        
-        # Count tweets that directly reply to the bot (in_reply_to_user_id == bot_id)
+        # Track which tweets are bot replies using two methods:
+        # Method 1: author_id matches bot_id
+        # Method 2: tweet_id exists in bot_tweets.json
+        bot_reply_ids = set()
         for entry in chain:
             if not entry or not isinstance(entry, dict):
                 continue
@@ -976,14 +1106,47 @@ def get_user_reply_counts():
             if not tweet:
                 continue
             
-            author_id = str(get_attr(tweet, 'author_id', ''))
-            in_reply_to = str(get_attr(tweet, 'in_reply_to_user_id', ''))
+            tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
+            author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
             
-            # Count only if this tweet is a direct reply/mention to the bot
-            if author_id and author_id != bot_id and in_reply_to == bot_id:
+            # Mark as bot reply if either method confirms it
+            if (author_id and author_id == bot_id) or (tweet_id and tweet_id in bot_tweets):
+                if tweet_id:
+                    bot_reply_ids.add(tweet_id)
+        
+        # Also check bot_replies list
+        for br in bot_replies:
+            br_id = str(br.get('id')) if br.get('id') else None
+            if br_id:
+                bot_reply_ids.add(br_id)
+        
+        # Skip conversations where bot hasn't participated
+        if not bot_reply_ids:
+            continue
+        
+        # Now count user tweets that the bot replied to
+        # Look for tweets where in_reply_to_user_id == bot_id (user replying to bot)
+        for entry in chain:
+            if not entry or not isinstance(entry, dict):
+                continue
+            tweet = entry.get('tweet')
+            if not tweet:
+                continue
+            
+            tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
+            author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
+            in_reply_to = str(tweet.get('in_reply_to_user_id')) if isinstance(tweet, dict) and tweet.get('in_reply_to_user_id') else None
+            
+            # Count only if:
+            # 1. This is NOT a bot tweet
+            # 2. This tweet replies to the bot (in_reply_to_user_id == bot_id)
+            # 3. Has valid author_id
+            if tweet_id not in bot_reply_ids and author_id and author_id != bot_id and in_reply_to == bot_id:
                 user_counts[author_id] = user_counts.get(author_id, 0) + 1
     
     print(f"[Auto-Follow] Counted mentions from {len(user_counts)} unique users across {len(chains)} conversations")
+    for user_id, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
+        print(f"[Auto-Follow] User {user_id}: {count} replies")
     return user_counts
 
 def get_followed_users():
@@ -1789,14 +1952,14 @@ def compute_baseline_replies_since_last_direct_post():
         return 0, total, None
 
 
-def generate_auto_search_term(n=100, current_term=None, used_terms=None):
+def generate_auto_search_term(n=20, current_term=None, used_terms=None):
     """Generate a search term based on recent bot threads.
     
     This is called when --search_term is set to "auto" after posting a reflection.
     Returns a single-word or short phrase search term, or None if unable to generate.
     
     Args:
-        n: Number of recent threads to analyze (default 100, ~37K tokens)
+        n: Number of recent threads to analyze (default 20, ~7.4K tokens)
         current_term: The current search term to avoid reusing (deprecated, use used_terms)
         used_terms: List of all previously used search terms to avoid repeating
     """
@@ -2099,7 +2262,8 @@ def authenticate():
     keys = load_keys()
     
     # Always use bearer for read_client (app-only, basic-tier app)
-    read_client = tweepy.Client(bearer_token=keys['bearer_token'], wait_on_rate_limit=True)
+    # Note: wait_on_rate_limit=False so we can handle rate limits ourselves with proper loop breaking
+    read_client = tweepy.Client(bearer_token=keys['bearer_token'], wait_on_rate_limit=False)
     print("Read client authenticated with Bearer Token (app-only, basic tier).")
     print(f"[DEBUG] Bearer token (first 20 chars): {keys['bearer_token'][:20]}...")
     print("[DEBUG] Please verify this bearer token matches your Basic tier app in the Twitter Developer Portal")
@@ -2113,7 +2277,7 @@ def authenticate():
                 consumer_secret=keys['XAPI_secret'],
                 access_token=keys['access_token'],
                 access_token_secret=keys['access_token_secret'],
-                wait_on_rate_limit=True
+                wait_on_rate_limit=False
             )
             user = post_client.get_me()
             print(f"Post client authenticated as @{user.data.username} (free tier).")
@@ -2260,9 +2424,24 @@ def fetch_and_process_mentions(user_id, username):
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
 
+                    # CRITICAL: Check if we've already replied to this EXACT tweet ID before
+                    elif has_bot_replied_to_specific_tweet_id(mention.id):
+                        print(f"[Mention] Skipping {mention.id}: bot already replied to this specific tweet")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
+
                     # 2) Check if we've already replied to this user in this cycle
                     elif target_author in replied_users_this_cycle:
                         print(f"[Mention Cycle Limit] SKIPPING: Already replied to user {target_author} in this cycle")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
+                    
+                    # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
+                    elif context.get('original_conversation_id') and context.get('original_conversation_id') in replied_users_this_cycle:
+                        original_conv_id = context.get('original_conversation_id')
+                        print(f"[Mention Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
                         continue
@@ -2295,6 +2474,12 @@ def fetch_and_process_mentions(user_id, username):
                             # Track that we replied to this user in this cycle
                             replied_users_this_cycle.add(target_author)
                             print(f"[Mention Cycle Limit] Replied to user {target_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
+                            
+                            # Also track the original conversation ID if this is a retweet
+                            original_conv_id = context.get('original_conversation_id')
+                            if original_conv_id:
+                                replied_users_this_cycle.add(original_conv_id)
+                                print(f"[Mention Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
                             
                             last_tweet_id = max(last_tweet_id, mention.id)
                             write_last_tweet_id(last_tweet_id)
@@ -2474,8 +2659,21 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
         if context['ancestor_chain']:
             context["original_tweet"] = context['ancestor_chain'][0]['tweet']  # Root is original
 
-        # If we have everything from cache, return early
-        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain']:
+        # Validate cached ancestor chain - check if any entries are blank/incomplete
+        has_blank_entries = False
+        if context['ancestor_chain']:
+            for entry in context['ancestor_chain']:
+                if not isinstance(entry, dict):
+                    continue
+                t = entry.get('tweet')
+                tweet_id = get_attr(t, 'id')
+                if not tweet_id:
+                    has_blank_entries = True
+                    print(f"[Context Cache] Found blank entry in cached ancestor chain")
+                    break
+
+        # If we have everything from cache AND no blank entries, return early
+        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain'] and not has_blank_entries:
             print("[Context Cache] All context loaded from cache - skipping API calls")
             context['from_cache'] = True  # Mark that this context was loaded from cache
             # Still collect media from mention if not in chain
@@ -2638,6 +2836,11 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                         break
             if parent_id is None or parent_id in visited:
                 break
+            
+            # Add parent_id to visited BEFORE making the API call
+            # This prevents duplicate API calls if an exception occurs and we retry
+            visited.add(parent_id)
+            
             parent_response = read_client.get_tweet(
                 id=parent_id,
                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
