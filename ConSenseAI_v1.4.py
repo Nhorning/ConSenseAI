@@ -86,6 +86,35 @@ import datetime
 import sys
 import re
 import webbrowser as web_open
+import ast
+
+
+def parse_bot_reply_entry(br):
+    """
+    Parse a bot_reply entry from cache, handling corrupted stringified dicts.
+    Returns a dict if successful, None if parsing fails.
+    
+    Args:
+        br: Entry from bot_replies list (can be dict, stringified dict, or tweet ID string)
+    
+    Returns:
+        dict if parseable, None otherwise
+    """
+    if isinstance(br, dict):
+        return br
+    elif isinstance(br, str):
+        # Try to parse if it's a stringified dict
+        if br.startswith('{') or br.startswith("{'"):
+            try:
+                return ast.literal_eval(br)
+            except:
+                return None
+        else:
+            # Simple tweet ID string - can't extract metadata
+            return None
+    else:
+        # Unknown type
+        return None
 
 
 def _search_last_filename(search_term: str):
@@ -391,13 +420,10 @@ def has_bot_replied_to_specific_tweet_id(target_tweet_id):
         # Also check bot_replies list
         bot_replies = cache_entry.get('bot_replies', [])
         for br in bot_replies:
-            # Handle both dict and string representations
-            if isinstance(br, str):
-                try:
-                    import ast
-                    br = ast.literal_eval(br)
-                except:
-                    continue
+            # Parse bot_reply entry (handles corrupted stringified dicts)
+            br = parse_bot_reply_entry(br)
+            if not br:
+                continue
             
             if not isinstance(br, dict):
                 continue
@@ -468,8 +494,11 @@ def has_bot_replied_to_tweet(tweet_id):
         # Also check bot_replies list
         bot_replies = cache_entry.get('bot_replies', [])
         for br in bot_replies:
-            if not isinstance(br, dict):
+            # Parse bot_reply entry (handles corrupted stringified dicts)
+            br = parse_bot_reply_entry(br)
+            if not br or not isinstance(br, dict):
                 continue
+            
             # If this bot reply is in a conversation rooted at our target tweet
             if conv_id == tweet_id_str:
                 print(f"[Retweet Check] Bot already replied in conversation {tweet_id_str} (found in bot_replies)")
@@ -1042,12 +1071,17 @@ def count_bot_replies_in_conversation(conversation_id, bot_user_id, api_bot_repl
         # Check cached bot replies if available
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
             for br in cached_data['bot_replies']:
+                # Parse bot_reply entry (handles corrupted stringified dicts)
+                br = parse_bot_reply_entry(br)
+                if not br or not isinstance(br, dict):
+                    continue
+                
                 br_id = str(br.get('id')) if br.get('id') is not None else None
                 br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
                 if br_id and br_id in bot_tweets:
                     count += 1
-        elif br_author and str(br_author) == str(bot_user_id):
-            count += 1
+                elif br_author and str(br_author) == str(bot_user_id):
+                    count += 1
 
     # Fallback: check API-provided bot replies (if any)
     if api_bot_replies:
@@ -1111,12 +1145,12 @@ def count_bot_replies_by_user_in_conversation(conversation_id, bot_user_id, targ
         if isinstance(cached_data, dict) and 'bot_replies' in cached_data:
             print(f"[Per-User Count] Checking cached bot_replies list ({len(cached_data['bot_replies'])} entries)")
             for br in cached_data['bot_replies']:
-                # bot_replies can contain strings (tweet IDs) or dict objects
-                if isinstance(br, str):
-                    # Just a tweet ID string - we can't determine if it replied to this user without more info
-                    # So we skip it (it's already handled in the chain iteration above)
+                # Parse bot_reply entry (handles corrupted stringified dicts)
+                br = parse_bot_reply_entry(br)
+                if not br:
                     continue
-                elif isinstance(br, dict):
+                
+                if isinstance(br, dict):
                     br_author = str(br.get('author_id')) if br.get('author_id') is not None else None
                     br_in_reply_to = str(br.get('in_reply_to_user_id')) if br.get('in_reply_to_user_id') is not None else None
                     br_id = str(br.get('id')) if br.get('id') is not None else None
@@ -1245,13 +1279,10 @@ def get_user_reply_counts():
         
         # Also check bot_replies list
         for br in bot_replies:
-            # Handle both dict and string representations
-            if isinstance(br, str):
-                try:
-                    import ast
-                    br = ast.literal_eval(br)
-                except:
-                    continue
+            # Parse bot_reply entry (handles corrupted stringified dicts)
+            br = parse_bot_reply_entry(br)
+            if not br:
+                continue
             
             if not isinstance(br, dict):
                 continue
@@ -2688,8 +2719,11 @@ def fetch_and_process_mentions(user_id, username):
 from collections import defaultdict
 
 def tweet_to_dict(t):
+    # If already a dict, return as-is
+    if isinstance(t, dict):
+        return t
     # Use .data if available, else fallback to __dict__
-    if hasattr(t, 'data') and isinstance(t.data, dict):
+    elif hasattr(t, 'data') and isinstance(t.data, dict):
         return t.data
     elif hasattr(t, '__dict__'):
         # Only keep serializable fields
