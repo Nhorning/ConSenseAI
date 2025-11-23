@@ -1841,7 +1841,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
             -Combine those responses into a consise coherent whole.\n\
             -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
-            -Do not perform additional searches.\n\
+            -You can perform additional searches and correct significant errors, but make sure not to simply substitute their opinion with yours.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
         # append to system prompt
