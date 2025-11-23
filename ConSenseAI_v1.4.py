@@ -1777,8 +1777,9 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     print(f"[DEBUG] Full mention text length in fact_check: {len(full_mention_text)} chars")
     print(f"[DEBUG] Full mention text: {full_mention_text[:500]}...") if len(full_mention_text) > 500 else print(f"[DEBUG] Full mention text: {full_mention_text}")
     media_str = format_media(context.get('media', []), context.get('ancestor_chain', [])) if context else ""
+    urls_str = format_urls(context.get('ancestor_chain', [])) if context else ""
     print(f"[Vision Debug] Found {len(context.get('media', []))} media items for vision analysis")
-    user_msg = f"Context:\n {context_str}\n{media_str}\nTweet: {full_mention_text}\n{instructions}\n"
+    user_msg = f"Context:\n {context_str}\n{media_str}{urls_str}\nTweet: {full_mention_text}\n{instructions}\n"
     #print(user_msg)
 
     # Initialize clients
@@ -3397,6 +3398,109 @@ def extract_media(t, includes=None):
         print(f"[Media Debug] No media found for tweet {get_attr(t, 'id')}")
 
     return media_list
+
+def extract_urls_from_tweet(tweet):
+    """Extract non-media URLs from a tweet's entities.
+    Returns list of dicts with 'url', 'expanded_url', 'display_url', 'title'.
+    Filters out Twitter links (t.co redirects to twitter.com posts).
+    """
+    urls = []
+    entities = get_attr(tweet, 'entities', {})
+    if entities is None:
+        entities = {}
+    
+    url_entities = entities.get('urls', [])
+    for url_obj in url_entities:
+        expanded_url = url_obj.get('expanded_url', '')
+        display_url = url_obj.get('display_url', '')
+        unwound_url = url_obj.get('unwound_url', expanded_url)  # v2 API provides unwound URL
+        title = url_obj.get('title', '')  # v2 API sometimes provides title
+        description = url_obj.get('description', '')
+        
+        # Skip Twitter/X links (quotes, replies, etc.)
+        if any(domain in expanded_url.lower() for domain in ['twitter.com/', 'x.com/']):
+            continue
+        
+        # Skip media URLs (already handled by format_media)
+        if 'pbs.twimg.com/media/' in expanded_url or expanded_url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+            continue
+        
+        urls.append({
+            'url': url_obj.get('url', ''),  # Shortened t.co link
+            'expanded_url': expanded_url,
+            'unwound_url': unwound_url,
+            'display_url': display_url,
+            'title': title,
+            'description': description
+        })
+    
+    return urls
+
+
+def format_urls(ancestor_chain=None):
+    """Format URLs from tweets in the conversation thread.
+    Similar to format_media but for web links (articles, etc.).
+    """
+    if not ancestor_chain:
+        return ""
+    
+    all_urls = []
+    seen_urls = set()
+    
+    # Collect URLs from each tweet in the chain
+    for entry in ancestor_chain:
+        tweet = entry.get("tweet") if isinstance(entry, dict) else entry
+        if not tweet:
+            continue
+        
+        tweet_id = get_attr(tweet, "id", "unknown")
+        tweet_snippet = get_full_text(tweet)[:50] + "..."
+        urls = extract_urls_from_tweet(tweet)
+        
+        # Deduplicate by expanded URL
+        for url_obj in urls:
+            expanded = url_obj.get('expanded_url', '')
+            if expanded and expanded not in seen_urls:
+                seen_urls.add(expanded)
+                all_urls.append({
+                    'tweet_id': tweet_id,
+                    'tweet_snippet': tweet_snippet,
+                    **url_obj
+                })
+        
+        # Also check quoted tweets
+        for qt in entry.get("quoted_tweets", []):
+            qt_urls = extract_urls_from_tweet(qt)
+            qt_id = get_attr(qt, "id", "unknown")
+            qt_snippet = get_full_text(qt)[:50] + "..."
+            
+            for url_obj in qt_urls:
+                expanded = url_obj.get('expanded_url', '')
+                if expanded and expanded not in seen_urls:
+                    seen_urls.add(expanded)
+                    all_urls.append({
+                        'tweet_id': qt_id,
+                        'tweet_snippet': qt_snippet,
+                        'is_quoted': True,
+                        **url_obj
+                    })
+    
+    if not all_urls:
+        return ""
+    
+    out = "\nURLs/Links shared in the conversation:\n"
+    for url_info in all_urls:
+        quoted_prefix = "[Quoted] " if url_info.get('is_quoted') else ""
+        out += f"- {quoted_prefix}From tweet {url_info['tweet_id']} ('{url_info['tweet_snippet']}')\n"
+        out += f"  URL: {url_info['unwound_url']}\n"
+        if url_info.get('title'):
+            out += f"  Title: {url_info['title']}\n"
+        if url_info.get('description'):
+            out += f"  Description: {url_info['description'][:100]}...\n"
+        out += f"  Display: {url_info['display_url']}\n"
+    
+    return out
+
 
 def format_media(media_list, ancestor_chain=None):
     if not media_list:
