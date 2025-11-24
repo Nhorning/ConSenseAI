@@ -2722,9 +2722,8 @@ def collect_quoted(refs, includes=None):
                 quoted_response = read_client.get_tweet(
                     id=ref_tweet.id,
                     tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
-                    expansions=["attachments.media_keys", "author_id"],
-                    media_fields=["type", "url", "preview_image_url", "alt_text"],
-                    user_fields=["username"]
+                    expansions=["attachments.media_keys"],
+                    media_fields=["type", "url", "preview_image_url", "alt_text"]
                 )
                 print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_response.data.text)} chars")
                 quoted_responses.append(quoted_response)
