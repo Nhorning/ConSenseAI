@@ -294,6 +294,59 @@ while True:
 - **Defensive coding:** Use `getattr()`, `hasattr()`, `isinstance()` checks for Tweepy objects (which may be dicts or objects depending on context)
 - **Explicit parameters:** Avoid implicit globals; pass required values as function parameters (e.g., `bot_username` in `get_tweet_context()`)
 
+### CRITICAL: Tweepy Object Type Handling
+**This is a recurring issue that must be handled consistently:**
+
+Tweepy API responses can return data in **multiple formats**:
+1. **Response objects** with attributes (e.g., `response.includes.users`)
+2. **Dictionaries** with keys (e.g., `includes['users']`)
+3. **Mixed formats** where some fields are objects and others are dicts
+
+**Common symptoms:**
+- `hasattr(obj, 'field')` returns False even though data exists
+- `AttributeError: 'dict' object has no attribute 'field'`
+- Usernames/fields not being extracted despite being in the response
+
+**Required pattern for accessing Tweepy data:**
+```python
+# ALWAYS handle both dict and object formats
+if isinstance(obj, dict):
+    value = obj.get('field', default)
+elif hasattr(obj, 'field'):
+    value = obj.field
+else:
+    value = default
+
+# For nested structures (like includes.users):
+users_list = None
+if isinstance(includes, dict):
+    users_list = includes.get('users', [])
+elif hasattr(includes, 'users'):
+    users_list = includes.users
+
+# For iterating over items that may be objects or dicts:
+for item in items_list:
+    item_id = item.id if hasattr(item, 'id') else item.get('id')
+    item_name = item.username if hasattr(item, 'username') else item.get('username')
+```
+
+**Use the `get_attr()` helper function when available:**
+```python
+def get_attr(obj, attr, default=None):
+    """Safely get attribute from either dict or object"""
+    if isinstance(obj, dict):
+        return obj.get(attr, default)
+    else:
+        return getattr(obj, attr, default)
+```
+
+**Places where this commonly occurs:**
+- `response.includes` (dict or object)
+- Tweet objects in cached vs fresh data
+- User objects from expansions
+- Media objects
+- Any data retrieved from `ancestor_chains.json` or `bot_tweets.json`
+
 ### Error Handling
 - Extensive use of try/except blocks for API resilience
 - Exponential backoff on rate limits (`backoff_multiplier`)

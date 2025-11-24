@@ -1026,7 +1026,12 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
         tweet_dict = tweet_to_dict(entry["tweet"])
         quoted_dicts = [tweet_to_dict(qt) for qt in entry["quoted_tweets"]]
         media = entry.get("media", [])  # Media should already be serializable
-        serializable_chain.append({"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media})
+        username = entry.get("username")  # Get username if present
+        
+        chain_entry = {"tweet": tweet_dict, "quoted_tweets": quoted_dicts, "media": media}
+        if username:
+            chain_entry["username"] = username  # Preserve username in cache
+        serializable_chain.append(chain_entry)
     cache_entry = {"chain": serializable_chain}
     if additional_context:
         cache_entry.update(additional_context)
@@ -2555,17 +2560,15 @@ def fetch_and_process_mentions(user_id, username):
     print(f"Checking for mentions of {username} at {datetime.datetime.now()}")
     sys.stdout.flush()  # Force immediate log update
     
-    # Track users we've already replied to in this cycle (limit 1 reply per user per cycle)
-    replied_users_this_cycle = set()
-    
     try:
         mentions = read_client.get_users_mentions(
             id=user_id,
             since_id=last_tweet_id,
             max_results=5,
             tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
-            expansions=["referenced_tweets.id", "attachments.media_keys"],
-            media_fields=["type", "url", "preview_image_url", "alt_text"]
+            expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
+            media_fields=["type", "url", "preview_image_url", "alt_text"],
+            user_fields=["username"]
         )
         
         if mentions.data:
@@ -2611,21 +2614,6 @@ def fetch_and_process_mentions(user_id, username):
                     # CRITICAL: Check if we've already replied to this EXACT tweet ID before
                     elif has_bot_replied_to_specific_tweet_id(mention.id):
                         print(f"[Mention] Skipping {mention.id}: bot already replied to this specific tweet")
-                        success = dryruncheck()
-                        write_last_tweet_id(mention.id)
-                        continue
-
-                    # 2) Check if we've already replied to this user in this cycle
-                    elif target_author in replied_users_this_cycle:
-                        print(f"[Mention Cycle Limit] SKIPPING: Already replied to user {target_author} in this cycle")
-                        success = dryruncheck()
-                        write_last_tweet_id(mention.id)
-                        continue
-                    
-                    # For retweets, also check if we've already replied to ANY retweet of the same original tweet in this cycle
-                    elif context.get('original_conversation_id') and context.get('original_conversation_id') in replied_users_this_cycle:
-                        original_conv_id = context.get('original_conversation_id')
-                        print(f"[Mention Cycle Limit] SKIPPING: Already replied to a retweet of original conversation {original_conv_id[:12]}.. in this cycle")
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
                         continue
@@ -2684,16 +2672,6 @@ def fetch_and_process_mentions(user_id, username):
                         # Pass context to fact_check and reply
                         success = fact_check(mention.text, mention.id, context)
                         if success == 'done!':
-                            # Track that we replied to this user in this cycle
-                            replied_users_this_cycle.add(target_author)
-                            print(f"[Mention Cycle Limit] Replied to user {target_author}, now in cycle tracking ({len(replied_users_this_cycle)} users total)")
-                            
-                            # Also track the original conversation ID if this is a retweet
-                            original_conv_id = context.get('original_conversation_id')
-                            if original_conv_id:
-                                replied_users_this_cycle.add(original_conv_id)
-                                print(f"[Mention Cycle Limit] Also tracking original conversation {original_conv_id[:12]}.. to prevent duplicate retweet replies")
-                            
                             last_tweet_id = max(last_tweet_id, mention.id)
                             write_last_tweet_id(last_tweet_id)
                             backoff_multiplier = 1
@@ -2744,8 +2722,9 @@ def collect_quoted(refs, includes=None):
                 quoted_response = read_client.get_tweet(
                     id=ref_tweet.id,
                     tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
-                    expansions=["attachments.media_keys"],
-                    media_fields=["type", "url", "preview_image_url", "alt_text"]
+                    expansions=["attachments.media_keys", "author_id"],
+                    media_fields=["type", "url", "preview_image_url", "alt_text"],
+                    user_fields=["username"]
                 )
                 print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_response.data.text)} chars")
                 quoted_responses.append(quoted_response)
@@ -3033,15 +3012,49 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             quoted = [qr.data for qr in quoted_responses]  # Extract data for storage
             quoted_from_api.extend(quoted)
             # Extract media, passing includes if available
-            current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
+            # For first iteration (current_tweet == tweet), use the includes passed to get_tweet_context
+            # For subsequent iterations, use parent_response.includes
+            if current_tweet.id == tweet.id:
+                current_includes = includes
+            else:
+                current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
             media = extract_media(current_tweet, current_includes)
             # Extract media from quoted tweets
             for qr in quoted_responses:
                 media.extend(extract_media(qr.data, qr.includes))
+            
+            # Extract username from includes
+            username = None
+            if current_includes:
+                tweet_author_id = getattr(current_tweet, 'author_id', None)
+                print(f"[Username Debug] Looking for author_id: {tweet_author_id}")
+                
+                # Handle both dict and object formats
+                users_list = None
+                if isinstance(current_includes, dict):
+                    users_list = current_includes.get('users', [])
+                    print(f"[Username Debug] current_includes is dict, has {len(users_list)} users")
+                elif hasattr(current_includes, 'users'):
+                    users_list = current_includes.users
+                    print(f"[Username Debug] current_includes is object, has {len(users_list) if users_list else 0} users")
+                
+                if users_list and tweet_author_id:
+                    for user in users_list:
+                        user_id = user.id if hasattr(user, 'id') else user.get('id')
+                        user_name = user.username if hasattr(user, 'username') else user.get('username')
+                        print(f"[Username Debug] Found user: id={user_id}, username={user_name}")
+                        if str(user_id) == str(tweet_author_id):
+                            username = user_name
+                            print(f"[Username Debug] MATCH! Setting username to: {username}")
+                            break
+            else:
+                print(f"[Username Debug] No includes available")
+            
             ancestor_chain.append({
                 "tweet": current_tweet,
                 "quoted_tweets": quoted,
-                "media": media
+                "media": media,
+                "username": username
             })
             visited.add(current_tweet.id)
             parent_id = None
@@ -3061,8 +3074,9 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 parent_response = read_client.get_tweet(
                     id=parent_id,
                     tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
-                    expansions=["referenced_tweets.id", "attachments.media_keys"],
-                    media_fields=["type", "url", "preview_image_url", "alt_text"]
+                    expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
+                    media_fields=["type", "url", "preview_image_url", "alt_text"],
+                    user_fields=["username"]
                 )
                 if parent_response.data:
                     current_tweet = parent_response.data
@@ -3103,10 +3117,39 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
     # NEW: Ensure the current mention is appended as the final entry with its media
     if ancestor_chain and ancestor_chain[-1]['tweet'].id != tweet.id:
         mention_media = extract_media(tweet, includes)
+        
+        # Extract username from includes for the mention
+        mention_username = None
+        if includes:
+            tweet_author_id = getattr(tweet, 'author_id', None)
+            print(f"[Mention Username Debug] Looking for author_id: {tweet_author_id}")
+            
+            # Handle both dict and object formats
+            users_list = None
+            if isinstance(includes, dict):
+                users_list = includes.get('users', [])
+                print(f"[Mention Username Debug] includes is dict, has {len(users_list)} users")
+            elif hasattr(includes, 'users'):
+                users_list = includes.users
+                print(f"[Mention Username Debug] includes is object, has {len(users_list) if users_list else 0} users")
+            
+            if users_list and tweet_author_id:
+                for user in users_list:
+                    user_id = user.id if hasattr(user, 'id') else user.get('id')
+                    user_name = user.username if hasattr(user, 'username') else user.get('username')
+                    print(f"[Mention Username Debug] Found user: id={user_id}, username={user_name}")
+                    if str(user_id) == str(tweet_author_id):
+                        mention_username = user_name
+                        print(f"[Mention Username Debug] MATCH! Setting mention_username to: {mention_username}")
+                        break
+        else:
+            print(f"[Mention Username Debug] No includes available")
+        
         ancestor_chain.append({
             "tweet": tweet,
             "quoted_tweets": [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))],  # Fetch any quoted in mention
-            "media": mention_media
+            "media": mention_media,
+            "username": mention_username
         })
 
     # Fetch thread if not cached and enabled
@@ -3259,7 +3302,11 @@ def build_ancestor_chain(ancestor_chain, indent=0, from_cache=False, verbose=Tru
                         print(f"[Ancestor Chain] Error fetching full text from twitterapi.io for {tweet_id}: {e}")
         if verbose:
             print(f"[Ancestor Chain] Tweet {tweet_id} text length in build: {len(tweet_text)} chars")
-        author = f" (from @{author_id})" if author_id else ""
+        
+        # Use username from entry if available, otherwise fall back to author_id
+        username = entry.get("username")
+        display_name = username if username else author_id
+        author = f" (from @{display_name})" if display_name else ""
         out += "  " * indent + f"- {tweet_text}{author}\n"
         # Show quoted tweets indented under their parent
         for qt in quoted_tweets:
