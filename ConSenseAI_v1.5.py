@@ -1843,10 +1843,11 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
         model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
 
         #we're gonna append this message to the system prompt of the combining model
-        combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of muiltiple models signified by 'Model Responses:'\n\
-            -Combine those responses into a consise coherent whole.\n\
+        combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
+            -Combine those responses into a concise coherent whole.\n\
             -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
+            -Please stick to the subject at hand. You do not need to keep responding to images or links if you have already addressed them in the thread hierarchy\n\
             -You can perform additional searches and correct significant errors, but make sure not to simply substitute their opinion with yours.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
