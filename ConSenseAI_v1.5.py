@@ -2343,7 +2343,7 @@ def post_reflection_on_recent_bot_threads(n=10):
             "Stick to one subject."
             "Optimize for engagement. "
             "Do not talk about differences between models."
-            "Post the text of the tweet only, without any additional commentary."
+            "Post the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
         )
 
         # Only provide the ancestor_chain (the thread hierarchy) to the fact_check prompt
