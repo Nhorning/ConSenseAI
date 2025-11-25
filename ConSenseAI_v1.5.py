@@ -1800,7 +1800,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
         {"name": "claude-haiku-4-5", "client": anthropic_client, "api": "anthropic"},
         #higher tier (index 3-5)
         {"name": "grok-4", "client": xai_client, "api": "xai"},
-        {"name": "gpt-5.1", "client": openai_client, "api": "openai"},
+        {"name": "gpt-5-chat-latest", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
     ]
     
