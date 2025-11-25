@@ -1795,7 +1795,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     # Models and their clients - Updated to include vision model
     models = [
         #lower tier (index 0-2)
-        {"name": "grok-4-fast-reasoning", "client": xai_client, "api": "xai"},
+        {"name": "grok-4-1-fast-reasoning", "client": xai_client, "api": "xai"},
         {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
         {"name": "claude-haiku-4-5", "client": anthropic_client, "api": "anthropic"},
         #higher tier (index 3-5)
