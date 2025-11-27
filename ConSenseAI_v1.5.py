@@ -1847,7 +1847,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
             -Combine those responses into a concise coherent whole.\n\
             -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
-            -Please stick to the subject at hand. You do not need to keep responding to images or links if you have already addressed them in the thread hierarchy\n\
+            -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet\n\
             -You can perform additional searches and correct significant errors (such as claims that charlie kirk is still alive), but make sure not to simply substitute their opinion with yours.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
