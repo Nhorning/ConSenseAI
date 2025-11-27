@@ -1848,7 +1848,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
             -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
             -Please stick to the subject at hand. You do not need to keep responding to images or links if you have already addressed them in the thread hierarchy\n\
-            -You can perform additional searches and correct significant errors, but make sure not to simply substitute their opinion with yours.\n\
+            -You can perform additional searches and correct significant errors (such as claims that charlie kirk is still alive), but make sure not to simply substitute their opinion with yours.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
         # append to system prompt
