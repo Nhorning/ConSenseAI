@@ -861,6 +861,22 @@ def fetch_and_process_followed_users():
                     print(f"[Followed] Skipping self tweet {t.id}")
                     continue
                 
+                # Skip retweets - we only reply to original content
+                refs = getattr(t, 'referenced_tweets', None) if hasattr(t, 'referenced_tweets') else (t.get('referenced_tweets') if isinstance(t, dict) else None)
+                if refs:
+                    is_retweet = False
+                    for ref in refs:
+                        if isinstance(ref, dict):
+                            rtype = ref.get('type')
+                        else:
+                            rtype = getattr(ref, 'type', None)
+                        if rtype == 'retweeted':
+                            is_retweet = True
+                            break
+                    if is_retweet:
+                        print(f"[Followed] Skipping retweet {t.id}")
+                        continue
+                
                 # CRITICAL: Check if we've already replied to this EXACT tweet ID before
                 if has_bot_replied_to_specific_tweet_id(t.id):
                     print(f"[Followed] Skipping {t.id}: bot already replied to this specific tweet")
