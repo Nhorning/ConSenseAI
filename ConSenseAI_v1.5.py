@@ -1903,8 +1903,9 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     except:
         version = ""
     
-    # Then, use it in a simpler f-string
-    reply = f"ConSenseAI{version}:\n {models_verdicts}"
+    #Then, use it in a simpler f-string
+    #reply = f"ConSenseAI{version}:\n {models_verdicts}" #let's move this to the end
+    reply = f"{models_verdicts}\nConSenseAI{version}"
     #if len(reply) > 280:  # Twitter's character limit
     #    reply = f"AutoGrok AI Fact-check v1: {initial_answer[:30]}... {search_summary[:150]}... {grok_prompt[:100]}..."
 
