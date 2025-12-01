@@ -4,9 +4,9 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 
 ## Project Structure
 
-**Current implementation:** `ConSenseAI_v1.4.py` (single-file bot, ~3195 lines)
+**Current implementation:** `ConSenseAI_v1.6.py` (single-file bot, ~3813 lines)
 
-**Current branch:** `fix-autofollow` - Reverted to commit 62250d7 (before problematic ancestor chain append changes that caused infinite loop)
+**Current branch:** `main`
 
 ### Core Components
 - Authentication and API client setup (`authenticate()`)
@@ -443,7 +443,7 @@ my_client = openai.OpenAI(api_key=keys.get('MY_MODEL_API_KEY'), base_url="https:
 ```
 
 ### Change Storage Filenames
-Edit constants near top of `ConSenseAI_v1.4.py`:
+Edit constants near top of `ConSenseAI_v1.6.py`:
 ```python
 TWEETS_FILE = 'bot_tweets.json'
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
@@ -455,6 +455,54 @@ Inside `get_tweet_context()`, after bot-replies search:
 print(f"[get_tweet_context] bot_username={bot_username or 'None'}, bot_replies_found={len(context['bot_replies_in_thread'])}")
 ```
 
+## Recent Fixes (v1.6)
+
+### 1. Retweet Handling in Followed Users (Nov 28, 2025)
+**Problem**: Bot was extracting and analyzing media from the original tweet when a followed user retweeted something, leading to irrelevant image descriptions.
+
+**Fix**: Added retweet detection in `fetch_and_process_followed_users()` to skip all retweets entirely:
+```python
+# Skip retweets - we only reply to original content
+refs = getattr(t, 'referenced_tweets', None) if hasattr(t, 'referenced_tweets') else (t.get('referenced_tweets') if isinstance(t, dict) else None)
+if refs:
+    is_retweet = False
+    for ref in refs:
+        if isinstance(ref, dict):
+            rtype = ref.get('type')
+        else:
+            rtype = getattr(ref, 'type', None)
+        if rtype == 'retweeted':
+            is_retweet = True
+            break
+    if is_retweet:
+        print(f"[Followed] Skipping retweet {t.id}")
+        continue
+```
+
+**Status**: Bot now only replies to original content from followed users, not their retweets.
+
+### 2. Quoted Tweet Expansion Breaking (Nov 24, 2025)
+**Problem**: Commit c1d31d0 added `author_id` expansion to `collect_quoted()` to fetch usernames, but this caused quoted tweets to stop being fetched properly because the API wasn't returning user data in includes.
+
+**Root Cause**: When fetching a tweet directly by ID, `expansions=["author_id"]` doesn't populate includes with users. The expansion is only needed when expanding references in a parent tweet.
+
+**Fix**: Removed `author_id` expansion and `user_fields` from `collect_quoted()`:
+```python
+quoted_response = read_client.get_tweet(
+    id=ref_tweet.id,
+    tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
+    expansions=["attachments.media_keys"],  # Removed author_id
+    media_fields=["type", "url", "preview_image_url", "alt_text"]
+    # Removed user_fields=["username"]
+)
+```
+
+**Status**: Quoted tweets now work correctly. Username display for quoted tweets remains a TODO.
+
+### 3. Prompt Improvements
+- Fixed typos in combine_msg: "muiltiple" → "multiple", "consise" → "concise"
+- Added instruction to reduce repetition: "Do not repeat descriptions of the same images, links, or content multiple times—describe each once and move on."
+
 ## What NOT to Assume
 - `README.md` contains historical notes and older filenames; do not treat it as authoritative for current runtime behavior
 - The bot enforces character/format constraints via prompts — changing prompt wording can change runtime behavior
@@ -462,6 +510,7 @@ print(f"[get_tweet_context] bot_username={bot_username or 'None'}, bot_replies_f
 - twitterapi.io may fail intermittently; the bot will fall back to standard Tweepy text
 
 ## Future Improvements (Optional)
+- Add username extraction for quoted tweets (currently only works for main tweets in thread)
 - Add instrumentation logs showing which source provided mention_full_text (twitterapi.io vs Tweepy)
 - Run dry-run end-to-end tests for retweet handling and ancestor chain building
 - Consider inverting full-text resolution fallback order (prefer includes/official API before external provider)

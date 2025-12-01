@@ -572,6 +572,11 @@ def fetch_and_process_search(search_term: str, user_id=None):
             print(f"[Search] Skipping self tweet {t.id}")
             continue
         
+        # Skip retweets - we only reply to original content
+        if context.get('is_retweet'):
+            print(f"[Search] Skipping retweet {t.id}")
+            continue
+        
         # CRITICAL: Check if we've already replied to this EXACT tweet ID before
         if has_bot_replied_to_specific_tweet_id(t.id):
             print(f"[Search] Skipping {t.id}: bot already replied to this specific tweet")
@@ -862,20 +867,9 @@ def fetch_and_process_followed_users():
                     continue
                 
                 # Skip retweets - we only reply to original content
-                refs = getattr(t, 'referenced_tweets', None) if hasattr(t, 'referenced_tweets') else (t.get('referenced_tweets') if isinstance(t, dict) else None)
-                if refs:
-                    is_retweet = False
-                    for ref in refs:
-                        if isinstance(ref, dict):
-                            rtype = ref.get('type')
-                        else:
-                            rtype = getattr(ref, 'type', None)
-                        if rtype == 'retweeted':
-                            is_retweet = True
-                            break
-                    if is_retweet:
-                        print(f"[Followed] Skipping retweet {t.id}")
-                        continue
+                if context.get('is_retweet'):
+                    print(f"[Followed] Skipping retweet {t.id}")
+                    continue
                 
                 # CRITICAL: Check if we've already replied to this EXACT tweet ID before
                 if has_bot_replied_to_specific_tweet_id(t.id):
@@ -2629,6 +2623,13 @@ def fetch_and_process_mentions(user_id, username):
                         success = dryruncheck()
                         write_last_tweet_id(mention.id)
 
+                    # Skip retweets - we only reply to original content
+                    elif context.get('is_retweet'):
+                        print(f"[Mention] Skipping retweet {mention.id}")
+                        success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
+
                     # CRITICAL: Check if we've already replied to this EXACT tweet ID before
                     elif has_bot_replied_to_specific_tweet_id(mention.id):
                         print(f"[Mention] Skipping {mention.id}: bot already replied to this specific tweet")
@@ -2758,8 +2759,21 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
         "conversation_id": getattr(tweet, 'conversation_id', None),
         "ancestor_chain": [],
         "bot_replies_in_thread": [],
-        "media": []
+        "media": [],
+        "is_retweet": False  # Default to False
     }
+
+    # Check if this tweet is a retweet
+    refs = getattr(tweet, 'referenced_tweets', None) if hasattr(tweet, 'referenced_tweets') else (tweet.get('referenced_tweets') if isinstance(tweet, dict) else None)
+    if refs:
+        for ref in refs:
+            if isinstance(ref, dict):
+                rtype = ref.get('type')
+            else:
+                rtype = getattr(ref, 'type', None)
+            if rtype == 'retweeted':
+                context['is_retweet'] = True
+                break
 
     conv_id = str(context["conversation_id"])
     cached_data = load_ancestor_chains().get(conv_id)
