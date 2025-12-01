@@ -1857,11 +1857,13 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
 
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
-            -Combine those responses into a concise coherent whole.\n\
-            -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
+            -Your primary task is to SYNTHESIZE and COMBINE those model responses into a concise coherent whole, not to perform fresh analysis.\n\
+            -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses.\n\
+            -The models have already analyzed any images, text, or context. Build upon their analysis rather than starting from scratch.\n\
+            -If the models agree on what an image shows or what a claim means, reflect that consensus. Only add your own analysis if the models significantly disagree or if you spot a critical error.\n\
             -Still respond in the first person as if you are one entity.\n\
-            -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet\n\
-            -You can perform additional searches and correct significant errors (such as claims that charlie kirk is still alive), but make sure not to simply substitute their opinion with yours.\n\
+            -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet.\n\
+            -You can perform additional searches and correct significant errors (such as claims that someone is alive when they're not), but make sure not to simply substitute their analysis with yours.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
         # append to system prompt
