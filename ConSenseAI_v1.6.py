@@ -1814,8 +1814,11 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
         {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
     ]
     
+    # Use SystemRandom for cryptographically strong randomness
+    secure_random = random.SystemRandom()
+    
     randomized_models = models[:3].copy()
-    random.shuffle(randomized_models)
+    secure_random.shuffle(randomized_models)
 
     # Then proceed with runs = 1 or  to keep it efficient
     runs = 3
@@ -1850,7 +1853,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     try:  
         #choose the combining model
         #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        model = random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
+        model = secure_random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
 
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n   - This is the final pass. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
