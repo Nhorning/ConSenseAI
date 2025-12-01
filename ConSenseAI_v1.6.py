@@ -1655,11 +1655,10 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
             #    )
             #    verdict[model['name']] = response.choices[0].message.content.strip()
             elif model['api'] == "openai":
-                # OpenAI vision model - send text + images
-                messages = [
-                    system_prompt,
-                    {"role": "user", "content": user_msg}
-                ]
+                # OpenAI vision model - send text + images in single message
+                messages = [system_prompt]
+                
+                # Build user message content with both text and images
                 if context and context.get('media'):
                     image_messages = []
                     for m in context['media']:
@@ -1673,10 +1672,20 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             })
                     if image_messages:
                         print(f"Appending Images:\n{image_messages}")
+                        # Combine text and images in single user message
                         messages.append({
                             "role": "user",
-                            "content": [*image_messages]
+                            "content": [
+                                {"type": "text", "text": user_msg},
+                                *image_messages
+                            ]
                         })
+                    else:
+                        # No images, just text
+                        messages.append({"role": "user", "content": user_msg})
+                else:
+                    # No context or no media, just text
+                    messages.append({"role": "user", "content": user_msg})
                 response = model['client'].chat.completions.create(
                     model=model['name'],
                     messages=messages,
