@@ -538,7 +538,7 @@ def fetch_and_process_search(search_term: str, user_id=None):
             max_results=min(args.search_max_results, 100),
             tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
             expansions=["referenced_tweets.id", "attachments.media_keys"],
-            media_fields=["type", "url", "preview_image_url", "alt_text"]
+            media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
         )
     except tweepy.TweepyException as e:
         print(f"[Search] API error: {e}")
@@ -834,7 +834,7 @@ def fetch_and_process_followed_users():
                 max_results=min(max_tweets_per_user, 100),
                 tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
                 expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
+                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
             )
             
             if not resp or not getattr(resp, 'data', None):
@@ -2592,7 +2592,7 @@ def fetch_and_process_mentions(user_id, username):
             max_results=5,
             tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
             expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
-            media_fields=["type", "url", "preview_image_url", "alt_text"],
+            media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"],
             user_fields=["username"]
         )
         
@@ -2755,7 +2755,7 @@ def collect_quoted(refs, includes=None):
                     id=ref_tweet.id,
                     tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
                     expansions=["attachments.media_keys"],
-                    media_fields=["type", "url", "preview_image_url", "alt_text"]
+                    media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                 )
                 print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_response.data.text)} chars")
                 quoted_responses.append(quoted_response)
@@ -2851,7 +2851,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                             max_results=10,
                             tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                             expansions=["referenced_tweets.id", "attachments.media_keys"],
-                            media_fields=["type", "url", "preview_image_url", "alt_text"]
+                            media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                         )
                         if thread_response.data:
                             context["thread_tweets"] = thread_response.data
@@ -2875,7 +2875,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                         max_results=10,
                         tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                         expansions=["referenced_tweets.id", "attachments.media_keys"],
-                        media_fields=["type", "url", "preview_image_url", "alt_text"]
+                        media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                     )
                     if bot_replies_response.data:
                         context["bot_replies_in_thread"] = bot_replies_response.data
@@ -2893,22 +2893,27 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             quoted = entry.get('quoted_tweets', []) if isinstance(entry, dict) else []
             cached_media = entry.get('media', []) if isinstance(entry, dict) else []
             
-            # Filter cached media: only include if tweet had no media_keys (old format) 
-            # or if we can't verify (to avoid breaking existing functionality)
-            # For new entries with media_keys, extract_media already filtered correctly
+            # Filter cached media: validate against attachments.media_keys
             tweet_obj = entry.get('tweet') if isinstance(entry, dict) else None
-            if tweet_obj:
+            if tweet_obj and len(cached_media) > 0:
                 attachments = get_attr(tweet_obj, 'attachments', {})
                 if attachments is None:
                     attachments = {}
                 media_keys = attachments.get('media_keys', []) if isinstance(attachments, dict) else (getattr(attachments, 'media_keys', []) if hasattr(attachments, 'media_keys') else [])
                 
-                # If tweet has media_keys defined but empty, it shouldn't have media
-                # If media_keys is not present/None, include media (backward compatibility)
-                if media_keys is not None and len(media_keys) == 0 and len(cached_media) > 0:
-                    tweet_id = get_attr(tweet_obj, 'id', 'unknown')
-                    print(f"[Media Filter] Skipping {len(cached_media)} cached media items from tweet {tweet_id} (has empty media_keys)")
-                    cached_media = []
+                # Validate each cached media item against media_keys
+                validated_media = []
+                for m in cached_media:
+                    media_key = m.get('media_key') if isinstance(m, dict) else None
+                    if media_keys and media_key and media_key in media_keys:
+                        # Media is properly attached
+                        validated_media.append(m)
+                    else:
+                        # Media not in attachments - skip it
+                        tweet_id = get_attr(tweet_obj, 'id', 'unknown')
+                        print(f"[Media Filter] Skipping cached media {media_key} from tweet {tweet_id} (not in attachments)")
+                
+                cached_media = validated_media
             
             context['quoted_tweets'].extend([q for q in quoted if q is not None])
             context['media'].extend([m for m in cached_media if m is not None])
@@ -3040,7 +3045,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                                 id=rid,
                                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                                 expansions=["referenced_tweets.id", "attachments.media_keys"],
-                                media_fields=["type", "url", "preview_image_url", "alt_text"]
+                                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                             )
                             if resp and getattr(resp, 'data', None):
                                 original_obj = resp.data
@@ -3138,7 +3143,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                     id=parent_id,
                     tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                     expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
-                    media_fields=["type", "url", "preview_image_url", "alt_text"],
+                    media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"],
                     user_fields=["username"]
                 )
                 if parent_response.data:
@@ -3224,7 +3229,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 max_results=10,
                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                 expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
+                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
             )
             if thread_response.data:
                 context["thread_tweets"] = thread_response.data
@@ -3240,7 +3245,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 max_results=10,
                 tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                 expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["type", "url", "preview_image_url", "alt_text"]
+                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                 )
             if bot_replies_response.data:
                 context["bot_replies_in_thread"] = bot_replies_response.data
@@ -3447,20 +3452,14 @@ def extract_media(t, includes=None):
                 media_list.append({
                     'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
                     'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
-                    'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
+                    'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else ''),
+                    'media_key': media_key  # Store media_key for validation when loading from cache
                 })
                 found_media = True
                 print(f"[Media Debug] Including media {media_key} (matches attachment)")
-            elif not media_keys:
-                # If tweet has no media_keys, include all media (backward compatibility)
-                media_list.append({
-                    'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
-                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
-                    'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
-                })
-                found_media = True
             else:
-                print(f"[Media Debug] Skipping media {media_key} (not in tweet attachments)")
+                # Media is in includes but not in tweet's attachments - likely a preview/card image
+                print(f"[Media Debug] Skipping media {media_key} (not in tweet attachments, no media_keys found)")
         print(f"[Media Debug] Extracted {len(media_list)} media items from includes['media']")
 
     # Handle dicts with 'media' key
