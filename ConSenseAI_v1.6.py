@@ -2905,10 +2905,17 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 validated_media = []
                 for m in cached_media:
                     media_key = m.get('media_key') if isinstance(m, dict) else None
+                    media_url = m.get('url', '') if isinstance(m, dict) else ''
                     
                     if media_key is None:
-                        # No media_key means this is a link preview from entities.urls - keep it
-                        validated_media.append(m)
+                        # No media_key - check if it's a link preview (news_img) or bad cached media
+                        if 'news_img' in media_url or not media_url.startswith('https://pbs.twimg.com/media/'):
+                            # Link preview from entities.urls or external URL - keep it
+                            validated_media.append(m)
+                        else:
+                            # Likely old cached media from includes without validation - skip it
+                            tweet_id = get_attr(tweet_obj, 'id', 'unknown')
+                            print(f"[Media Filter] Skipping cached media with no media_key from tweet {tweet_id} (URL: {media_url[:50]}...)")
                     elif media_keys and media_key in media_keys:
                         # Media key matches tweet's attachments - keep it
                         validated_media.append(m)
