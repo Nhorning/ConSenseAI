@@ -2886,13 +2886,32 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                     print(f"Error fetching bot replies: {e}")
 
         # Extract quoted tweets and media from cached chain
+        # Validate cached media to ensure it was properly attached to tweets
         for entry in context['ancestor_chain']:
             if entry is None:
                 continue
             quoted = entry.get('quoted_tweets', []) if isinstance(entry, dict) else []
-            media = entry.get('media', []) if isinstance(entry, dict) else []
+            cached_media = entry.get('media', []) if isinstance(entry, dict) else []
+            
+            # Filter cached media: only include if tweet had no media_keys (old format) 
+            # or if we can't verify (to avoid breaking existing functionality)
+            # For new entries with media_keys, extract_media already filtered correctly
+            tweet_obj = entry.get('tweet') if isinstance(entry, dict) else None
+            if tweet_obj:
+                attachments = get_attr(tweet_obj, 'attachments', {})
+                if attachments is None:
+                    attachments = {}
+                media_keys = attachments.get('media_keys', []) if isinstance(attachments, dict) else (getattr(attachments, 'media_keys', []) if hasattr(attachments, 'media_keys') else [])
+                
+                # If tweet has media_keys defined but empty, it shouldn't have media
+                # If media_keys is not present/None, include media (backward compatibility)
+                if media_keys is not None and len(media_keys) == 0 and len(cached_media) > 0:
+                    tweet_id = get_attr(tweet_obj, 'id', 'unknown')
+                    print(f"[Media Filter] Skipping {len(cached_media)} cached media items from tweet {tweet_id} (has empty media_keys)")
+                    cached_media = []
+            
             context['quoted_tweets'].extend([q for q in quoted if q is not None])
-            context['media'].extend([m for m in media if m is not None])
+            context['media'].extend([m for m in cached_media if m is not None])
 
         # Attempt to derive original_tweet from chain if not fetching separately
         if context['ancestor_chain']:
