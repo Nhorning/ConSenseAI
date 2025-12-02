@@ -3406,15 +3406,42 @@ def extract_media(t, includes=None):
 
     # FIRST: Check includes for media (most reliable source from API responses)
     if includes and isinstance(includes, dict) and 'media' in includes:
+        # Get the tweet's media_keys if they exist
+        attachments = get_attr(t, 'attachments', {})
+        if attachments is None:
+            attachments = {}
+        media_keys = attachments.get('media_keys', []) if isinstance(attachments, dict) else (getattr(attachments, 'media_keys', []) if hasattr(attachments, 'media_keys') else [])
+        
+        print(f"[Media Debug] Tweet has {len(media_keys)} media_keys in attachments: {media_keys}")
+        
         for m in includes['media']:
             if m is None:
                 continue
-            media_list.append({
-                'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
-                'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
-                'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
-            })
-            found_media = True
+            # Get media_key from the media object
+            media_key = getattr(m, 'media_key', None) if hasattr(m, 'media_key') else (m.get('media_key') if isinstance(m, dict) else None)
+            
+            # Include media if:
+            # 1. It's in the tweet's attachments (directly attached photo/video), OR
+            # 2. Tweet has no media_keys (old format/backward compatibility), OR
+            # 3. We'll check later if it's from a URL entity (link preview)
+            if media_keys and media_key and media_key in media_keys:
+                media_list.append({
+                    'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
+                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
+                    'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
+                })
+                found_media = True
+                print(f"[Media Debug] Including media {media_key} (matches attachment)")
+            elif not media_keys:
+                # If tweet has no media_keys, include all media (backward compatibility)
+                media_list.append({
+                    'type': getattr(m, 'type', '') if hasattr(m, 'type') else (m.get('type', '') if isinstance(m, dict) else ''),
+                    'url': getattr(m, 'url', getattr(m, 'preview_image_url', '')) if hasattr(m, 'url') else (m.get('url', m.get('preview_image_url', '')) if isinstance(m, dict) else ''),
+                    'alt_text': getattr(m, 'alt_text', '') if hasattr(m, 'alt_text') else (m.get('alt_text', '') if isinstance(m, dict) else '')
+                })
+                found_media = True
+            else:
+                print(f"[Media Debug] Skipping media {media_key} (not in tweet attachments)")
         print(f"[Media Debug] Extracted {len(media_list)} media items from includes['media']")
 
     # Handle dicts with 'media' key
