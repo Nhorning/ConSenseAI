@@ -2905,11 +2905,15 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 validated_media = []
                 for m in cached_media:
                     media_key = m.get('media_key') if isinstance(m, dict) else None
-                    if media_keys and media_key and media_key in media_keys:
-                        # Media is properly attached
+                    
+                    if media_key is None:
+                        # No media_key means this is a link preview from entities.urls - keep it
+                        validated_media.append(m)
+                    elif media_keys and media_key in media_keys:
+                        # Media key matches tweet's attachments - keep it
                         validated_media.append(m)
                     else:
-                        # Media not in attachments - skip it
+                        # Media has media_key but it's not in tweet's attachments - skip it
                         tweet_id = get_attr(tweet_obj, 'id', 'unknown')
                         print(f"[Media Filter] Skipping cached media {media_key} from tweet {tweet_id} (not in attachments)")
                 
