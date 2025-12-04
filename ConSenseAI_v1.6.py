@@ -1239,10 +1239,10 @@ def get_bot_tweet_content(tweet_id, verbose=True):
 
 def get_user_reply_counts():
     """
-    Count how many times the bot has replied to each user.
-    Counts any tweet that the bot replied to, regardless of whether the user
-    directly mentioned the bot or was found via search/followed users.
-    Returns dict: {user_id: reply_count}
+    Count how many times each user has @mentioned the bot.
+    Only counts tweets that contain an @mention of the bot's username in the text.
+    This includes both direct mentions and replies that tag the bot.
+    Returns dict: {user_id: mention_count}
     
     Uses combined data from ancestor_chains.json and bot_tweets.json to ensure
     accurate counting even when ancestor_id fields are missing.
@@ -1260,6 +1260,9 @@ def get_user_reply_counts():
     # Load bot tweets for fallback identification
     bot_tweets = load_bot_tweets()
     bot_id = str(getid())
+    
+    # Get bot username for mention checking (global variable from main())
+    bot_username = username.lower() if 'username' in globals() else 'consenseai'
     
     for conv_id, conv_data in chains.items():
         # Handle both dict format (new) and list format (legacy)
@@ -1315,8 +1318,7 @@ def get_user_reply_counts():
         if not bot_reply_ids:
             continue
         
-        # Now count user tweets that the bot replied to
-        # Look through bot replies to see who they replied to
+        # Now count user tweets that @mention the bot
         for entry in chain:
             if not entry or not isinstance(entry, dict):
                 continue
@@ -1334,15 +1336,18 @@ def get_user_reply_counts():
             
             tweet_id = str(tweet.get('id')) if isinstance(tweet, dict) and tweet.get('id') else None
             author_id = str(tweet.get('author_id')) if isinstance(tweet, dict) and tweet.get('author_id') else None
-            in_reply_to_user = str(tweet.get('in_reply_to_user_id')) if isinstance(tweet, dict) and tweet.get('in_reply_to_user_id') else None
+            tweet_text = str(tweet.get('text', '')) if isinstance(tweet, dict) else ''
             
             # Count only if:
-            # 1. This IS a bot tweet (in bot_reply_ids)
-            # 2. It's replying to someone (has in_reply_to_user_id)
-            # 3. Not replying to itself
-            # Then credit the user being replied to
-            if tweet_id in bot_reply_ids and in_reply_to_user and in_reply_to_user != bot_id:
-                user_counts[in_reply_to_user] = user_counts.get(in_reply_to_user, 0) + 1
+            # 1. This is NOT a bot tweet
+            # 2. Has valid author_id
+            # 3. Author is not the bot
+            # 4. Tweet text contains @mention of the bot
+            if (tweet_id not in bot_reply_ids and 
+                author_id and 
+                author_id != bot_id and 
+                f'@{bot_username}' in tweet_text.lower()):
+                user_counts[author_id] = user_counts.get(author_id, 0) + 1
     
     print(f"[Auto-Follow] Counted mentions from {len(user_counts)} unique users across {len(chains)} conversations")
     for user_id, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:10]:
