@@ -2493,126 +2493,142 @@ def authenticate():
     
     # Check if access_token and access_token_secret are already present for post_client
     if 'access_token' in keys and 'access_token_secret' in keys and keys['access_token'] and keys['access_token_secret']:
-        # Post client (as @ConSenseAI - free tier)
-        post_client = tweepy.Client(
-            consumer_key=keys['XAPI_key'],
-            consumer_secret=keys['XAPI_secret'],
-            access_token=keys['access_token'],
-            access_token_secret=keys['access_token_secret'],
-            wait_on_rate_limit=False
-        )
-        print(f"Post client initialized with existing access tokens.")
-        
-        # Try to validate and get BOT_USER_ID, but don't fail if it errors
         try:
+            # Post client (as @ConSenseAI - free tier)
+            post_client = tweepy.Client(
+                consumer_key=keys['XAPI_key'],
+                consumer_secret=keys['XAPI_secret'],
+                access_token=keys['access_token'],
+                access_token_secret=keys['access_token_secret'],
+                wait_on_rate_limit=False
+            )
             user = post_client.get_me()
+            print(f"Post client authenticated as @{user.data.username} (free tier).")
+            # Cache the authenticated bot user id to avoid future get_user calls
             BOT_USER_ID = user.data.id
-            print(f"Post client validated as @{user.data.username} (ID: {BOT_USER_ID}).")
+            print(f"[Authenticate] BOT_USER_ID cached as {BOT_USER_ID}")
+            if user.data.username.lower() == 'consenseai':
+                print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
+                return  # Exit early if authentication succeeds
+            else:
+                print(f"Warning: Existing tokens authenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
         except tweepy.TweepyException as e:
-            print(f"Warning: Could not validate tokens with get_me(): {e}")
-            print(f"Continuing anyway - tokens may still work for other operations.")
-            # Set a default BOT_USER_ID if we can't fetch it
-            # You can hardcode your bot's user ID here if known
-            BOT_USER_ID = None
-        
-        return  # Exit early - we have tokens, proceed with them
+            print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
     
     # If no valid tokens or authentication failed, perform three-legged OAuth flow for @ConSenseAI
     print("\n" + "="*70)
-    print("THREE-LEGGED OAUTH REQUIRED")
+    print("THREE-LEGGED OAUTH REQUIRED - MANUAL FLOW")
     print("="*70)
-    print("\nCloudflare is blocking automated OAuth requests.")
-    print("You need to manually complete the OAuth flow in your browser:\n")
+    print("\nYour access tokens are expired/invalid. Follow these steps:\n")
     
-    # Use 'oob' (out of band) for PIN-based flow instead of callback
-    auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'], 'oob')
+    print("STEP 1: Get Request Token")
+    print("-" * 70)
+    print("Open this URL in your browser to bypass Cloudflare:")
+    print(f"\n  https://api.twitter.com/oauth/request_token?oauth_callback=oob")
+    print("\nIf Cloudflare blocks you:")
+    print("  a) Visit https://api.twitter.com first to pass the challenge")
+    print("  b) Then try the request_token URL above")
+    print("\nYou should see something like:")
+    print("  oauth_token=XXXXX&oauth_token_secret=YYYYY&oauth_callback_confirmed=true")
+    print("")
+    
+    oauth_token = input("Enter the oauth_token value: ").strip()
+    
+    if not oauth_token:
+        print("\n✗ No token entered. Cannot proceed.")
+        print("\nALTERNATIVE: Use Twitter Developer Portal (easier):")
+        print("  1. Go to https://developer.twitter.com/en/portal/dashboard")
+        print("  2. Select your app → Keys and tokens")
+        print("  3. Click 'Regenerate' under 'Access Token and Secret'")
+        print("  4. Copy tokens to keys.txt")
+        exit(1)
+    
+    print("\n" + "="*70)
+    print("STEP 2: Authorize the Application")
+    print("-" * 70)
+    auth_url = f"https://api.twitter.com/oauth/authorize?oauth_token={oauth_token}"
+    print(f"Visit this URL to authorize as @ConSenseAI:\n")
+    print(f"  {auth_url}\n")
     
     try:
-        # Step 1: Get authorization URL
-        # This might fail with Cloudflare, but we'll give manual instructions
-        try:
-            auth_url = auth.get_authorization_url()
-            print(f"STEP 1: Visit this URL to authorize the bot account:")
-            print(f"  {auth_url}\n")
-            
-            # Try to open browser
-            try:
-                web_open(auth_url)
-                print("✓ Browser opened automatically")
-            except:
-                print("(Could not open browser automatically)")
-            
-        except tweepy.TweepyException as e:
-            if '403' in str(e) or 'Cloudflare' in str(e):
-                print(f"✗ Automated request blocked by Cloudflare: {e}\n")
-                print("MANUAL WORKAROUND:")
-                print("-" * 70)
-                print("1. Open your browser and visit: https://api.twitter.com")
-                print("2. Complete the Cloudflare challenge (if prompted)")
-                print("3. Then manually construct the OAuth URL:")
-                print(f"   https://api.twitter.com/oauth/authorize?oauth_token=REQUEST_TOKEN")
-                print("\n4. To get the REQUEST_TOKEN, you need to call the request_token endpoint")
-                print("   with Cloudflare cookies from your browser session.")
-                print("\nALTERNATIVE (EASIER): Use Twitter Developer Portal:")
-                print("   https://developer.twitter.com/en/portal/dashboard")
-                print("   → Your App → Keys and tokens → Regenerate Access Token & Secret")
-                print("="*70)
-                exit(1)
-            else:
-                raise
-        
-        # Step 2: Get verifier PIN from user
-        print("STEP 2: After authorizing as the BOT account (@ConSenseAI),")
-        print("        you'll see a PIN code.")
-        verifier = input("\nEnter the PIN/verifier code: ").strip()
-        
-        if not verifier:
-            print("ERROR: No verifier entered")
-            exit(1)
-        
-        # Step 3: Exchange verifier for access token
-        print("\nSTEP 3: Exchanging verifier for access tokens...")
+        web_open(auth_url)
+        print("✓ Browser opened automatically")
+    except:
+        print("(Copy the URL above if browser didn't open)")
+    
+    print("\nLog in as @ConSenseAI and click 'Authorize app'")
+    print("You'll see a PIN code on the screen.")
+    
+    verifier = input("\nEnter the PIN code: ").strip()
+    
+    if not verifier:
+        print("✗ No PIN entered. Cannot proceed.")
+        exit(1)
+    
+    print("\n" + "="*70)
+    print("STEP 3: Get Access Tokens")
+    print("-" * 70)
+    print("Now we need to exchange the PIN for access tokens.")
+    print("This might also be blocked by Cloudflare...\n")
+    
+    # Try using Tweepy to get access token
+    auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'], 'oob')
+    auth.request_token = {'oauth_token': oauth_token, 'oauth_token_secret': 'placeholder'}
+    
+    try:
         auth.get_access_token(verifier)
         access_token = auth.access_token
         access_token_secret = auth.access_token_secret
         
-        print(f"\n✓ SUCCESS! Got tokens for bot account:")
+        print(f"✓ SUCCESS! Got access tokens:")
         print(f"  access_token: {access_token[:20]}...")
         print(f"  access_token_secret: {access_token_secret[:20]}...\n")
         
-        # Update keys.txt with new tokens
-        print("Updating keys.txt...")
-        with open('keys.txt', 'r') as f:
-            lines = f.readlines()
-        
-        # Replace existing tokens or append
-        updated_access = False
-        updated_secret = False
-        for i, line in enumerate(lines):
-            if line.startswith('access_token=') and not line.startswith('access_token_secret='):
-                lines[i] = f"access_token={access_token}\n"
-                updated_access = True
-            elif line.startswith('access_token_secret='):
-                lines[i] = f"access_token_secret={access_token_secret}\n"
-                updated_secret = True
-        
-        if not updated_access:
-            lines.append(f"access_token={access_token}\n")
-        if not updated_secret:
-            lines.append(f"access_token_secret={access_token_secret}\n")
-        
-        with open('keys.txt', 'w') as f:
-            f.writelines(lines)
-        
-        print("✓ keys.txt updated!")
-        print("\nRe-authenticating with new tokens...")
-        authenticate()
-       
     except tweepy.TweepyException as e:
-        print(f"\n✗ Error during OAuth flow: {e}")
-        print("\nIf Cloudflare is blocking, use Developer Portal instead:")
-        print("  https://developer.twitter.com/en/portal/dashboard")
-        exit(1)
+        print(f"✗ Token exchange failed (likely Cloudflare): {e}\n")
+        print("MANUAL TOKEN EXCHANGE:")
+        print("-" * 70)
+        print("Open this URL in your browser:")
+        print(f"\n  https://api.twitter.com/oauth/access_token")
+        print(f"  ?oauth_token={oauth_token}")
+        print(f"  &oauth_verifier={verifier}")
+        print("\nYou should see something like:")
+        print("  oauth_token=XXX&oauth_token_secret=YYY&user_id=ZZZ&screen_name=ConSenseAI")
+        print("")
+        access_token = input("Enter the oauth_token value: ").strip()
+        access_token_secret = input("Enter the oauth_token_secret value: ").strip()
+        
+        if not access_token or not access_token_secret:
+            print("\n✗ No tokens entered. Cannot proceed.")
+            exit(1)
+    
+    # Update keys.txt with new tokens
+    print("\nUpdating keys.txt...")
+    with open('keys.txt', 'r') as f:
+        lines = f.readlines()
+    
+    # Replace existing tokens or append
+    updated_access = False
+    updated_secret = False
+    for i, line in enumerate(lines):
+        if line.startswith('access_token=') and not line.startswith('access_token_secret='):
+            lines[i] = f"access_token={access_token}\n"
+            updated_access = True
+        elif line.startswith('access_token_secret='):
+            lines[i] = f"access_token_secret={access_token_secret}\n"
+            updated_secret = True
+    
+    if not updated_access:
+        lines.append(f"access_token={access_token}\n")
+    if not updated_secret:
+        lines.append(f"access_token_secret={access_token_secret}\n")
+    
+    with open('keys.txt', 'w') as f:
+        f.writelines(lines)
+    
+    print("✓ keys.txt updated!")
+    print("\nRe-authenticating with new tokens...")
+    authenticate()
     
     #client_oauth2 = None
     #print("OAuth 2.0 client disabled; using OAuth 1.0a for all operations.")
@@ -3872,6 +3888,11 @@ def main():
     while True:
         authenticate()
         user_id = BOT_USER_ID
+        
+        # Fallback: If BOT_USER_ID is still None after authentication, use hardcoded value
+        if user_id is None:
+            user_id = 1948872778989666305  # @ConSenseAI's user ID
+            print(f"[Main] Using fallback BOT_USER_ID: {user_id}")
         
         # Generate initial search term for auto mode (only if we don't have one yet)
         if auto_search_mode and not current_search_term:
