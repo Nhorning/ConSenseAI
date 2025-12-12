@@ -2493,61 +2493,125 @@ def authenticate():
     
     # Check if access_token and access_token_secret are already present for post_client
     if 'access_token' in keys and 'access_token_secret' in keys and keys['access_token'] and keys['access_token_secret']:
+        # Post client (as @ConSenseAI - free tier)
+        post_client = tweepy.Client(
+            consumer_key=keys['XAPI_key'],
+            consumer_secret=keys['XAPI_secret'],
+            access_token=keys['access_token'],
+            access_token_secret=keys['access_token_secret'],
+            wait_on_rate_limit=False
+        )
+        print(f"Post client initialized with existing access tokens.")
+        
+        # Try to validate and get BOT_USER_ID, but don't fail if it errors
         try:
-            # Post client (as @ConSenseAI - free tier)
-            post_client = tweepy.Client(
-                consumer_key=keys['XAPI_key'],
-                consumer_secret=keys['XAPI_secret'],
-                access_token=keys['access_token'],
-                access_token_secret=keys['access_token_secret'],
-                wait_on_rate_limit=False
-            )
             user = post_client.get_me()
-            print(f"Post client authenticated as @{user.data.username} (free tier).")
-            # Cache the authenticated bot user id to avoid future get_user calls
-            try:
-                BOT_USER_ID = user.data.id
-                print(f"[Authenticate] BOT_USER_ID cached as {BOT_USER_ID}")
-            except Exception:
-                pass
-            if user.data.username.lower() == 'consenseai':
-                print(f"Authenticated with X API v1.1 (OAuth 1.0a) as @ConSenseAI (ID: {user.data.id}) successfully using existing tokens.")
-                return  # Exit early if authentication succeeds
-            else:
-                print(f"Warning: Existing tokens auYou thenticate as {user.data.username}, not @ConSenseAI. Proceeding with new authentication.")
+            BOT_USER_ID = user.data.id
+            print(f"Post client validated as @{user.data.username} (ID: {BOT_USER_ID}).")
         except tweepy.TweepyException as e:
-            print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
+            print(f"Warning: Could not validate tokens with get_me(): {e}")
+            print(f"Continuing anyway - tokens may still work for other operations.")
+            # Set a default BOT_USER_ID if we can't fetch it
+            # You can hardcode your bot's user ID here if known
+            BOT_USER_ID = None
+        
+        return  # Exit early - we have tokens, proceed with them
     
     # If no valid tokens or authentication failed, perform three-legged OAuth flow for @ConSenseAI
-    print("No valid access tokens found or authentication failed. Initiating three-legged OAuth flow...")
-    auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'])
+    print("\n" + "="*70)
+    print("THREE-LEGGED OAUTH REQUIRED")
+    print("="*70)
+    print("\nCloudflare is blocking automated OAuth requests.")
+    print("You need to manually complete the OAuth flow in your browser:\n")
+    
+    # Use 'oob' (out of band) for PIN-based flow instead of callback
+    auth = tweepy.OAuthHandler(keys['XAPI_key'], keys['XAPI_secret'], 'oob')
+    
     try:
-        # Step 1: Get request token
-        redirect_url = "http://127.0.0.1:3000/"  # Ensure this matches the callback URL in X Developer Portal
-        auth.set_access_token(None, None)  # Clear any existing tokens
-        redirect_url = auth.get_authorization_url()
-        print(f"Please go to this URL and authorize the app: {redirect_url}")
-        web_open(redirect_url)  # Opens in default browser
+        # Step 1: Get authorization URL
+        # This might fail with Cloudflare, but we'll give manual instructions
+        try:
+            auth_url = auth.get_authorization_url()
+            print(f"STEP 1: Visit this URL to authorize the bot account:")
+            print(f"  {auth_url}\n")
+            
+            # Try to open browser
+            try:
+                web_open(auth_url)
+                print("✓ Browser opened automatically")
+            except:
+                print("(Could not open browser automatically)")
+            
+        except tweepy.TweepyException as e:
+            if '403' in str(e) or 'Cloudflare' in str(e):
+                print(f"✗ Automated request blocked by Cloudflare: {e}\n")
+                print("MANUAL WORKAROUND:")
+                print("-" * 70)
+                print("1. Open your browser and visit: https://api.twitter.com")
+                print("2. Complete the Cloudflare challenge (if prompted)")
+                print("3. Then manually construct the OAuth URL:")
+                print(f"   https://api.twitter.com/oauth/authorize?oauth_token=REQUEST_TOKEN")
+                print("\n4. To get the REQUEST_TOKEN, you need to call the request_token endpoint")
+                print("   with Cloudflare cookies from your browser session.")
+                print("\nALTERNATIVE (EASIER): Use Twitter Developer Portal:")
+                print("   https://developer.twitter.com/en/portal/dashboard")
+                print("   → Your App → Keys and tokens → Regenerate Access Token & Secret")
+                print("="*70)
+                exit(1)
+            else:
+                raise
         
-        # Step 2: Get verifier from callback
-        verifier = input("Enter the verifier PIN from the callback URL: ")
+        # Step 2: Get verifier PIN from user
+        print("STEP 2: After authorizing as the BOT account (@ConSenseAI),")
+        print("        you'll see a PIN code.")
+        verifier = input("\nEnter the PIN/verifier code: ").strip()
         
-        # Step 3: Get access token
+        if not verifier:
+            print("ERROR: No verifier entered")
+            exit(1)
+        
+        # Step 3: Exchange verifier for access token
+        print("\nSTEP 3: Exchanging verifier for access tokens...")
         auth.get_access_token(verifier)
         access_token = auth.access_token
         access_token_secret = auth.access_token_secret
         
-        # Update keys.txt with new tokens
-        with open('keys.txt', 'a') as f:
-            f.write(f"access_token={access_token}\naccess_token_secret={access_token_secret}\n")
-        print(f"New access tokens saved to keys.txt: {access_token}, {access_token_secret}")
+        print(f"\n✓ SUCCESS! Got tokens for bot account:")
+        print(f"  access_token: {access_token[:20]}...")
+        print(f"  access_token_secret: {access_token_secret[:20]}...\n")
         
-        # Step 4: Call function again with new tokens
-        #keys=load_keys()
+        # Update keys.txt with new tokens
+        print("Updating keys.txt...")
+        with open('keys.txt', 'r') as f:
+            lines = f.readlines()
+        
+        # Replace existing tokens or append
+        updated_access = False
+        updated_secret = False
+        for i, line in enumerate(lines):
+            if line.startswith('access_token=') and not line.startswith('access_token_secret='):
+                lines[i] = f"access_token={access_token}\n"
+                updated_access = True
+            elif line.startswith('access_token_secret='):
+                lines[i] = f"access_token_secret={access_token_secret}\n"
+                updated_secret = True
+        
+        if not updated_access:
+            lines.append(f"access_token={access_token}\n")
+        if not updated_secret:
+            lines.append(f"access_token_secret={access_token_secret}\n")
+        
+        with open('keys.txt', 'w') as f:
+            f.writelines(lines)
+        
+        print("✓ keys.txt updated!")
+        print("\nRe-authenticating with new tokens...")
         authenticate()
        
     except tweepy.TweepyException as e:
-        print(f"Error during OAuth flow: {e}")
+        print(f"\n✗ Error during OAuth flow: {e}")
+        print("\nIf Cloudflare is blocking, use Developer Portal instead:")
+        print("  https://developer.twitter.com/en/portal/dashboard")
         exit(1)
     
     #client_oauth2 = None
@@ -2586,6 +2650,20 @@ def write_last_tweet_id(tweet_id):
 # Get the user ID for the specified username
 def getid():
     global BOT_USER_ID
+    global post_client
+    
+    # If BOT_USER_ID is not cached, try to fetch it
+    if BOT_USER_ID is None:
+        try:
+            print("[getid] BOT_USER_ID not cached, fetching from API...")
+            user = post_client.get_me()
+            BOT_USER_ID = user.data.id
+            print(f"[getid] Fetched BOT_USER_ID: {BOT_USER_ID}")
+        except Exception as e:
+            print(f"[getid] Error fetching BOT_USER_ID: {e}")
+            # If we can't get it, we have a problem - but don't crash
+            pass
+    
     return BOT_USER_ID
 
 def fetch_and_process_mentions(user_id, username):
