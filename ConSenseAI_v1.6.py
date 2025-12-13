@@ -3049,8 +3049,27 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                     print(f"[Context Cache] Found blank entry in cached ancestor chain")
                     break
 
-        # If we have everything from cache AND no blank entries, return early
-        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain'] and not has_blank_entries:
+        # Check if cached ancestor chain is complete (walks to root)
+        chain_complete = True
+        if context['ancestor_chain']:
+            # Get the oldest (root) tweet in chain
+            root_entry = context['ancestor_chain'][0] if context['ancestor_chain'] else None
+            if root_entry and isinstance(root_entry, dict):
+                root_tweet = root_entry.get('tweet')
+                if root_tweet:
+                    # Check if root tweet has a parent (referenced_tweets with replied_to)
+                    refs = get_attr(root_tweet, 'referenced_tweets', [])
+                    if refs:
+                        for ref in refs:
+                            ref_type = get_attr(ref, 'type') if not isinstance(ref, dict) else ref.get('type')
+                            if ref_type == 'replied_to':
+                                # Root tweet has a parent, so chain is incomplete
+                                chain_complete = False
+                                print(f"[Context Cache] Cached chain incomplete - root tweet has parent")
+                                break
+        
+        # If we have everything from cache AND no blank entries AND chain is complete, return early
+        if isinstance(cached_data, dict) and 'thread_tweets' in cached_data and 'bot_replies' in cached_data and context['ancestor_chain'] and not has_blank_entries and chain_complete:
             print("[Context Cache] All context loaded from cache - skipping API calls")
             context['from_cache'] = True  # Mark that this context was loaded from cache
             # Still collect media from mention if not in chain
@@ -3111,10 +3130,25 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             return context
 
     # If not fully cached, build ancestor chain
-    print(f"[Context Cache] Incomplete cache for {conv_id} - building with API")
-    ancestor_chain = []
-    current_tweet = tweet
-    visited = set()
+    # If we have a partial cached chain, continue from where it left off
+    if context['ancestor_chain'] and not chain_complete:
+        print(f"[Context Cache] Continuing ancestor chain from cached root")
+        ancestor_chain = context['ancestor_chain']
+        # Start from the root (oldest) tweet in cached chain
+        root_entry = ancestor_chain[0]
+        current_tweet = root_entry.get('tweet') if isinstance(root_entry, dict) else root_entry
+        # Mark all cached tweets as visited
+        for entry in ancestor_chain:
+            t = entry.get('tweet') if isinstance(entry, dict) else entry
+            tid = get_attr(t, 'id')
+            if tid:
+                visited.add(tid)
+    else:
+        print(f"[Context Cache] Incomplete cache for {conv_id} - building with API")
+        ancestor_chain = []
+        current_tweet = tweet
+        visited = set()
+    
     quoted_from_api = []  # Collect any newly fetched quoted tweets
     # Special handling: if this mention is a retweet of another tweet, attempt to
     # fetch the original full text (prefer twitterapi.io if configured) and
