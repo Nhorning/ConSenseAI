@@ -202,11 +202,18 @@ def read_last_search_id(search_term: str):
     return None
 
 def write_last_search_id(search_term: str, tweet_id):
-    """Write the last processed tweet ID for a search term to JSON storage."""
+    """Write the last processed tweet ID for a search term to JSON storage.
+    If tweet_id is None, removes the entry to reset the search."""
     data = _load_json_file(_get_auto_search_file(), {})
     if 'last_search_ids' not in data:
         data['last_search_ids'] = {}
-    data['last_search_ids'][search_term] = str(tweet_id)
+    if tweet_id is None:
+        # Remove the entry to reset
+        if search_term in data['last_search_ids']:
+            del data['last_search_ids'][search_term]
+            print(f"[Search ID] Removed stale since_id for '{search_term}'")
+    else:
+        data['last_search_ids'][search_term] = str(tweet_id)
     _save_json_file(_get_auto_search_file(), data)
 
 def _load_json_file(path, default):
@@ -541,9 +548,29 @@ def fetch_and_process_search(search_term: str, user_id=None):
             media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
         )
     except tweepy.TweepyException as e:
-        print(f"[Search] API error: {e}")
-        backoff_multiplier += 1
-        return
+        error_str = str(e)
+        # Check if since_id is too old (outside 7-day window)
+        if "since_id" in error_str and "must be a tweet id created after" in error_str:
+            print(f"[Search] since_id {last_id} is too old (outside 7-day window), resetting to None")
+            # Reset the since_id for this search term so it starts fresh
+            write_last_search_id(search_term, None)
+            # Retry without since_id
+            try:
+                resp = read_client.search_recent_tweets(
+                    query=search_term,
+                    max_results=min(args.search_max_results, 100),
+                    tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
+                    expansions=["referenced_tweets.id", "attachments.media_keys"],
+                    media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
+                )
+            except tweepy.TweepyException as retry_e:
+                print(f"[Search] API error on retry: {retry_e}")
+                backoff_multiplier += 1
+                return
+        else:
+            print(f"[Search] API error: {e}")
+            backoff_multiplier += 1
+            return
 
     if not resp or not getattr(resp, 'data', None):
         print(f"[Search] No results for '{search_term}'")
