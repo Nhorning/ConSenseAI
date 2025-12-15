@@ -3879,6 +3879,9 @@ parser.add_argument('--check_followed_users', type=bool, help='If True, periodic
 parser.add_argument('--followed_users_max_tweets', type=int, help='Max tweets to check per followed user per cycle (default 5)', default=5)
 parser.add_argument('--followed_users_daily_cap', type=int, help='Max automated replies per day from followed users (default 10)', default=10)
 parser.add_argument('--followed_users_per_cycle', type=int, help='Max followed users to check per cycle for rotation (default 3)', default=3)
+parser.add_argument('--check_community_notes', type=bool, help='If True, periodically fetch and propose Community Notes (default False)', default=False)
+parser.add_argument('--cn_max_results', type=int, help='Max Community Notes eligible posts to process per cycle (default 5)', default=5)
+parser.add_argument('--cn_test_mode', type=bool, help='If True, submit Community Notes in test mode (recommended for development, default True)', default=True)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
@@ -3920,6 +3923,240 @@ FOLLOWED_USERS_ROTATION_FILE = f'followed_rotation_{username}.json'
 
 RESTART_DELAY = 10
 backoff_multiplier = 1
+
+# Community Notes files and configuration
+COMMUNITY_NOTES_LAST_CHECK_FILE = f'cn_last_check_{username}.txt'
+COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
+
+def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
+    """
+    Fetch posts eligible for Community Notes and propose notes using ConSenseAI's fact-checking pipeline.
+    
+    Args:
+        user_id: Bot user ID (for checking if we've already written notes)
+        max_results: Maximum number of posts to fetch (default 5)
+        test_mode: If True, submit notes in test mode (default True, recommended for development)
+    
+    Returns:
+        int: Number of notes written
+    """
+    global backoff_multiplier
+    
+    print(f"[Community Notes] Fetching up to {max_results} posts eligible for notes (test_mode={test_mode})")
+    
+    try:
+        # Use Twitter API v2 to fetch posts eligible for Community Notes
+        # This endpoint supports OAuth 1.0a User Context (existing bot tokens)
+        from requests_oauthlib import OAuth1Session
+        import requests
+        
+        # Use separate keys for Community Notes project (must be from a project with CN API access)
+        # Check if CN-specific keys exist, otherwise fall back to main keys
+        cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+        cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+        cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+        cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+        
+        if not keys.get('CN_XAPI_key'):
+            print("[Community Notes] WARNING: Using main project keys. For Community Notes to work, you need keys from a project with Community Notes API access.")
+            print("[Community Notes] Add to keys.txt: CN_XAPI_key, CN_XAPI_secret, CN_access_token, CN_access_token_secret")
+        
+        print("[Community Notes] Using OAuth 1.0a authentication")
+        oauth = OAuth1Session(
+            client_key=cn_api_key,
+            client_secret=cn_api_secret,
+            resource_owner_key=cn_access_token,
+            resource_owner_secret=cn_access_secret
+        )
+        
+        params = {
+            "test_mode": str(test_mode).lower(),
+            "max_results": max_results,
+            "tweet.fields": "author_id,created_at,referenced_tweets,attachments,entities,conversation_id",
+            "expansions": "attachments.media_keys,referenced_tweets.id,referenced_tweets.id.attachments.media_keys",
+            "media.fields": "media_key,type,url,preview_image_url,alt_text,height,width"
+        }
+        
+        response = oauth.get(
+            "https://api.twitter.com/2/notes/search/posts_eligible_for_notes",
+            params=params
+        )
+        
+        if response.status_code == 200:
+            resp = response.json()
+            if not resp or not resp.get('data'):
+                print("[Community Notes] No eligible posts found")
+                return 0
+        else:
+            error_msg = f"HTTP {response.status_code}: {response.text}"
+            if response.status_code == 403:
+                print(f"[Community Notes] Access denied - account may not have Community Notes API access enabled: {error_msg}")
+            elif response.status_code == 404:
+                print(f"[Community Notes] Endpoint not found - Community Notes API may not be available: {error_msg}")
+            else:
+                print(f"[Community Notes] API error: {error_msg}")
+                backoff_multiplier += 1
+            return 0
+            
+    except tweepy.TweepyException as e:
+        error_str = str(e)
+        if "403" in error_str or "Forbidden" in error_str:
+            print(f"[Community Notes] Access denied - account may not have Community Notes API access enabled: {e}")
+        elif "404" in error_str:
+            print(f"[Community Notes] Endpoint not found - Community Notes API may not be available: {e}")
+        else:
+            print(f"[Community Notes] API error: {e}")
+            backoff_multiplier += 1
+        return 0
+    except Exception as e:
+        print(f"[Community Notes] Unexpected error: {e}")
+        return 0
+    
+    # Load previously written notes to avoid duplicates
+    written_notes = {}
+    if os.path.exists(COMMUNITY_NOTES_WRITTEN_FILE):
+        try:
+            with open(COMMUNITY_NOTES_WRITTEN_FILE, 'r') as f:
+                written_notes = json.load(f)
+        except Exception as e:
+            print(f"[Community Notes] Error loading written notes file: {e}")
+    
+    notes_written = 0
+    posts = resp.get('data', [])
+    includes = resp.get('includes', {})
+    
+    print(f"[Community Notes] Found {len(posts)} eligible posts")
+    
+    for post_data in posts:
+        post_id = str(post_data.get('id'))
+        
+        # Skip if we've already written a note for this post
+        if post_id in written_notes:
+            print(f"[Community Notes] Skipping {post_id} - already written note")
+            continue
+        
+        # Convert post dict to Tweepy-like object for compatibility with existing functions
+        # Create a mock tweet object
+        class MockTweet:
+            def __init__(self, data):
+                self.id = data.get('id')
+                self.text = data.get('text', '')
+                self.author_id = data.get('author_id')
+                self.created_at = data.get('created_at')
+                self.conversation_id = data.get('conversation_id')
+                self.referenced_tweets = data.get('referenced_tweets', [])
+                self.attachments = data.get('attachments', {})
+                self.entities = data.get('entities', {})
+        
+        post = MockTweet(post_data)
+        
+        # Get full context for the post
+        try:
+            context = get_tweet_context(post, includes, bot_username=username)
+            context['mention'] = post
+            context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims."
+            
+            post_text = post.text
+            
+            print(f"[Community Notes] Analyzing post {post_id}: {post_text[:100]}...")
+            
+            # Use fact_check in generate_only mode to get the note text
+            note_text = fact_check(post_text, post_id, context=context, generate_only=True)
+            
+            if not isinstance(note_text, str) or not note_text:
+                print(f"[Community Notes] No note generated for {post_id}")
+                continue
+            
+            # Check if the response indicates no note is needed
+            if any(phrase in note_text.upper() for phrase in ["NO NOTE NEEDED", "NOT MISLEADING", "NO COMMUNITY NOTE"]):
+                print(f"[Community Notes] Post {post_id} determined not to need a note")
+                written_notes[post_id] = {
+                    "note": None,
+                    "reason": "not_misleading",
+                    "timestamp": datetime.datetime.now().isoformat()
+                }
+                continue
+            
+            # Prepare note submission using Twitter API v2
+            # Community Notes API endpoint: POST /2/notes
+            note_payload = {
+                "test_mode": test_mode,
+                "post_id": post_id,
+                "info": {
+                    "text": note_text,
+                    "classification": "misinformed_or_potentially_misleading",
+                    "trustworthy_sources": True
+                }
+            }
+            
+            # In test mode or dry run, just log the note
+            if args.dryrun or test_mode:
+                print(f"[Community Notes DRY RUN] Would submit note for {post_id}:")
+                print(f"  Note text: {note_text}")
+                print(f"  Payload: {json.dumps(note_payload, indent=2)}")
+            else:
+                try:
+                    # Submit the note using Twitter API v2 with OAuth 1.0a (CN project keys)
+                    cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+                    cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+                    cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+                    cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+                    
+                    oauth_submit = OAuth1Session(
+                        client_key=cn_api_key,
+                        client_secret=cn_api_secret,
+                        resource_owner_key=cn_access_token,
+                        resource_owner_secret=cn_access_secret
+                    )
+                    
+                    submit_response = oauth_submit.post(
+                        "https://api.twitter.com/2/notes",
+                        json=note_payload
+                    )
+                    
+                    if submit_response.status_code in [200, 201]:
+                        print(f"[Community Notes] Successfully submitted note for {post_id}")
+                        print(f"  Note text: {note_text}")
+                    else:
+                        print(f"[Community Notes] Error submitting note for {post_id}: HTTP {submit_response.status_code}")
+                        print(f"  Response: {submit_response.text}")
+                        continue
+                    
+                except Exception as e:
+                    print(f"[Community Notes] Error submitting note for {post_id}: {e}")
+                    continue
+            
+            # Record that we've written a note for this post
+            written_notes[post_id] = {
+                "note": note_text,
+                "test_mode": test_mode,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            notes_written += 1
+            
+        except Exception as e:
+            print(f"[Community Notes] Error processing post {post_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
+    
+    # Save written notes record
+    try:
+        with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+            json.dump(written_notes, f, indent=2)
+        print(f"[Community Notes] Saved record of {len(written_notes)} processed posts")
+    except Exception as e:
+        print(f"[Community Notes] Error saving written notes file: {e}")
+    
+    # Update last check timestamp
+    try:
+        with open(COMMUNITY_NOTES_LAST_CHECK_FILE, 'w') as f:
+            f.write(datetime.datetime.now().isoformat())
+    except Exception as e:
+        print(f"[Community Notes] Error saving last check file: {e}")
+    
+    print(f"[Community Notes] Completed: {notes_written} notes written")
+    return notes_written
 
 # The main loop
 def main():
@@ -4024,6 +4261,17 @@ def main():
                         fetch_and_process_followed_users()
                     except Exception as e:
                         print(f"[Main] Followed users check error: {e}")
+                        # Don't raise - just log and continue
+
+                # Check for Community Notes eligible posts if enabled
+                if getattr(args, 'check_community_notes', False):
+                    try:
+                        print(f"[Main] Checking for Community Notes eligible posts")
+                        cn_max_results = getattr(args, 'cn_max_results', 5)
+                        cn_test_mode = getattr(args, 'cn_test_mode', True)
+                        fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode)
+                    except Exception as e:
+                        print(f"[Main] Community Notes check error: {e}")
                         # Don't raise - just log and continue
 
                 # Check whether enough bot replies have occurred to trigger a reflection post
