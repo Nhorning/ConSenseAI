@@ -4054,7 +4054,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         try:
             context = get_tweet_context(post, includes, bot_username=username)
             context['mention'] = post
-            context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims."
+            context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
+                - Provide working url links to credible sources for fact checking \n\
+                - Remain anonomous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
+                - search for information on drafting successful community notes if needed"  
             
             post_text = post.text
             
