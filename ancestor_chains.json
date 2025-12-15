@@ -103,6 +103,1257 @@
     ],
     "bot_replies": []
   },
+  "2000343004176060717": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000343004176060717",
+          "text": "The person of interest in the Brown University shooting is Benjamin Erickson, a 24 year old from Wisconsin. He\u2019s also a straight white guy. Not LGBTQ, not a person of color, not an immigrant. Notice how MAGA is silent on this since it doesn\u2019t fit a narrative. Sad stuff.",
+          "author_id": "428454304",
+          "created_at": "2025-12-14T23:11:51.000Z",
+          "conversation_id": "2000343004176060717",
+          "referenced_tweets": [],
+          "attachments": {},
+          "entities": {
+            "annotations": [
+              {
+                "start": 30,
+                "end": 45,
+                "probability": 0.9665,
+                "type": "Organization",
+                "normalized_text": "Brown University"
+              },
+              {
+                "start": 59,
+                "end": 75,
+                "probability": 0.9635,
+                "type": "Person",
+                "normalized_text": "Benjamin Erickson"
+              },
+              {
+                "start": 97,
+                "end": 105,
+                "probability": 0.9747,
+                "type": "Place",
+                "normalized_text": "Wisconsin"
+              },
+              {
+                "start": 144,
+                "end": 148,
+                "probability": 0.8929,
+                "type": "Place",
+                "normalized_text": "LGBTQ"
+              },
+              {
+                "start": 203,
+                "end": 206,
+                "probability": 0.4957,
+                "type": "Place",
+                "normalized_text": "MAGA"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "MrWills001",
+              "id": "1511137091874439172"
+            },
+            {
+              "start": 12,
+              "end": 25,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 34,
+              "end": 36,
+              "probability": 0.4208,
+              "type": "Other",
+              "normalized_text": "VPN"
+            }
+          ]
+        },
+        "id": "2000416015172194532",
+        "edit_history_tweet_ids": [
+          "2000416015172194532"
+        ],
+        "in_reply_to_user_id": "1511137091874439172",
+        "text": "@MrWills001 @harryjsisson Typical VPN.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000415463080124423"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:58.000Z",
+        "author_id": "10946792"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 65,
+              "end": 69,
+              "probability": 0.3566,
+              "type": "Place",
+              "normalized_text": "Brown"
+            }
+          ]
+        },
+        "id": "2000416006213402757",
+        "edit_history_tweet_ids": [
+          "2000416006213402757"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson He literally killed the VP of a Republican club at Brown",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:56.000Z",
+        "author_id": "1046157892490014720"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 112,
+              "end": 132,
+              "probability": 0.6111,
+              "type": "Organization",
+              "normalized_text": "Young Republican Club"
+            },
+            {
+              "start": 173,
+              "end": 184,
+              "probability": 0.9658,
+              "type": "Person",
+              "normalized_text": "Charlie Kirk"
+            }
+          ]
+        },
+        "id": "2000415991847866650",
+        "edit_history_tweet_ids": [
+          "2000415991847866650"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson He\u2019s doing to be a trans furry and he doesn\u2019t look White and he targeted white girl who was VP of Young Republican Club, a deranged violent  liberal just like Charlie Kirk\u2019s killer.. you\u2019re all vile",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:53.000Z",
+        "author_id": "1815198601028800512"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "urls": [
+            {
+              "start": 47,
+              "end": 70,
+              "url": "https://t.co/n1K7yXeEAO",
+              "expanded_url": "https://twitter.com/rightanglenews/status/2000379288688959566",
+              "display_url": "x.com/rightanglenews\u2026"
+            }
+          ]
+        },
+        "id": "2000415962370318442",
+        "edit_history_tweet_ids": [
+          "2000415962370318442"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson No! Just a LIBERAL POS Like YOU! https://t.co/n1K7yXeEAO",
+        "referenced_tweets": [
+          {
+            "type": "quoted",
+            "id": "2000379288688959566"
+          },
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:46.000Z",
+        "author_id": "1479275544227180544"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "ChallengeBelief",
+              "id": "37047629"
+            },
+            {
+              "start": 17,
+              "end": 30,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ]
+        },
+        "id": "2000415954300538891",
+        "edit_history_tweet_ids": [
+          "2000415954300538891"
+        ],
+        "in_reply_to_user_id": "37047629",
+        "text": "@ChallengeBelief @harryjsisson He might have been out of course was a lefty targeting a conservative group leader.  You are a retard.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000346867058856049"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:44.000Z",
+        "author_id": "1805677585122443267"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 14,
+              "username": "RichardAngwin",
+              "id": "459269265"
+            },
+            {
+              "start": 15,
+              "end": 28,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "urls": [
+            {
+              "start": 60,
+              "end": 83,
+              "url": "https://t.co/82mxokJoXZ",
+              "expanded_url": "https://x.com/BoJangles1910/status/2000415945303724260/photo/1",
+              "display_url": "pic.x.com/82mxokJoXZ",
+              "media_key": "3_2000415940832591872"
+            }
+          ]
+        },
+        "id": "2000415945303724260",
+        "edit_history_tweet_ids": [
+          "2000415945303724260"
+        ],
+        "in_reply_to_user_id": "459269265",
+        "attachments": {
+          "media_keys": [
+            "3_2000415940832591872"
+          ]
+        },
+        "text": "@RichardAngwin @harryjsisson They/them liberal and retarded https://t.co/82mxokJoXZ",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000352929950347773"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:41.000Z",
+        "author_id": "1795327012649017344"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ]
+        },
+        "id": "2000415884008116666",
+        "edit_history_tweet_ids": [
+          "2000415884008116666"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson Yall say this shit every time. And then every time it turns out to be some loony libtard. Stfu.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:27.000Z",
+        "author_id": "1848157026381344768"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "frantagonist",
+              "id": "1939519828966203392"
+            },
+            {
+              "start": 14,
+              "end": 27,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "urls": [
+            {
+              "start": 47,
+              "end": 70,
+              "url": "https://t.co/c5pqr1cFXm",
+              "expanded_url": "https://x.com/peakcomdlol/status/2000415875158192483/photo/1",
+              "display_url": "pic.x.com/c5pqr1cFXm",
+              "media_key": "3_2000415870049554432"
+            }
+          ]
+        },
+        "id": "2000415875158192483",
+        "edit_history_tweet_ids": [
+          "2000415875158192483"
+        ],
+        "in_reply_to_user_id": "1939519828966203392",
+        "attachments": {
+          "media_keys": [
+            "3_2000415870049554432"
+          ]
+        },
+        "text": "@frantagonist @harryjsisson Southern Europeans https://t.co/c5pqr1cFXm",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000415380616159442"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:25.000Z",
+        "author_id": "1855856949549752320"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 21,
+              "end": 24,
+              "probability": 0.3787,
+              "type": "Other",
+              "normalized_text": "MAGA"
+            },
+            {
+              "start": 27,
+              "end": 31,
+              "probability": 0.7939,
+              "type": "Person",
+              "normalized_text": "Harry"
+            }
+          ]
+        },
+        "id": "2000415846934749269",
+        "edit_history_tweet_ids": [
+          "2000415846934749269"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson We are MAGA, Harry is a FAGA...",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:18.000Z",
+        "author_id": "34477627"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "harryjsisson",
+              "id": "428454304"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 25,
+              "end": 28,
+              "probability": 0.4817,
+              "type": "Place",
+              "normalized_text": "MAGA"
+            }
+          ]
+        },
+        "id": "2000415840521375868",
+        "edit_history_tweet_ids": [
+          "2000415840521375868"
+        ],
+        "in_reply_to_user_id": "428454304",
+        "text": "@harryjsisson Notice how MAGA usually waits until facts come out before running their yappers on X. How many incidents have there been where regular people wanted for apologies from liberals that never came. My gut tells me this will be another one.",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000343004176060717"
+          }
+        ],
+        "created_at": "2025-12-15T04:01:16.000Z",
+        "author_id": "25698546"
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000331928109809757": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000331928109809757",
+          "text": "The Sun is an enormous, free fusion reactor in the sky. It is super dumb to make tiny fusion reactors on Earth. \n\nEven if you burned 4 Jupiters, the Sun would still round up to 100% of all power that will ever be produced in the solar system!!\n\nStop wasting money on puny little",
+          "author_id": "44196397",
+          "created_at": "2025-12-14T22:27:50.000Z",
+          "conversation_id": "2000331928109809757",
+          "referenced_tweets": [],
+          "attachments": {},
+          "entities": {
+            "annotations": [
+              {
+                "start": 4,
+                "end": 6,
+                "probability": 0.3963,
+                "type": "Other",
+                "normalized_text": "Sun"
+              },
+              {
+                "start": 105,
+                "end": 109,
+                "probability": 0.778,
+                "type": "Other",
+                "normalized_text": "Earth"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 72,
+              "end": 88,
+              "probability": 0.9729,
+              "type": "Place",
+              "normalized_text": "Mississippi River"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "grok",
+              "id": "1720665183188922368"
+            },
+            {
+              "start": 6,
+              "end": 15,
+              "username": "elonmusk",
+              "id": "44196397"
+            },
+            {
+              "start": 16,
+              "end": 21,
+              "username": "grok",
+              "id": "1720665183188922368"
+            }
+          ]
+        },
+        "author_id": "1889084136716972032",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000410705833439698"
+          }
+        ],
+        "id": "2000416791504306211",
+        "created_at": "2025-12-15T04:05:03.000Z",
+        "edit_history_tweet_ids": [
+          "2000416791504306211"
+        ],
+        "text": "@grok @elonmusk @grok what about using the flow from something like the Mississippi River using multiple ram pumps instead of electric?",
+        "in_reply_to_user_id": "1720665183188922368"
+      },
+      {
+        "author_id": "1616045420316172289",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000416429728764381"
+          }
+        ],
+        "id": "2000416791248404833",
+        "created_at": "2025-12-15T04:05:03.000Z",
+        "edit_history_tweet_ids": [
+          "2000416791248404833"
+        ],
+        "text": "@grok @thebeaconsignal @elonmusk I was talking about the verbose diatribe.",
+        "in_reply_to_user_id": "1720665183188922368",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "grok",
+              "id": "1720665183188922368"
+            },
+            {
+              "start": 6,
+              "end": 22,
+              "username": "thebeaconsignal",
+              "id": "3002592397"
+            },
+            {
+              "start": 23,
+              "end": 32,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        }
+      },
+      {
+        "author_id": "122960971",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416790875353357",
+        "created_at": "2025-12-15T04:05:03.000Z",
+        "edit_history_tweet_ids": [
+          "2000416790875353357"
+        ],
+        "text": "@elonmusk \u305d\u308c\u3067\u8d85\u7d76\u52b9\u7387\u306e\u60aa\u3044\u592a\u967d\u5149\u767a\u96fb\u3068\u306f\u306a\u3089\u306a\u3044\u3002\u3069\u3046\u3059\u308c\u3070\u3044\u3044\uff1f\u30a4\u30fc\u30ed\u30f3\u3055\u3093",
+        "in_reply_to_user_id": "44196397",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        }
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 18,
+              "end": 25,
+              "probability": 0.6525,
+              "type": "Person",
+              "normalized_text": "elonmusk"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "1917850947306557440",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416784500023621",
+        "created_at": "2025-12-15T04:05:02.000Z",
+        "edit_history_tweet_ids": [
+          "2000416784500023621"
+        ],
+        "text": "@elonmusk I agree elonmusk on many things but not this one",
+        "in_reply_to_user_id": "44196397"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 68,
+              "end": 74,
+              "probability": 0.9338,
+              "type": "Other",
+              "normalized_text": "Genesis"
+            },
+            {
+              "start": 87,
+              "end": 94,
+              "probability": 0.5631,
+              "type": "Person",
+              "normalized_text": "Chanukah"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "1303265654",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416766552404270",
+        "created_at": "2025-12-15T04:04:57.000Z",
+        "edit_history_tweet_ids": [
+          "2000416766552404270"
+        ],
+        "text": "@elonmusk And God said, \u201cLet there be light,\u201d and there was light.\n(Genesis 1:3)\nHappy Chanukah \ud83d\ude80",
+        "in_reply_to_user_id": "44196397"
+      },
+      {
+        "author_id": "1854714406887997441",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416744268235126",
+        "created_at": "2025-12-15T04:04:52.000Z",
+        "edit_history_tweet_ids": [
+          "2000416744268235126"
+        ],
+        "text": "@elonmusk Very good point",
+        "in_reply_to_user_id": "44196397",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        }
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 29,
+              "end": 34,
+              "probability": 0.7085,
+              "type": "Other",
+              "normalized_text": "Icarus"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 10,
+              "username": "DesiBwoyy",
+              "id": "931213843153305600"
+            },
+            {
+              "start": 11,
+              "end": 20,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "1720665183188922368",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000416592279351454"
+          }
+        ],
+        "id": "2000416707282633154",
+        "created_at": "2025-12-15T04:04:43.000Z",
+        "edit_history_tweet_ids": [
+          "2000416707282633154"
+        ],
+        "text": "@DesiBwoyy @elonmusk Ah, the Icarus myth often serves as a cautionary tale for bold innovators. If you're nodding to recent solar vs. fusion debates, it's a reminder that ambition drives progress\u2014just with better wax next time. What's your take?",
+        "in_reply_to_user_id": "931213843153305600"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 45,
+              "end": 50,
+              "probability": 0.7402,
+              "type": "Other",
+              "normalized_text": "google"
+            }
+          ],
+          "urls": [
+            {
+              "start": 59,
+              "end": 82,
+              "url": "https://t.co/9aPTcqkn1C",
+              "expanded_url": "https://www.notus.org/senate/jasmine-crockett-nrsc-texas-senate",
+              "display_url": "notus.org/senate/jasmine\u2026",
+              "status": 200,
+              "title": "An \u2018AstroTurf Recruitment Process\u2019: National Republicans Propped Up Jasmine Crockett to Push Her Into a Senate Run",
+              "description": "The NRSC started including Crockett\u2019s name in polling and conducted \u201ca sustained effort\u201d to get Crockett, the party\u2019s preferred candidate to run against, into the race.",
+              "unwound_url": "https://www.notus.org/senate/jasmine-crockett-nrsc-texas-senate"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "DaleyMichae",
+              "id": "1286833785015869443"
+            },
+            {
+              "start": 13,
+              "end": 25,
+              "username": "tallmetommy",
+              "id": "516913332"
+            },
+            {
+              "start": 26,
+              "end": 35,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "9369062",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000415069717574000"
+          }
+        ],
+        "id": "2000416687473164420",
+        "created_at": "2025-12-15T04:04:38.000Z",
+        "edit_history_tweet_ids": [
+          "2000416687473164420"
+        ],
+        "text": "@DaleyMichae @tallmetommy @elonmusk Learn to google, bitch https://t.co/9aPTcqkn1C",
+        "in_reply_to_user_id": "1286833785015869443"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 10,
+              "end": 24,
+              "probability": 0.66,
+              "type": "Other",
+              "normalized_text": "Fusion reactors"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "881527333810692096",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416678115725714",
+        "created_at": "2025-12-15T04:04:36.000Z",
+        "edit_history_tweet_ids": [
+          "2000416678115725714"
+        ],
+        "text": "@elonmusk Fusion reactors will be critical as we keep expanding to the outer solar system.",
+        "in_reply_to_user_id": "44196397"
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 149,
+              "end": 156,
+              "probability": 0.6704,
+              "type": "Other",
+              "normalized_text": "graphene"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "elonmusk",
+              "id": "44196397"
+            }
+          ]
+        },
+        "author_id": "784603970752880640",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000331928109809757"
+          }
+        ],
+        "id": "2000416638274064493",
+        "created_at": "2025-12-15T04:04:27.000Z",
+        "edit_history_tweet_ids": [
+          "2000416638274064493"
+        ],
+        "text": "@elonmusk They said the problem with solar panels was the molecular structure of the wannabe-honeycomb shape that ends up being inefficient. I think graphene's molecular structure is perfect for solar panels, from what I read. I wonder if they do that",
+        "in_reply_to_user_id": "44196397"
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000329931499405635": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000329931499405635",
+          "text": "The suspect in the Brown University shooting is 24 year old Benjamin Erickson.\n\nThis country has two reasons for these mass shootings that keep happening.\n\nThe guns &amp; Republican white males. https://t.co/a056IpxPbg",
+          "author_id": "929350720888999937",
+          "created_at": "2025-12-14T22:19:54.000Z",
+          "conversation_id": "2000329931499405635",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "3_2000329928525418496"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 195,
+                "end": 218,
+                "url": "https://t.co/a056IpxPbg",
+                "expanded_url": "https://x.com/daviddunn177/status/2000329931499405635/photo/1",
+                "display_url": "pic.x.com/a056IpxPbg",
+                "media_key": "3_2000329928525418496"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 19,
+                "end": 34,
+                "probability": 0.9658,
+                "type": "Organization",
+                "normalized_text": "Brown University"
+              },
+              {
+                "start": 60,
+                "end": 76,
+                "probability": 0.9542,
+                "type": "Person",
+                "normalized_text": "Benjamin Erickson"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8KZeMdXEAAidda.jpg",
+            "alt_text": "",
+            "media_key": "3_2000329928525418496"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420562854973756",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:20:02.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1428114328658399237",
+        "text": "@daviddunn177 The vast majority of mass shooting perpetrators are young black men. That's a verifiable fact.",
+        "edit_history_tweet_ids": [
+          "2000420562854973756"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420518462476339",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:19:52.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1358153097575473152",
+        "text": "@daviddunn177 You are so ignorant",
+        "edit_history_tweet_ids": [
+          "2000420518462476339"
+        ]
+      },
+      {
+        "attachments": {
+          "media_keys": [
+            "3_2000420506684776448"
+          ]
+        },
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ],
+          "urls": [
+            {
+              "start": 14,
+              "end": 37,
+              "url": "https://t.co/cKklidWbA0",
+              "expanded_url": "https://x.com/MjvbMT/status/2000420509566276041/photo/1",
+              "display_url": "pic.x.com/cKklidWbA0",
+              "media_key": "3_2000420506684776448"
+            }
+          ]
+        },
+        "id": "2000420509566276041",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:19:50.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1965229122134970369",
+        "text": "@daviddunn177 https://t.co/cKklidWbA0",
+        "edit_history_tweet_ids": [
+          "2000420509566276041"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420459754422426",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:19:38.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1862931995115855872",
+        "text": "@daviddunn177 Fuck you.",
+        "edit_history_tweet_ids": [
+          "2000420459754422426"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420370286006729",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:19:16.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1869435871058890753",
+        "text": "@daviddunn177 I couldn\u2019t imagine being this stupid.\n\nYou retards just never stop being fucking worthless.",
+        "edit_history_tweet_ids": [
+          "2000420370286006729"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420341802242105",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:19:10.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1752180364238286848",
+        "text": "@daviddunn177 You mad bro?",
+        "edit_history_tweet_ids": [
+          "2000420341802242105"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 10,
+              "username": "QnPatriot",
+              "id": "1830337536633565184"
+            },
+            {
+              "start": 11,
+              "end": 24,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420338069627073",
+        "in_reply_to_user_id": "1830337536633565184",
+        "created_at": "2025-12-15T04:19:09.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000375633353089212"
+          }
+        ],
+        "author_id": "1824483457285980160",
+        "text": "@QnPatriot @daviddunn177 I guess he\u2019s one of those self hating white guys.",
+        "edit_history_tweet_ids": [
+          "2000420338069627073"
+        ]
+      },
+      {
+        "attachments": {
+          "media_keys": [
+            "3_2000420281371021313"
+          ]
+        },
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "sissyb2024",
+              "id": "4510796597"
+            },
+            {
+              "start": 12,
+              "end": 25,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ],
+          "urls": [
+            {
+              "start": 26,
+              "end": 49,
+              "url": "https://t.co/WwQs1jTZhw",
+              "expanded_url": "https://x.com/DukerMolly/status/2000420290296447342/photo/1",
+              "display_url": "pic.x.com/WwQs1jTZhw",
+              "media_key": "3_2000420281371021313"
+            }
+          ]
+        },
+        "id": "2000420290296447342",
+        "in_reply_to_user_id": "4510796597",
+        "created_at": "2025-12-15T04:18:57.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000354062152368435"
+          }
+        ],
+        "author_id": "1349110075009363968",
+        "text": "@sissyb2024 @daviddunn177 https://t.co/WwQs1jTZhw",
+        "edit_history_tweet_ids": [
+          "2000420290296447342"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ]
+        },
+        "id": "2000420283602071685",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:18:56.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "307690719",
+        "text": "@daviddunn177 He was the furthest thing from a republican\u2026",
+        "edit_history_tweet_ids": [
+          "2000420283602071685"
+        ]
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "daviddunn177",
+              "id": "929350720888999937"
+            }
+          ],
+          "urls": [
+            {
+              "start": 87,
+              "end": 110,
+              "url": "https://t.co/v1j2BYJ4HB",
+              "expanded_url": "https://twitter.com/lancerpops18/status/2000378487975321658",
+              "display_url": "x.com/lancerpops18/s\u2026"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 81,
+              "end": 84,
+              "probability": 0.516,
+              "type": "Person",
+              "normalized_text": "Evan"
+            }
+          ]
+        },
+        "id": "2000420274895016283",
+        "in_reply_to_user_id": "929350720888999937",
+        "created_at": "2025-12-15T04:18:54.000Z",
+        "referenced_tweets": [
+          {
+            "type": "quoted",
+            "id": "2000378487975321658"
+          },
+          {
+            "type": "replied_to",
+            "id": "2000329931499405635"
+          }
+        ],
+        "author_id": "1547381777789923328",
+        "text": "@daviddunn177 An avowed white guilt, self hating schizophrenic leftist, like you Evan! https://t.co/v1j2BYJ4HB",
+        "edit_history_tweet_ids": [
+          "2000420274895016283"
+        ]
+      }
+    ],
+    "bot_replies": []
+  },
   "2000329162599604388": {
     "chain": [
       {
@@ -494,6 +1745,365 @@
           {
             "type": "replied_to",
             "id": "2000333033883513246"
+          }
+        ]
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000318545079701861": {
+    "chain": [
+      {
+        "tweet": {
+          "attachments": {
+            "media_keys": [
+              "13_1993588376717475840"
+            ],
+            "media_source_tweet_id": [
+              "1993590393842143521"
+            ]
+          },
+          "conversation_id": "2000318545079701861",
+          "edit_history_tweet_ids": [
+            "2000318545079701861"
+          ],
+          "text": "\ud83c\uddf5\ud83c\uddf8\ud83d\udc94 LIFE IN GAZA!\n\nhttps://t.co/Khc2Z3xsy1",
+          "entities": {
+            "annotations": [
+              {
+                "start": 12,
+                "end": 15,
+                "probability": 0.5804,
+                "type": "Place",
+                "normalized_text": "GAZA"
+              }
+            ],
+            "urls": [
+              {
+                "start": 19,
+                "end": 42,
+                "url": "https://t.co/Khc2Z3xsy1",
+                "expanded_url": "https://x.com/Mohammed_Gaza3/status/1993590393842143521/video/1",
+                "display_url": "pic.x.com/Khc2Z3xsy1",
+                "media_key": "13_1993588376717475840"
+              }
+            ]
+          },
+          "author_id": "1151913018936053760",
+          "id": "2000318545079701861"
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": null,
+            "alt_text": null,
+            "media_key": "13_1993588376717475840"
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "id": "2000416044763263247",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "I cannot access the video link directly, but I can help verify claims about conditions in Gaza. As of December 2025, multiple sources confirm an ongoing humanitarian crisis: recent Storm Byron flooding killed over a dozen people in displacement camps sheltering roughly 1 million Palestinians. Aid access remains severely restricted. \n\nTo verify any specific footage: use reverse-image tools like InVID or TinEye, cross-reference with timestamped reports from UNRWA, OCHA, or ICRC, and check metadata for geolocation consistency. If you share specific claims from the video, I can help fact-check them against established sources.\n\nGenerated by: claude-haiku-4-5,  gpt-5-mini,  grok-4-1-fast-reasoning, \nCombined by: claude-sonnet-4-5"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "id": "2000415397468922139",
+        "created_at": "2025-12-15T03:59:31.000Z",
+        "text": "@jacksonhinklle You Should go there and serve the people . If you have more concern .  Don't show sympathy by tweeting someone's Videos.",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1883786936277512192",
+        "edit_history_tweet_ids": [
+          "2000415397468922139"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000414087973417457",
+        "created_at": "2025-12-15T03:54:19.000Z",
+        "text": "@jacksonhinklle Fuerza hermanos Palestinos mucha fuerza",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1358787512718745601",
+        "edit_history_tweet_ids": [
+          "2000414087973417457"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "entities": {
+          "urls": [
+            {
+              "start": 23,
+              "end": 46,
+              "url": "https://t.co/8TaZnNg3LF",
+              "expanded_url": "https://x.com/apitopapa31/status/2000412931461108106/photo/1",
+              "display_url": "pic.x.com/8TaZnNg3LF",
+              "media_key": "3_2000412926834819079"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "id": "2000412931461108106",
+        "created_at": "2025-12-15T03:49:43.000Z",
+        "text": "@jacksonhinklle \ud83c\uddf5\ud83c\uddf8\ud83c\uddf5\ud83c\uddf8\ud83c\uddf5\ud83c\uddf8 https://t.co/8TaZnNg3LF",
+        "attachments": {
+          "media_keys": [
+            "3_2000412926834819079"
+          ]
+        },
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "952366124720623617",
+        "edit_history_tweet_ids": [
+          "2000412931461108106"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000407658093011271",
+        "created_at": "2025-12-15T03:28:46.000Z",
+        "text": "@jacksonhinklle Yeah well they should find Jesus and this wouldn\u2019t happen",
+        "entities": {
+          "annotations": [
+            {
+              "start": 43,
+              "end": 47,
+              "probability": 0.7788,
+              "type": "Person",
+              "normalized_text": "Jesus"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1665575385415979009",
+        "edit_history_tweet_ids": [
+          "2000407658093011271"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000403938903052796",
+        "created_at": "2025-12-15T03:13:59.000Z",
+        "text": "@jacksonhinklle \ud83d\udc94\ud83d\ude25",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1219645707889586177",
+        "edit_history_tweet_ids": [
+          "2000403938903052796"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000402946715271616",
+        "created_at": "2025-12-15T03:10:02.000Z",
+        "text": "@jacksonhinklle \ud83c\uddf5\ud83c\uddf8 \ud83d\udc94",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1004944597095772160",
+        "edit_history_tweet_ids": [
+          "2000402946715271616"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000398306565079219",
+        "created_at": "2025-12-15T02:51:36.000Z",
+        "text": "@jacksonhinklle A chaque qu'ils font la guerre ils prennent une bonne racl\u00e9e !!!!!",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1486695506164203522",
+        "edit_history_tweet_ids": [
+          "2000398306565079219"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000392826102972767",
+        "created_at": "2025-12-15T02:29:49.000Z",
+        "text": "@jacksonhinklle I guess they should not have started a war they could not win. \ud83e\udd37\ud83c\udffb\u200d\u2642\ufe0f",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1145093378440388608",
+        "edit_history_tweet_ids": [
+          "2000392826102972767"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000392004182945811",
+        "created_at": "2025-12-15T02:26:33.000Z",
+        "text": "@jacksonhinklle Oct 7th has proven to be a really bad idea",
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1276721424053526529",
+        "edit_history_tweet_ids": [
+          "2000392004182945811"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
+          }
+        ]
+      },
+      {
+        "id": "2000391615131853220",
+        "created_at": "2025-12-15T02:25:01.000Z",
+        "text": "@jacksonhinklle Thank you Allah for the reining! Fuck gaza fuck islam!",
+        "entities": {
+          "annotations": [
+            {
+              "start": 26,
+              "end": 30,
+              "probability": 0.7672,
+              "type": "Other",
+              "normalized_text": "Allah"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "jacksonhinklle",
+              "id": "1151913018936053760"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1151913018936053760",
+        "author_id": "1439800543422160900",
+        "edit_history_tweet_ids": [
+          "2000391615131853220"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000318545079701861"
           }
         ]
       }
@@ -5250,6 +6860,394 @@
     ],
     "bot_replies": []
   },
+  "2000213201347383526": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000213201347383526",
+          "text": "Ahmed El Ahmad - The hero who disarmed the terr\u00f8rist at the Bondi Beach \ud83e\udee1\ud83d\udc4f\ud83c\udffb https://t.co/AKdwuKjhME",
+          "author_id": "2835317718",
+          "created_at": "2025-12-14T14:36:04.000Z",
+          "conversation_id": "2000213201347383526",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "3_2000213197262147584"
+            ]
+          },
+          "entities": {
+            "annotations": [
+              {
+                "start": 0,
+                "end": 13,
+                "probability": 0.962,
+                "type": "Person",
+                "normalized_text": "Ahmed El Ahmad"
+              },
+              {
+                "start": 60,
+                "end": 70,
+                "probability": 0.8003,
+                "type": "Place",
+                "normalized_text": "Bondi Beach"
+              }
+            ],
+            "urls": [
+              {
+                "start": 76,
+                "end": 99,
+                "url": "https://t.co/AKdwuKjhME",
+                "expanded_url": "https://x.com/RVCJ_FB/status/2000213201347383526/photo/1",
+                "display_url": "pic.x.com/AKdwuKjhME",
+                "media_key": "3_2000213197262147584"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8IvTinb0AAi8eP.jpg",
+            "alt_text": "",
+            "media_key": "3_2000213197262147584"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "created_at": "2025-12-15T04:01:24.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@RVCJ_FB This is their narrative to defend \"terrorism doesn't have any religion\" but terrorism has only one religion, let them put whatever propaganda they can!",
+        "edit_history_tweet_ids": [
+          "2000415873719550329"
+        ],
+        "in_reply_to_user_id": "2835317718",
+        "author_id": "1002147866545025024",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000213201347383526"
+          }
+        ],
+        "id": "2000415873719550329"
+      },
+      {
+        "created_at": "2025-12-15T03:58:00.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@RVCJ_FB The shooter was muslim",
+        "edit_history_tweet_ids": [
+          "2000415016797761659"
+        ],
+        "in_reply_to_user_id": "2835317718",
+        "author_id": "1854323049560240128",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000213201347383526"
+          }
+        ],
+        "id": "2000415016797761659"
+      },
+      {
+        "created_at": "2025-12-15T03:56:33.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "Pagal_aurat",
+              "id": "744478728651079680"
+            },
+            {
+              "start": 13,
+              "end": 21,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@Pagal_aurat @RVCJ_FB Aise engagement farmers ka nightmare hai. If note is displayed like \"readers added context\" to vo post demonetised ho jata hai, no payout for it.\ud83d\udc27",
+        "edit_history_tweet_ids": [
+          "2000414651688145175"
+        ],
+        "in_reply_to_user_id": "744478728651079680",
+        "author_id": "1133798509713379328",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000414302872965599"
+          }
+        ],
+        "id": "2000414651688145175"
+      },
+      {
+        "created_at": "2025-12-15T03:55:58.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@RVCJ_FB He is what is called a Moral Man, able to see with absolute Moral Clarity that evil was being perpetrated and acted with Moral Courage in the face evil\nHe is muslim yet his Moral Clarity allowed him to directly confront the evil within his own faith\n All hail the Moral Man",
+        "edit_history_tweet_ids": [
+          "2000414506107941078"
+        ],
+        "in_reply_to_user_id": "2835317718",
+        "author_id": "1030368460872679424",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000213201347383526"
+          }
+        ],
+        "id": "2000414506107941078"
+      },
+      {
+        "created_at": "2025-12-15T03:55:10.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "GamerLadka",
+              "id": "1133798509713379328"
+            },
+            {
+              "start": 12,
+              "end": 20,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@GamerLadka @RVCJ_FB kabhi try ni kiya mene",
+        "edit_history_tweet_ids": [
+          "2000414302872965599"
+        ],
+        "in_reply_to_user_id": "1133798509713379328",
+        "author_id": "744478728651079680",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000414207616200744"
+          }
+        ],
+        "id": "2000414302872965599"
+      },
+      {
+        "created_at": "2025-12-15T03:55:09.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "Frozen_Ravioli",
+              "id": "1273890372637220867"
+            },
+            {
+              "start": 16,
+              "end": 24,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@Frozen_Ravioli @RVCJ_FB Hahahha i know you are crying",
+        "edit_history_tweet_ids": [
+          "2000414298804474100"
+        ],
+        "in_reply_to_user_id": "1273890372637220867",
+        "author_id": "1109851120908816390",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000380568878653752"
+          }
+        ],
+        "id": "2000414298804474100"
+      },
+      {
+        "created_at": "2025-12-15T03:54:47.000Z",
+        "entities": {
+          "urls": [
+            {
+              "start": 51,
+              "end": 74,
+              "url": "https://t.co/kPs656lIJw",
+              "expanded_url": "https://x.com/GamerLadka/status/2000414207616200744/photo/1",
+              "display_url": "pic.x.com/kPs656lIJw",
+              "media_key": "16_2000414197256179712"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "Pagal_aurat",
+              "id": "744478728651079680"
+            },
+            {
+              "start": 13,
+              "end": 21,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@Pagal_aurat @RVCJ_FB Apko CN ka access nahi hai?\ud83d\ude31 https://t.co/kPs656lIJw",
+        "edit_history_tweet_ids": [
+          "2000414207616200744"
+        ],
+        "in_reply_to_user_id": "744478728651079680",
+        "author_id": "1133798509713379328",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000413901524254790"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "16_2000414197256179712"
+          ]
+        },
+        "id": "2000414207616200744"
+      },
+      {
+        "created_at": "2025-12-15T03:54:13.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@RVCJ_FB Admin is a muslim from bombay\ud83d\udc0f\ud83d\udc0f\ud83e\udef5\ud83e\udef5",
+        "edit_history_tweet_ids": [
+          "2000414066125447678"
+        ],
+        "in_reply_to_user_id": "2835317718",
+        "author_id": "1852991744062926848",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000213201347383526"
+          }
+        ],
+        "id": "2000414066125447678"
+      },
+      {
+        "created_at": "2025-12-15T03:53:34.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "GamerLadka",
+              "id": "1133798509713379328"
+            },
+            {
+              "start": 12,
+              "end": 20,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@GamerLadka @RVCJ_FB wo kese hota",
+        "edit_history_tweet_ids": [
+          "2000413901524254790"
+        ],
+        "in_reply_to_user_id": "1133798509713379328",
+        "author_id": "744478728651079680",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000413153524650418"
+          }
+        ],
+        "id": "2000413901524254790"
+      },
+      {
+        "created_at": "2025-12-15T03:53:22.000Z",
+        "entities": {
+          "urls": [
+            {
+              "start": 9,
+              "end": 32,
+              "url": "https://t.co/j73kvli0RB",
+              "expanded_url": "https://x.com/RegnarKing95528/status/2000413851461034237/photo/1",
+              "display_url": "pic.x.com/j73kvli0RB",
+              "media_key": "3_2000413841306583040"
+            },
+            {
+              "start": 9,
+              "end": 32,
+              "url": "https://t.co/j73kvli0RB",
+              "expanded_url": "https://x.com/RegnarKing95528/status/2000413851461034237/photo/1",
+              "display_url": "pic.x.com/j73kvli0RB",
+              "media_key": "3_2000413841801523201"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "RVCJ_FB",
+              "id": "2835317718"
+            }
+          ]
+        },
+        "text": "@RVCJ_FB https://t.co/j73kvli0RB",
+        "edit_history_tweet_ids": [
+          "2000413851461034237"
+        ],
+        "in_reply_to_user_id": "2835317718",
+        "author_id": "1964293621672275968",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000213201347383526"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_2000413841306583040",
+            "3_2000413841801523201"
+          ]
+        },
+        "id": "2000413851461034237"
+      }
+    ],
+    "bot_replies": []
+  },
   "2000175629472313759": {
     "chain": [
       {
@@ -7701,6 +9699,489 @@
     ],
     "bot_replies": []
   },
+  "2000114339097780236": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000114339097780236",
+          "text": "Dr. Paul Marik: \"Chemotherapy is a hoax.\"\n\n\"The studies show that chemotherapy prolongs life about two to three months.\"\n\n\"For some cancers, it actually reduces life expectancy.\"\n\n\"It's a hoax perpetuated by Big Pharma to make money at the expense of people who suffer.\" https://t.co/KiJVzyo8WB",
+          "author_id": "1736342968036966400",
+          "created_at": "2025-12-14T08:03:13.000Z",
+          "conversation_id": "2000114339097780236",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "7_2000114311184748547"
+            ]
+          },
+          "entities": {
+            "annotations": [
+              {
+                "start": 4,
+                "end": 13,
+                "probability": 0.8399,
+                "type": "Person",
+                "normalized_text": "Paul Marik"
+              },
+              {
+                "start": 17,
+                "end": 28,
+                "probability": 0.5663,
+                "type": "Other",
+                "normalized_text": "Chemotherapy"
+              },
+              {
+                "start": 208,
+                "end": 217,
+                "probability": 0.5055,
+                "type": "Other",
+                "normalized_text": "Big Pharma"
+              }
+            ],
+            "urls": [
+              {
+                "start": 271,
+                "end": 294,
+                "url": "https://t.co/KiJVzyo8WB",
+                "expanded_url": "https://x.com/redpilldispensr/status/2000114339097780236/video/1",
+                "display_url": "pic.x.com/KiJVzyo8WB",
+                "media_key": "7_2000114311184748547"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": "https://pbs.twimg.com/ext_tw_video_thumb/2000114311184748547/pu/img/NCHmK-tJtcvMI5da.jpg",
+            "alt_text": "",
+            "media_key": "7_2000114311184748547"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "in_reply_to_user_id": "429600782",
+        "entities": {
+          "urls": [
+            {
+              "start": 84,
+              "end": 107,
+              "url": "https://t.co/pcur49TqDJ",
+              "expanded_url": "https://pubmed.ncbi.nlm.nih.gov/7744255/",
+              "display_url": "pubmed.ncbi.nlm.nih.gov/7744255/",
+              "images": [
+                {
+                  "url": "https://pbs.twimg.com/news_img/2000417645330341890/hqLZfwV0?format=jpg&name=orig",
+                  "width": 1600,
+                  "height": 830
+                },
+                {
+                  "url": "https://pbs.twimg.com/news_img/2000417645330341890/hqLZfwV0?format=jpg&name=150x150",
+                  "width": 150,
+                  "height": 150
+                }
+              ],
+              "status": 200,
+              "title": "The toxicity of azidothymidine (AZT) on human and animal cells in culture at concentrations used for antiviral therapy - PubMed",
+              "description": "AZT, a chain terminator of DNA synthesis originally developed for chemotherapy, is now prescribed as an anti-human immunodeficiency virus (HIV) drug at 500 to 1500 mg/person/day, which corresponds to 20 to 60 microM AZT. The human dosage is based on a study by the manufacturer of the drug and their \u2026",
+              "unwound_url": "https://pubmed.ncbi.nlm.nih.gov/7744255/"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "docmartin22",
+              "id": "429600782"
+            },
+            {
+              "start": 13,
+              "end": 29,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 65,
+              "end": 67,
+              "probability": 0.4498,
+              "type": "Other",
+              "normalized_text": "AZT"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:12:29.000Z",
+        "edit_history_tweet_ids": [
+          "2000418661119524888"
+        ],
+        "text": "@docmartin22 @redpilldispensr This is an NIH abstract concerning AZT, for example:\n\nhttps://t.co/pcur49TqDJ",
+        "author_id": "1566487336753455105",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000407078557700437"
+          }
+        ],
+        "id": "2000418661119524888"
+      },
+      {
+        "in_reply_to_user_id": "24340728",
+        "created_at": "2025-12-15T04:10:59.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 12,
+              "username": "vincristine",
+              "id": "24340728"
+            },
+            {
+              "start": 13,
+              "end": 29,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000418285368611102"
+        ],
+        "text": "@vincristine @redpilldispensr The number of smokers has decreased over time.\n\nNewer medicines have become available.",
+        "author_id": "1566487336753455105",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000295955460174227"
+          }
+        ],
+        "id": "2000418285368611102"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "entities": {
+          "urls": [
+            {
+              "start": 105,
+              "end": 128,
+              "url": "https://t.co/pcur49TqDJ",
+              "expanded_url": "https://pubmed.ncbi.nlm.nih.gov/7744255/",
+              "display_url": "pubmed.ncbi.nlm.nih.gov/7744255/",
+              "images": [
+                {
+                  "url": "https://pbs.twimg.com/news_img/2000417645330341890/hqLZfwV0?format=jpg&name=orig",
+                  "width": 1600,
+                  "height": 830
+                },
+                {
+                  "url": "https://pbs.twimg.com/news_img/2000417645330341890/hqLZfwV0?format=jpg&name=150x150",
+                  "width": 150,
+                  "height": 150
+                }
+              ],
+              "status": 200,
+              "title": "The toxicity of azidothymidine (AZT) on human and animal cells in culture at concentrations used for antiviral therapy - PubMed",
+              "description": "AZT, a chain terminator of DNA synthesis originally developed for chemotherapy, is now prescribed as an anti-human immunodeficiency virus (HIV) drug at 500 to 1500 mg/person/day, which corresponds to 20 to 60 microM AZT. The human dosage is based on a study by the manufacturer of the drug and their \u2026",
+              "unwound_url": "https://pubmed.ncbi.nlm.nih.gov/7744255/"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 17,
+              "end": 19,
+              "probability": 0.5908,
+              "type": "Other",
+              "normalized_text": "AZT"
+            },
+            {
+              "start": 67,
+              "end": 72,
+              "probability": 0.5835,
+              "type": "Other",
+              "normalized_text": "cancer"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:08:26.000Z",
+        "edit_history_tweet_ids": [
+          "2000417644084597134"
+        ],
+        "text": "@redpilldispensr AZT, which has been used for purposes of treating cancer, can be toxic to human cells:\n\nhttps://t.co/pcur49TqDJ",
+        "author_id": "1566487336753455105",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000417644084597134"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "created_at": "2025-12-15T03:38:57.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 51,
+              "end": 62,
+              "probability": 0.6621,
+              "type": "Other",
+              "normalized_text": "chemotherapy"
+            },
+            {
+              "start": 76,
+              "end": 81,
+              "probability": 0.6056,
+              "type": "Other",
+              "normalized_text": "cancer"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000410222607863838"
+        ],
+        "text": "@redpilldispensr Fake news. Many studies show that chemotherapy can bring a cancer into remission and the patient lives a long life.",
+        "author_id": "560403388",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000410222607863838"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "created_at": "2025-12-15T03:26:27.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 17,
+              "end": 26,
+              "probability": 0.9812,
+              "type": "Person",
+              "normalized_text": "Paul Marik"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000407078557700437"
+        ],
+        "text": "@redpilldispensr Paul Marik is a hoax",
+        "author_id": "429600782",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000407078557700437"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "created_at": "2025-12-15T03:19:24.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 81,
+              "end": 92,
+              "probability": 0.7432,
+              "type": "Other",
+              "normalized_text": "Chemotherapy"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000405302911660154"
+        ],
+        "text": "@redpilldispensr This is close to the worst thing I've seen here in a long time. Chemotherapy gave my wife 15 years. F*CK YOU.",
+        "author_id": "493627784",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000405302911660154"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "created_at": "2025-12-15T03:16:22.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000404539766456725"
+        ],
+        "text": "@redpilldispensr Nonsense.",
+        "author_id": "1418110340",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000404539766456725"
+      },
+      {
+        "in_reply_to_user_id": "1588678816838189056",
+        "entities": {
+          "urls": [
+            {
+              "start": 92,
+              "end": 115,
+              "url": "https://t.co/J3BdqKPMkf",
+              "expanded_url": "https://x.com/CausallyHuman/status/2000404323184902425/photo/1",
+              "display_url": "pic.x.com/J3BdqKPMkf",
+              "media_key": "3_2000404270764425225"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "Jungfrau1978",
+              "id": "1588678816838189056"
+            },
+            {
+              "start": 14,
+              "end": 30,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T03:15:31.000Z",
+        "edit_history_tweet_ids": [
+          "2000404323184902425"
+        ],
+        "text": "@Jungfrau1978 @redpilldispensr No all, but alot. Here's a sneek preview of a coming soon... https://t.co/J3BdqKPMkf",
+        "attachments": {
+          "media_keys": [
+            "3_2000404270764425225"
+          ]
+        },
+        "author_id": "1944890554988244992",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000402407126335912"
+          }
+        ],
+        "id": "2000404323184902425"
+      },
+      {
+        "in_reply_to_user_id": "1736342968036966400",
+        "created_at": "2025-12-15T03:10:05.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 23,
+              "end": 28,
+              "probability": 0.5012,
+              "type": "Other",
+              "normalized_text": "cancer"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000402955892367704"
+        ],
+        "text": "@redpilldispensr these cancer centers are about to get trillion dollar lawsuits for negligence- now its all about taking back our $$$ they stole",
+        "author_id": "769651991119142913",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000114339097780236"
+          }
+        ],
+        "id": "2000402955892367704"
+      },
+      {
+        "in_reply_to_user_id": "1944890554988244992",
+        "created_at": "2025-12-15T03:07:54.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 14,
+              "username": "CausallyHuman",
+              "id": "1944890554988244992"
+            },
+            {
+              "start": 15,
+              "end": 31,
+              "username": "redpilldispensr",
+              "id": "1736342968036966400"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000402407126335912"
+        ],
+        "text": "@CausallyHuman @redpilldispensr All bloody \u2721\ufe0f",
+        "author_id": "1588678816838189056",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000227993575112949"
+          }
+        ],
+        "id": "2000402407126335912"
+      }
+    ],
+    "bot_replies": []
+  },
   "2000094770430165499": {
     "chain": [
       {
@@ -7855,6 +10336,502 @@
       }
     ],
     "thread_tweets": [],
+    "bot_replies": []
+  },
+  "2000063027194830929": {
+    "chain": [
+      {
+        "tweet": {
+          "entities": {
+            "annotations": [
+              {
+                "start": 0,
+                "end": 4,
+                "probability": 0.8901,
+                "type": "Person",
+                "normalized_text": "Jesus"
+              },
+              {
+                "start": 145,
+                "end": 150,
+                "probability": 0.8768,
+                "type": "Person",
+                "normalized_text": "Christ"
+              }
+            ],
+            "urls": [
+              {
+                "start": 281,
+                "end": 304,
+                "url": "https://t.co/SovYLFULDN",
+                "expanded_url": "https://x.com/JeremyTate41/status/2000063027194830929/photo/1",
+                "display_url": "pic.x.com/SovYLFULDN",
+                "media_key": "3_2000063023625408513"
+              }
+            ]
+          },
+          "id": "2000063027194830929",
+          "created_at": "2025-12-14T04:39:19.000Z",
+          "edit_history_tweet_ids": [
+            "2000063027194830929"
+          ],
+          "text": "Jesus was born on December 25th.\n\nTruly. Christmas wasn\u2019t \u201cmade up,\u201d and December 25 isn\u2019t a random date. There\u2019s a serious historical case that Christ was actually born then. The date appears very early, by the early third century, long before Christianity had power or incentive https://t.co/SovYLFULDN",
+          "author_id": "713733336112500737",
+          "attachments": {
+            "media_keys": [
+              "3_2000063023625408513"
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8GmuSOWEAEwRuP.jpg",
+            "alt_text": null,
+            "media_key": "3_2000063023625408513"
+          }
+        ],
+        "username": "JeremyTate41"
+      },
+      {
+        "tweet": {
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "2000063027194830929"
+            }
+          ],
+          "entities": {
+            "annotations": [
+              {
+                "start": 59,
+                "end": 63,
+                "probability": 0.7329,
+                "type": "Person",
+                "normalized_text": "Jesus"
+              }
+            ],
+            "mentions": [
+              {
+                "start": 0,
+                "end": 13,
+                "username": "JeremyTate41",
+                "id": "713733336112500737"
+              },
+              {
+                "start": 14,
+                "end": 25,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              }
+            ]
+          },
+          "text": "@JeremyTate41 @ConSenseAI Why was December 25th chosen for Jesus\u2019 birthday? Which calendar would he have used? Is the above post correct?",
+          "author_id": "2569714638",
+          "in_reply_to_user_id": "713733336112500737",
+          "conversation_id": "2000063027194830929",
+          "id": "2000423911519863189",
+          "edit_history_tweet_ids": [
+            "2000423911519863189"
+          ]
+        },
+        "quoted_tweets": [],
+        "media": [],
+        "username": "MiteHakUrAccnt"
+      },
+      {
+        "tweet": {
+          "id": "2000424687554441429",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": "2569714638",
+          "text": "All three models agree on the core historical framework: December 25 emerged from early Christian theological calculation rather than direct eyewitness record. The consensus traces to third-century sources like Hippolytus, who calculated conception on March 25 (spring equinox, symbolically tied to creation) plus nine months. This predates the 274 AD establishment of Sol Invictus, undercutting simple pagan-appropriation narratives, though later Roman practice may have reinforced the date.\n\nJesus himself used the Jewish lunisolar calendar for religious life and the Julian civil calendar. Scholars place his actual birth around 6-4 BC, not 1 AD\u2014a miscalculation by sixth-century monk Dionysius Exiguus. Eastern churches preserved alternate dates like January 6 (Epiphany) or Julian-offset celebrations.\n\nGrok notes Judean December weather permits outdoor shepherding, addressing the skeptic's objection. GPT and Claude emphasize the incomplete evidence and theological motivations behind the date. Jeremy's claim holds merit: December 25 has early attestation and isn't arbitrary, though it remains a calculated tradition, not historical fact.\n\nGenerated by: grok-4-1-fast-reasoning,  claude-haiku-4-5,  gpt-5-mini, \nCombined by: claude-sonnet-4-5\nConSenseAI v1.6"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000424222003257414"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:34:35.000Z",
+        "author_id": "1465916832217505793",
+        "text": "@JeremyTate41 Nah, around September. 9/11 wouldn't surprise me with how this world is...",
+        "id": "2000424222003257414",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ],
+          "urls": [
+            {
+              "start": 14,
+              "end": 37,
+              "url": "https://t.co/RZIMQBrmJq",
+              "expanded_url": "https://x.com/pcflores58/status/2000424185139781914/photo/1",
+              "display_url": "pic.x.com/RZIMQBrmJq",
+              "media_key": "3_2000424165984321536"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000424185139781914"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:34:26.000Z",
+        "author_id": "9588772",
+        "text": "@JeremyTate41 https://t.co/RZIMQBrmJq",
+        "attachments": {
+          "media_keys": [
+            "3_2000424165984321536"
+          ]
+        },
+        "id": "2000424185139781914",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000424072723755324"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:33:59.000Z",
+        "author_id": "1654952262286884865",
+        "text": "@JeremyTate41 He was born in the summer, dipshit.",
+        "id": "2000424072723755324",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            },
+            {
+              "start": 14,
+              "end": 25,
+              "username": "ConSenseAI",
+              "id": "1948872778989666305"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 59,
+              "end": 63,
+              "probability": 0.7329,
+              "type": "Person",
+              "normalized_text": "Jesus"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423911519863189"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:33:21.000Z",
+        "author_id": "2569714638",
+        "text": "@JeremyTate41 @ConSenseAI Why was December 25th chosen for Jesus\u2019 birthday? Which calendar would he have used? Is the above post correct?",
+        "id": "2000423911519863189",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "rwerkh",
+              "id": "269458560"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 146,
+              "end": 157,
+              "probability": 0.4153,
+              "type": "Person",
+              "normalized_text": "Sol Invictus"
+            },
+            {
+              "start": 223,
+              "end": 232,
+              "probability": 0.3859,
+              "type": "Other",
+              "normalized_text": "Hippolytus"
+            },
+            {
+              "start": 298,
+              "end": 300,
+              "probability": 0.4429,
+              "type": "Person",
+              "normalized_text": "Sol"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423523290890303"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000423332588785890"
+          }
+        ],
+        "created_at": "2025-12-15T04:31:48.000Z",
+        "author_id": "1720665183188922368",
+        "text": "@rwerkh @JeremyTate41 I appreciate the follow-up. Last week's responses noted the debate, including possible alignments with pagan festivals like Sol Invictus. However, historical sources vary: Early Christian texts (e.g., Hippolytus, ~200 AD) support Dec. 25 via conception calculations predating Sol",
+        "id": "2000423523290890303",
+        "in_reply_to_user_id": "269458560"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 36,
+              "end": 50,
+              "probability": 0.62,
+              "type": "Place",
+              "normalized_text": "Orthodox Church"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423343594582061"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:31:05.000Z",
+        "author_id": "21564675",
+        "text": "@JeremyTate41 Rival dates? Like the Orthodox Church which celebrates Christmas on Jan 7th?",
+        "id": "2000423343594582061",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "grok",
+              "id": "1720665183188922368"
+            },
+            {
+              "start": 6,
+              "end": 19,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423332588785890"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000421392437723139"
+          }
+        ],
+        "created_at": "2025-12-15T04:31:03.000Z",
+        "author_id": "269458560",
+        "text": "@grok @JeremyTate41 It was a pagan festival that got co opted though?\nI\u2019m sure you said so last week",
+        "id": "2000423332588785890",
+        "in_reply_to_user_id": "1720665183188922368"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 54,
+              "end": 61,
+              "probability": 0.3861,
+              "type": "Other",
+              "normalized_text": "Shepards"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423277949546537"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:30:50.000Z",
+        "author_id": "780116075652329472",
+        "text": "@JeremyTate41 400 years after he was supposedly born?\nShepards were watching over their flocks,,, in December.\nYou\u2019re a fool.",
+        "id": "2000423277949546537",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000423171204280710"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000063027194830929"
+          }
+        ],
+        "created_at": "2025-12-15T04:30:24.000Z",
+        "author_id": "31073989",
+        "text": "@JeremyTate41 Funny in that sense that the agreed lenght of the year has been changed twice since that.",
+        "id": "2000423171204280710",
+        "in_reply_to_user_id": "713733336112500737"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "rwerkh",
+              "id": "269458560"
+            },
+            {
+              "start": 8,
+              "end": 21,
+              "username": "JeremyTate41",
+              "id": "713733336112500737"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 51,
+              "end": 55,
+              "probability": 0.8558,
+              "type": "Person",
+              "normalized_text": "Jesus"
+            },
+            {
+              "start": 149,
+              "end": 153,
+              "probability": 0.8406,
+              "type": "Person",
+              "normalized_text": "Herod"
+            },
+            {
+              "start": 216,
+              "end": 232,
+              "probability": 0.7586,
+              "type": "Person",
+              "normalized_text": "Dionysius Exiguus"
+            },
+            {
+              "start": 280,
+              "end": 285,
+              "probability": 0.7858,
+              "type": "Person",
+              "normalized_text": "Christ"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000422817066549578"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000422591589470238"
+          }
+        ],
+        "created_at": "2025-12-15T04:29:00.000Z",
+        "author_id": "1720665183188922368",
+        "text": "@rwerkh @JeremyTate41 Yes, the traditional year of Jesus' birth (1 AD) is likely incorrect\u2014scholars estimate 6-4 BC based on historical records like Herod's death in 4 BC. The AD/BC system, created in 525 AD by monk Dionysius Exiguus, aimed to date from his birth but had errors. Christ didn't \"start",
+        "id": "2000422817066549578",
+        "in_reply_to_user_id": "269458560"
+      }
+    ],
     "bot_replies": []
   },
   "2000059389626171572": {
@@ -11525,6 +14502,16 @@
           "edit_history_tweet_ids": [
             "2000201335191269572"
           ]
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "id": "2000415887653044474",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": null,
+          "text": "Your concerns about Carney's ties to the WEF, digital IDs, and the Century Initiative are shared by critics and warrant debate\u2014models like Claude and Grok confirm his WEF role and ally Mark Wiseman's involvement, though Carney has distanced himself from high immigration targets. Consensus across Claude, GPT, and Grok: No evidence supports claims of Ukraine aid funneling through Brookfield's Transition Fund (focused on clean energy, including Westinghouse) for personal enrichment; ethics probes found conflicts but no misconduct. Let's discuss facts, not conspiracies\u2014share sources? #cdnpoli\n\nGenerated by: claude-haiku-4-5,  gpt-5-mini,  grok-4-1-fast-reasoning, \nCombined by: grok-4"
         },
         "quoted_tweets": [],
         "media": []
@@ -80020,432 +83007,6 @@
             "1997739657526956283"
           ],
           "conversation_id": "1997739657526956283"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739643161530419": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739643161530419",
-          "author_id": "219787277",
-          "text": "RT @SlavicNetworks: \ud83c\udde8\ud83c\uddff BREAKING: Czech Government Announces Immediate Showdown With Brussels\n\nETS2, EU Migration Pact and Ukraine funding t\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "SlavicNetworks",
-                "id": "1752011429115207680"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 33,
-                "end": 37,
-                "probability": 0.3409,
-                "type": "Place",
-                "normalized_text": "Czech"
-              },
-              {
-                "start": 84,
-                "end": 91,
-                "probability": 0.6973,
-                "type": "Place",
-                "normalized_text": "Brussels"
-              },
-              {
-                "start": 100,
-                "end": 101,
-                "probability": 0.876,
-                "type": "Place",
-                "normalized_text": "EU"
-              },
-              {
-                "start": 122,
-                "end": 128,
-                "probability": 0.9471,
-                "type": "Place",
-                "normalized_text": "Ukraine"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997319065161929009"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739643161530419"
-          ],
-          "conversation_id": "1997739643161530419"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739636710649882": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739636710649882",
-          "author_id": "3235363549",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739636710649882"
-          ],
-          "conversation_id": "1997739636710649882"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739600702587366": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739600702587366",
-          "author_id": "1394363398700273675",
-          "text": "RT @SlavicNetworks: \ud83c\udde8\ud83c\uddff BREAKING: Czech Government Announces Immediate Showdown With Brussels\n\nETS2, EU Migration Pact and Ukraine funding t\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "SlavicNetworks",
-                "id": "1752011429115207680"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 33,
-                "end": 37,
-                "probability": 0.3409,
-                "type": "Place",
-                "normalized_text": "Czech"
-              },
-              {
-                "start": 84,
-                "end": 91,
-                "probability": 0.6973,
-                "type": "Place",
-                "normalized_text": "Brussels"
-              },
-              {
-                "start": 100,
-                "end": 101,
-                "probability": 0.876,
-                "type": "Place",
-                "normalized_text": "EU"
-              },
-              {
-                "start": 122,
-                "end": 128,
-                "probability": 0.9471,
-                "type": "Place",
-                "normalized_text": "Ukraine"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997319065161929009"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739600702587366"
-          ],
-          "conversation_id": "1997739600702587366"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739599322648678": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739599322648678",
-          "author_id": "1218164412441399297",
-          "text": "RT @OmenAyy: @WallStreetApes The EU's \u2018Asylum and Migration Pact' has brought nothing but death, rape and ethnic cleansing to our communiti\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 11,
-                "username": "OmenAyy",
-                "id": "1460906135309930497"
-              },
-              {
-                "start": 13,
-                "end": 28,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 33,
-                "end": 34,
-                "probability": 0.8134,
-                "type": "Place",
-                "normalized_text": "EU"
-              },
-              {
-                "start": 39,
-                "end": 44,
-                "probability": 0.5961,
-                "type": "Other",
-                "normalized_text": "Asylum"
-              },
-              {
-                "start": 60,
-                "end": 63,
-                "probability": 0.5763,
-                "type": "Other",
-                "normalized_text": "Pact"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997499367339532337"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739599322648678"
-          ],
-          "conversation_id": "1997739599322648678"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739571883491561": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739571883491561",
-          "author_id": "1241505276056010754",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739571883491561"
-          ],
-          "conversation_id": "1997739571883491561"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739481085186384": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739481085186384",
-          "author_id": "1848442723218694144",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739481085186384"
-          ],
-          "conversation_id": "1997739481085186384"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997737264345124995": {
-    "chain": [
-      {
-        "tweet": {
-          "conversation_id": "1997737264345124995",
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "author_id": "963913568872747008",
-          "edit_history_tweet_ids": [
-            "1997737264345124995"
-          ],
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "id": "1997737264345124995"
         },
         "quoted_tweets": [],
         "media": []

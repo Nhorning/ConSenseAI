@@ -3942,7 +3942,24 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     """
     global backoff_multiplier
     
+    # Initialize log file for this run
+    log_filename = f"cn_notes_log_{username}.txt"
+    run_timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    def log_to_file(message):
+        """Append message to CN log file with timestamp"""
+        try:
+            with open(log_filename, 'a', encoding='utf-8') as f:
+                f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
+        except Exception as e:
+            print(f"[Community Notes] Error writing to log file: {e}")
+    
+    log_to_file("=" * 80)
+    log_to_file(f"COMMUNITY NOTES RUN STARTED (test_mode={test_mode}, max_results={max_results})")
+    log_to_file("=" * 80)
+    
     print(f"[Community Notes] Fetching up to {max_results} posts eligible for notes (test_mode={test_mode})")
+    print(f"[Community Notes] Logging to {log_filename}")
     
     try:
         # Use Twitter API v2 to fetch posts eligible for Community Notes
@@ -3986,7 +4003,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             resp = response.json()
             if not resp or not resp.get('data'):
                 print("[Community Notes] No eligible posts found")
+                log_to_file("No eligible posts found")
                 return 0
+            else:
+                log_to_file(f"Fetched {len(resp['data'])} eligible posts")
         else:
             error_msg = f"HTTP {response.status_code}: {response.text}"
             if response.status_code == 403:
@@ -4026,13 +4046,21 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     includes = resp.get('includes', {})
     
     print(f"[Community Notes] Found {len(posts)} eligible posts")
+    log_to_file(f"Found {len(posts)} eligible posts to process")
     
     for post_data in posts:
         post_id = str(post_data.get('id'))
         
+        log_to_file("\n" + "-" * 80)
+        log_to_file(f"POST ID: {post_id}")
+        log_to_file(f"POST TEXT: {post_data.get('text', '')}")
+        log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
+        log_to_file(f"CREATED AT: {post_data.get('created_at')}")
+        
         # Skip if we've already written a note for this post
         if post_id in written_notes:
             print(f"[Community Notes] Skipping {post_id} - already written note")
+            log_to_file("STATUS: SKIPPED (already wrote note)")
             continue
         
         # Convert post dict to Tweepy-like object for compatibility with existing functions
@@ -4052,27 +4080,39 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         
         # Get full context for the post
         try:
+            log_to_file("STATUS: Processing")
             context = get_tweet_context(post, includes, bot_username=username)
+            log_to_file(f"CONTEXT: Gathered {len(context.get('ancestor_chain', []))} ancestor tweets, {len(context.get('media', []))} media items")
+            
             context['mention'] = post
             context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
                 - Provide working url links to credible sources for fact checking \n\
                 - Remain anonomous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
-                - search for information on drafting successful community notes if needed"  
+                - search for information on drafting successful community notes if needed \n\
+                - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE'\n\
+                - If a note is needed, provide only the text of the note - no labels or titles.\n"  
             
             post_text = post.text
             
             print(f"[Community Notes] Analyzing post {post_id}: {post_text[:100]}...")
+            log_to_file("GENERATING NOTE: Using ConSenseAI fact-checking pipeline")
             
             # Use fact_check in generate_only mode to get the note text
             note_text = fact_check(post_text, post_id, context=context, generate_only=True)
             
             if not isinstance(note_text, str) or not note_text:
                 print(f"[Community Notes] No note generated for {post_id}")
+                log_to_file("NOTE GENERATION: Failed (empty response)")
                 continue
+            
+            log_to_file(f"NOTE GENERATED ({len(note_text)} chars):")
+            log_to_file(note_text)
+            log_to_file("")
             
             # Check if the response indicates no note is needed
             if any(phrase in note_text.upper() for phrase in ["NO NOTE NEEDED", "NOT MISLEADING", "NO COMMUNITY NOTE"]):
                 print(f"[Community Notes] Post {post_id} determined not to need a note")
+                log_to_file("DECISION: Post does not need a community note")
                 written_notes[post_id] = {
                     "note": None,
                     "reason": "not_misleading",
@@ -4092,11 +4132,16 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 }
             }
             
-            # In test mode or dry run, just log the note
-            if args.dryrun or test_mode:
+            # In global dry run mode, just log the note
+            # But if only test_mode is true, we should still submit (as a test note)
+            if args.dryrun:
                 print(f"[Community Notes DRY RUN] Would submit note for {post_id}:")
                 print(f"  Note text: {note_text}")
                 print(f"  Payload: {json.dumps(note_payload, indent=2)}")
+                log_to_file("SUBMISSION: DRY RUN (would submit)")
+                log_to_file(f"PAYLOAD: {json.dumps(note_payload, indent=2)}")
+                log_to_file("SUBMISSION: DRY RUN (would submit)")
+                log_to_file(f"PAYLOAD: {json.dumps(note_payload, indent=2)}")
             else:
                 try:
                     # Submit the note using Twitter API v2 with OAuth 1.0a (CN project keys)
@@ -4120,13 +4165,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     if submit_response.status_code in [200, 201]:
                         print(f"[Community Notes] Successfully submitted note for {post_id}")
                         print(f"  Note text: {note_text}")
+                        log_to_file(f"SUBMISSION: SUCCESS (HTTP {submit_response.status_code})")
+                        log_to_file(f"RESPONSE: {submit_response.text}")
                     else:
                         print(f"[Community Notes] Error submitting note for {post_id}: HTTP {submit_response.status_code}")
                         print(f"  Response: {submit_response.text}")
+                        log_to_file(f"SUBMISSION: FAILED (HTTP {submit_response.status_code})")
+                        log_to_file(f"ERROR RESPONSE: {submit_response.text}")
                         continue
                     
                 except Exception as e:
                     print(f"[Community Notes] Error submitting note for {post_id}: {e}")
+                    log_to_file(f"SUBMISSION: EXCEPTION - {e}")
+                    import traceback
+                    log_to_file(traceback.format_exc())
                     continue
             
             # Record that we've written a note for this post
@@ -4139,11 +4191,17 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
         except Exception as e:
             print(f"[Community Notes] Error processing post {post_id}: {e}")
+            log_to_file(f"ERROR: Exception during processing - {e}")
             import traceback
+            log_to_file(traceback.format_exc())
             traceback.print_exc()
             continue
     
     # Save written notes record
+    log_to_file("\n" + "=" * 80)
+    log_to_file(f"RUN COMPLETE: {notes_written} notes processed")
+    log_to_file("=" * 80 + "\n")
+    
     try:
         with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
             json.dump(written_notes, f, indent=2)
@@ -4159,6 +4217,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         print(f"[Community Notes] Error saving last check file: {e}")
     
     print(f"[Community Notes] Completed: {notes_written} notes written")
+    print(f"[Community Notes] Full log saved to {log_filename}")
     return notes_written
 
 # The main loop
