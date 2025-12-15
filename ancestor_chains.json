@@ -1,4 +1,361 @@
 {
+  "2000400432846545198": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000400432846545198",
+          "text": "The disgusting hatred being spewed towards Rob Reiner right now when he is likely dead is beyond repulsive.\n\nThis man spent his entire life fighting for love, justice, and equality. He deserves nothing but our deepest respect and sorrow. \ud83d\udc94 https://t.co/eCBkMpkj6E",
+          "author_id": "772958490356617216",
+          "created_at": "2025-12-15T03:00:03.000Z",
+          "conversation_id": "2000400432846545198",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "3_2000400425472626693"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 240,
+                "end": 263,
+                "url": "https://t.co/eCBkMpkj6E",
+                "expanded_url": "https://x.com/DisavowTrump20/status/2000400432846545198/photo/1",
+                "display_url": "pic.x.com/eCBkMpkj6E",
+                "media_key": "3_2000400425472626693"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 43,
+                "end": 52,
+                "probability": 0.9648,
+                "type": "Person",
+                "normalized_text": "Rob Reiner"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8LZlqDWEAUhpF2.jpg",
+            "alt_text": "",
+            "media_key": "3_2000400425472626693"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "idoc2000",
+              "id": "15886146"
+            },
+            {
+              "start": 10,
+              "end": 25,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 46,
+              "end": 48,
+              "probability": 0.528,
+              "type": "Other",
+              "normalized_text": "TDS"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:11.000Z",
+        "id": "2000428902058176900",
+        "edit_history_tweet_ids": [
+          "2000428902058176900"
+        ],
+        "author_id": "1264621002656546818",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000401154300314048"
+          }
+        ],
+        "in_reply_to_user_id": "15886146",
+        "text": "@idoc2000 @DisavowTrump20 You should get your TDS checked by a psychiatrist. Hope this helps."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:09.000Z",
+        "id": "2000428894445261139",
+        "edit_history_tweet_ids": [
+          "2000428894445261139"
+        ],
+        "author_id": "2961624636",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 He spewed hate. Seems he taught his son well"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:09.000Z",
+        "id": "2000428894252650870",
+        "edit_history_tweet_ids": [
+          "2000428894252650870"
+        ],
+        "author_id": "1494671980976558081",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 Haven't seen even one hate comment so far."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "NWadlin13420",
+              "id": "1852025290761080833"
+            },
+            {
+              "start": 14,
+              "end": 29,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            },
+            {
+              "start": 89,
+              "end": 105,
+              "username": "realDonaldTrump",
+              "id": "25073877"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:08.000Z",
+        "id": "2000428892985659516",
+        "edit_history_tweet_ids": [
+          "2000428892985659516"
+        ],
+        "author_id": "968212439501299712",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000414801634504782"
+          }
+        ],
+        "in_reply_to_user_id": "1852025290761080833",
+        "text": "@NWadlin13420 @DisavowTrump20 That just shows he had the courage to tell the truth about @realDonaldTrump, even in the face of inexplicable worship by so many people who cannot distinguish between reality and reality TV."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 45,
+              "end": 54,
+              "probability": 0.8466,
+              "type": "Place",
+              "normalized_text": "California"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:06.000Z",
+        "id": "2000428883728838945",
+        "edit_history_tweet_ids": [
+          "2000428883728838945"
+        ],
+        "author_id": "87994096",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 No transparency from liberal California law enforcement.  What a shock"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:05.000Z",
+        "id": "2000428879987544537",
+        "edit_history_tweet_ids": [
+          "2000428879987544537"
+        ],
+        "author_id": "1695824479224467456",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 It\u2019s no big loss . He wasn\u2019t anyone of great importance."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 33,
+              "end": 44,
+              "probability": 0.9751,
+              "type": "Person",
+              "normalized_text": "Charlie Kirk"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:04.000Z",
+        "id": "2000428876531368358",
+        "edit_history_tweet_ids": [
+          "2000428876531368358"
+        ],
+        "author_id": "4917503822",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 Now you know how Charlie Kirk's friends &amp; family feel!!!!!!"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:04.000Z",
+        "id": "2000428875457704186",
+        "edit_history_tweet_ids": [
+          "2000428875457704186"
+        ],
+        "author_id": "4076631922",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 It was his son."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:53:04.000Z",
+        "id": "2000428874740740500",
+        "edit_history_tweet_ids": [
+          "2000428874740740500"
+        ],
+        "author_id": "279335935",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 A couple anonymous idiots with less than a hundred followers is meaningless. All you\u2019re doing is giving them more exposure."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DisavowTrump20",
+              "id": "772958490356617216"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:52:57.000Z",
+        "id": "2000428844210135323",
+        "edit_history_tweet_ids": [
+          "2000428844210135323"
+        ],
+        "author_id": "1833325698976538624",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000400432846545198"
+          }
+        ],
+        "in_reply_to_user_id": "772958490356617216",
+        "text": "@DisavowTrump20 I didn\u2019t like his political views at all. \nBut I would never celebrate his or anyone else\u2019s death. \nPrayers for his family \ud83d\ude4f"
+      }
+    ],
+    "bot_replies": []
+  },
   "2000373349537730890": {
     "chain": [
       {
@@ -99,6 +456,425 @@
           ]
         },
         "id": "2000381548391190675"
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000364941090467845": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000364941090467845",
+          "text": "TERROR: The 2nd shooter was Sajid Akram, the father of Naveed Akram, who was identified earlier today. Sajid Akram was in Australia on a tourist visa from Pakistan. He was licensed to own six guns, all of which were used in the attack. https://t.co/l9eOKCaCJ3",
+          "author_id": "4239551",
+          "created_at": "2025-12-15T00:39:01.000Z",
+          "conversation_id": "2000364941090467845",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_source_tweet_id": [
+              "2000310357684818180"
+            ],
+            "media_keys": [
+              "13_2000310283143639044"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 236,
+                "end": 259,
+                "url": "https://t.co/l9eOKCaCJ3",
+                "expanded_url": "https://x.com/AdamMilstein/status/2000310357684818180/video/1",
+                "display_url": "pic.x.com/l9eOKCaCJ3",
+                "media_key": "13_2000310283143639044"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 28,
+                "end": 38,
+                "probability": 0.8682,
+                "type": "Person",
+                "normalized_text": "Sajid Akram"
+              },
+              {
+                "start": 55,
+                "end": 66,
+                "probability": 0.5788,
+                "type": "Person",
+                "normalized_text": "Naveed Akram"
+              },
+              {
+                "start": 103,
+                "end": 113,
+                "probability": 0.8843,
+                "type": "Person",
+                "normalized_text": "Sajid Akram"
+              },
+              {
+                "start": 122,
+                "end": 130,
+                "probability": 0.9733,
+                "type": "Place",
+                "normalized_text": "Australia"
+              },
+              {
+                "start": 155,
+                "end": 162,
+                "probability": 0.9729,
+                "type": "Place",
+                "normalized_text": "Pakistan"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": "https://pbs.twimg.com/amplify_video_thumb/2000310283143639044/img/r9tqra093XgTJRN2.jpg",
+            "alt_text": "",
+            "media_key": "13_2000310283143639044"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "id": "2000428052090855526",
+        "created_at": "2025-12-15T04:49:48.000Z",
+        "text": "@amuse This is ridiculous. There is no way a person on a tourist visa could have a firearm license. There must be Australian citizen to obtain firearm license. Check your facts before spreading false information",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000428052090855526"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "1460569104750759940"
+      },
+      {
+        "id": "2000427744426168620",
+        "created_at": "2025-12-15T04:48:35.000Z",
+        "text": "@amuse We\u2019re going to t",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000427744426168620"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "734252074267856897"
+      },
+      {
+        "id": "2000427163711844396",
+        "created_at": "2025-12-15T04:46:16.000Z",
+        "text": "@dev_iqab @amuse No, the police commissioner in the video does not mention Pakistan. He describes the offenders as a 50-year-old father and 24-year-old son, with the father holding six licensed firearms, but provides no details on names or origins.",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "dev_iqab",
+              "id": "1630854399924002817"
+            },
+            {
+              "start": 10,
+              "end": 16,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 75,
+              "end": 82,
+              "probability": 0.9818,
+              "type": "Place",
+              "normalized_text": "Pakistan"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1630854399924002817",
+        "edit_history_tweet_ids": [
+          "2000427163711844396"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000426893267620055"
+          }
+        ],
+        "author_id": "1720665183188922368"
+      },
+      {
+        "id": "2000427033156047290",
+        "created_at": "2025-12-15T04:45:45.000Z",
+        "text": "@amuse How can he be licensed on a tourist visa!",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000427033156047290"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "3028607821"
+      },
+      {
+        "id": "2000426909205958880",
+        "created_at": "2025-12-15T04:45:15.000Z",
+        "text": "@E_W_Price @amuse Zastava Hunting Association. According to the card below the drivers licence in the picture. Thought that was the son though.",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 10,
+              "username": "E_W_Price",
+              "id": "1869850377648054273"
+            },
+            {
+              "start": 11,
+              "end": 17,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 18,
+              "end": 44,
+              "probability": 0.793,
+              "type": "Other",
+              "normalized_text": "Zastava Hunting Association"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1869850377648054273",
+        "edit_history_tweet_ids": [
+          "2000426909205958880"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000371557894697242"
+          }
+        ],
+        "author_id": "1269125680668659712"
+      },
+      {
+        "id": "2000426893267620055",
+        "created_at": "2025-12-15T04:45:12.000Z",
+        "text": "@amuse @grok did he mentioned pakistan in video?",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            },
+            {
+              "start": 7,
+              "end": 12,
+              "username": "grok",
+              "id": "1720665183188922368"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 30,
+              "end": 37,
+              "probability": 0.3884,
+              "type": "Place",
+              "normalized_text": "pakistan"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000426893267620055"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "1630854399924002817"
+      },
+      {
+        "id": "2000426829874610498",
+        "created_at": "2025-12-15T04:44:57.000Z",
+        "text": "@amuse So a tourist can just go to Australia with 6 guns? Wow.",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 35,
+              "end": 43,
+              "probability": 0.9845,
+              "type": "Place",
+              "normalized_text": "Australia"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000426829874610498"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "1595032434369765377"
+      },
+      {
+        "id": "2000426464068694433",
+        "created_at": "2025-12-15T04:43:29.000Z",
+        "text": "@jrlingerfelt @amuse Because it's fake News. Wait for the Australian Authorities to identify the identities of the Shooters.",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 13,
+              "username": "jrlingerfelt",
+              "id": "471580057"
+            },
+            {
+              "start": 14,
+              "end": 20,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "471580057",
+        "edit_history_tweet_ids": [
+          "2000426464068694433"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000366616832602124"
+          }
+        ],
+        "author_id": "1762877549728706560"
+      },
+      {
+        "id": "2000426071221817430",
+        "created_at": "2025-12-15T04:41:56.000Z",
+        "text": "@amuse This information is incomplete. I believe this guy has a license from his country, and declared his carriage to border force at the port of entry. What I don\u2019t understand is how a Paki license should fly in Australia, being that they\u2019d never have the same level of regulation.",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 187,
+              "end": 190,
+              "probability": 0.4297,
+              "type": "Other",
+              "normalized_text": "Paki"
+            },
+            {
+              "start": 214,
+              "end": 222,
+              "probability": 0.9804,
+              "type": "Place",
+              "normalized_text": "Australia"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000426071221817430"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "464388356"
+      },
+      {
+        "id": "2000426021343125833",
+        "created_at": "2025-12-15T04:41:44.000Z",
+        "text": "@amuse Tourist visa can own guns? What?",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 6,
+              "username": "amuse",
+              "id": "4239551"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "4239551",
+        "edit_history_tweet_ids": [
+          "2000426021343125833"
+        ],
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000364941090467845"
+          }
+        ],
+        "author_id": "33466711"
       }
     ],
     "bot_replies": []
@@ -1747,6 +2523,432 @@
             "id": "2000333033883513246"
           }
         ]
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000327813946028234": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000327813946028234",
+          "text": "President Trump announced that America has generated more than $18 trillion for Americans through tariffs in just 10 months. \n\nJust for comparison, the previous administration brought in only $1 trillion over four years. This is fantastic news, and the future continues to look https://t.co/GfFWmr6icb",
+          "author_id": "1602751001756311556",
+          "created_at": "2025-12-14T22:11:29.000Z",
+          "conversation_id": "2000327813946028234",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "13_2000327743465029633"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 278,
+                "end": 301,
+                "url": "https://t.co/GfFWmr6icb",
+                "expanded_url": "https://x.com/RepWPH/status/2000327813946028234/video/1",
+                "display_url": "pic.x.com/GfFWmr6icb",
+                "media_key": "13_2000327743465029633"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 10,
+                "end": 14,
+                "probability": 0.9352,
+                "type": "Person",
+                "normalized_text": "Trump"
+              },
+              {
+                "start": 31,
+                "end": 37,
+                "probability": 0.8848,
+                "type": "Place",
+                "normalized_text": "America"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": "https://pbs.twimg.com/amplify_video_thumb/2000327743465029633/img/sR0Ae01jXXQ3uyIv.jpg",
+            "alt_text": "",
+            "media_key": "13_2000327743465029633"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:26.000Z",
+        "id": "2000428211897851991",
+        "edit_history_tweet_ids": [
+          "2000428211897851991"
+        ],
+        "author_id": "833784101178048514",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH This is just embarrassing for a sitting congressman- take this down you idiot"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:24.000Z",
+        "id": "2000428203492405657",
+        "edit_history_tweet_ids": [
+          "2000428203492405657"
+        ],
+        "author_id": "2164680700",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH Not true fact. Heard it wasnt even close to a trillion"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "GulliverGadfly",
+              "id": "1896648657052790784"
+            },
+            {
+              "start": 16,
+              "end": 23,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 24,
+              "end": 28,
+              "probability": 0.9209,
+              "type": "Person",
+              "normalized_text": "Trump"
+            },
+            {
+              "start": 151,
+              "end": 155,
+              "probability": 0.8908,
+              "type": "Person",
+              "normalized_text": "Biden"
+            }
+          ],
+          "urls": [
+            {
+              "start": 219,
+              "end": 242,
+              "url": "https://t.co/sPvb54hWgn",
+              "expanded_url": "http://FactCheck.org",
+              "display_url": "FactCheck.org",
+              "images": [
+                {
+                  "url": "https://pbs.twimg.com/news_img/1999514995822850051/_hI2yIot?format=png&name=orig",
+                  "width": 200,
+                  "height": 200
+                },
+                {
+                  "url": "https://pbs.twimg.com/news_img/1999514995822850051/_hI2yIot?format=png&name=150x150",
+                  "width": 150,
+                  "height": 150
+                }
+              ],
+              "status": 200,
+              "title": "FactCheck.org",
+              "description": "In a campaign-style rally in Pennsylvania on Dec. 9, President Donald Trump honed a message of \u201clower prices, bigger paychecks\u201d ahead of next year\u2019s midterm elections. Some of his talking points on the economy missed the mark. Nearly eight years ago, President Donald Trump denied using the word \u201cshitholes\u201d to describe African countries during an Oval Office meeting on immigration. But now he has fessed up. In a disparaging attack on Somalia in which he said he didn\u2019t want people of Somali descent in the",
+              "unwound_url": "https://www.factcheck.org/"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:23.000Z",
+        "id": "2000428199499456981",
+        "edit_history_tweet_ids": [
+          "2000428199499456981"
+        ],
+        "author_id": "1720665183188922368",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000428021342408988"
+          }
+        ],
+        "in_reply_to_user_id": "1896648657052790784",
+        "text": "@GulliverGadfly @RepWPH Trump likely meant $18T+ in foreign investments secured, not direct tariff revenue (which is ~$300B in 10 months per reports). Biden era tariffs brought ~$300B over 4 years. Sources: PolitiFact, https://t.co/sPvb54hWgn, Tax Policy Center."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:21.000Z",
+        "id": "2000428191148614068",
+        "edit_history_tweet_ids": [
+          "2000428191148614068"
+        ],
+        "author_id": "1577067966579056649",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH Lmfao!  If you believe this you\u2019re very naive"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:14.000Z",
+        "id": "2000428161352298783",
+        "edit_history_tweet_ids": [
+          "2000428161352298783"
+        ],
+        "author_id": "1474603442685497351",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH And who paid that $18 billion?  American taxpayers.  Biggest tax hike in history."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "Bacon_ofthe_Day",
+              "id": "31495540"
+            },
+            {
+              "start": 17,
+              "end": 24,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 106,
+              "end": 110,
+              "probability": 0.9445,
+              "type": "Person",
+              "normalized_text": "Trump"
+            },
+            {
+              "start": 144,
+              "end": 151,
+              "probability": 0.2744,
+              "type": "Person",
+              "normalized_text": "Benzinga"
+            },
+            {
+              "start": 154,
+              "end": 156,
+              "probability": 0.9588,
+              "type": "Organization",
+              "normalized_text": "CNN"
+            },
+            {
+              "start": 225,
+              "end": 229,
+              "probability": 0.9053,
+              "type": "Person",
+              "normalized_text": "Biden"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:11.000Z",
+        "id": "2000428150740635761",
+        "edit_history_tweet_ids": [
+          "2000428150740635761"
+        ],
+        "author_id": "1720665183188922368",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000427925246521721"
+          }
+        ],
+        "in_reply_to_user_id": "31495540",
+        "text": "@Bacon_ofthe_Day @RepWPH The claim refers to $18T in investments attracted by tariffs in ~10 months under Trump, per his announcement (sources: Benzinga, CNN). Actual tariff revenue in 2025 is ~$200B (CRFB, Tax Foundation).\n\nBiden era (2021-2024): ~$300B total tariff revenue (USAFacts estimates), not"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:03.000Z",
+        "id": "2000428116431470695",
+        "edit_history_tweet_ids": [
+          "2000428116431470695"
+        ],
+        "author_id": "62594658",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH Are you stupid or something?"
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 12,
+              "end": 17,
+              "probability": 0.6915,
+              "type": "Person",
+              "normalized_text": "Wesley"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:50:00.000Z",
+        "id": "2000428102217052493",
+        "edit_history_tweet_ids": [
+          "2000428102217052493"
+        ],
+        "author_id": "37894075",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH Hey Wesley. Fuck your lying face. You bought crooked cunt."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:49:59.000Z",
+        "id": "2000428097569751281",
+        "edit_history_tweet_ids": [
+          "2000428097569751281"
+        ],
+        "author_id": "1399287444",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH There is no 18 trillion brought in by tariffs. That's a lie."
+      },
+      {
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 7,
+              "username": "RepWPH",
+              "id": "1602751001756311556"
+            }
+          ],
+          "urls": [
+            {
+              "start": 8,
+              "end": 31,
+              "url": "https://t.co/gwFtGZIzxY",
+              "expanded_url": "https://x.com/edsaldana60/status/2000428094658924893/photo/1",
+              "display_url": "pic.x.com/gwFtGZIzxY",
+              "media_key": "16_2000428088212197376"
+            }
+          ]
+        },
+        "created_at": "2025-12-15T04:49:58.000Z",
+        "id": "2000428094658924893",
+        "edit_history_tweet_ids": [
+          "2000428094658924893"
+        ],
+        "author_id": "3433008494",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000327813946028234"
+          }
+        ],
+        "in_reply_to_user_id": "1602751001756311556",
+        "text": "@RepWPH https://t.co/gwFtGZIzxY",
+        "attachments": {
+          "media_keys": [
+            "16_2000428088212197376"
+          ]
+        }
       }
     ],
     "bot_replies": []
@@ -3527,6 +4729,526 @@
         "edit_history_tweet_ids": [
           "2000282259459318191"
         ]
+      }
+    ],
+    "bot_replies": []
+  },
+  "2000274779400442198": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000274779400442198",
+          "text": "\ud83d\udea8BREAKING: The second Bondi Beach terrorist has been identified as Khaled al-Nablusi, a Lebanese national of Palestinian descent. https://t.co/DMTEnGukJN",
+          "author_id": "1511074777708085258",
+          "created_at": "2025-12-14T18:40:45.000Z",
+          "conversation_id": "2000274779400442198",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "13_2000274722789924864"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 130,
+                "end": 153,
+                "url": "https://t.co/DMTEnGukJN",
+                "expanded_url": "https://x.com/ImMeme0/status/2000274779400442198/video/1",
+                "display_url": "pic.x.com/DMTEnGukJN",
+                "media_key": "13_2000274722789924864"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 22,
+                "end": 32,
+                "probability": 0.6853,
+                "type": "Place",
+                "normalized_text": "Bondi Beach"
+              },
+              {
+                "start": 67,
+                "end": 83,
+                "probability": 0.8041,
+                "type": "Person",
+                "normalized_text": "Khaled al-Nablusi"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "video",
+            "url": "https://pbs.twimg.com/amplify_video_thumb/2000274722789924864/img/BtKPkpamwo-AdKLR.jpg",
+            "alt_text": "",
+            "media_key": "13_2000274722789924864"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "id": "2000427768106922244",
+        "edit_history_tweet_ids": [
+          "2000427768106922244"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "DEPLORABLEFACE",
+              "id": "833187727629750273"
+            },
+            {
+              "start": 16,
+              "end": 24,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ],
+          "urls": [
+            {
+              "start": 25,
+              "end": 48,
+              "url": "https://t.co/9HhTrhsmxi",
+              "expanded_url": "https://x.com/deadratman/status/2000427768106922244/photo/1",
+              "display_url": "pic.x.com/9HhTrhsmxi",
+              "media_key": "16_2000427760368373769"
+            }
+          ]
+        },
+        "author_id": "1223216138",
+        "created_at": "2025-12-15T04:48:40.000Z",
+        "text": "@DEPLORABLEFACE @ImMeme0 https://t.co/9HhTrhsmxi",
+        "in_reply_to_user_id": "833187727629750273",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000347659165700213"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "16_2000427760368373769"
+          ]
+        }
+      },
+      {
+        "id": "2000427606605181033",
+        "edit_history_tweet_ids": [
+          "2000427606605181033"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ]
+        },
+        "author_id": "1160936930",
+        "created_at": "2025-12-15T04:48:02.000Z",
+        "text": "@ImMeme0 Wait is he still alive?",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ]
+      },
+      {
+        "id": "2000427107227443393",
+        "edit_history_tweet_ids": [
+          "2000427107227443393"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 9,
+              "username": "RDerreze",
+              "id": "1783579393048141824"
+            },
+            {
+              "start": 10,
+              "end": 24,
+              "username": "Bitcoinfinity",
+              "id": "1520641697582960646"
+            },
+            {
+              "start": 25,
+              "end": 33,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ]
+        },
+        "author_id": "1540193867026530304",
+        "created_at": "2025-12-15T04:46:03.000Z",
+        "text": "@RDerreze @Bitcoinfinity @ImMeme0 The guys house literally got raided",
+        "in_reply_to_user_id": "1783579393048141824",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000360840361553933"
+          }
+        ]
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 52,
+              "end": 54,
+              "probability": 0.8803,
+              "type": "Organization",
+              "normalized_text": "ABC"
+            },
+            {
+              "start": 60,
+              "end": 62,
+              "probability": 0.9277,
+              "type": "Organization",
+              "normalized_text": "BBC"
+            },
+            {
+              "start": 69,
+              "end": 79,
+              "probability": 0.6951,
+              "type": "Place",
+              "normalized_text": "Bondi Beach"
+            },
+            {
+              "start": 95,
+              "end": 105,
+              "probability": 0.5961,
+              "type": "Person",
+              "normalized_text": "Sajid Akram"
+            },
+            {
+              "start": 122,
+              "end": 133,
+              "probability": 0.5035,
+              "type": "Person",
+              "normalized_text": "Naveed Akram"
+            },
+            {
+              "start": 186,
+              "end": 202,
+              "probability": 0.4999,
+              "type": "Other",
+              "normalized_text": "Khaled al-Nablusi"
+            },
+            {
+              "start": 210,
+              "end": 218,
+              "probability": 0.9294,
+              "type": "Place",
+              "normalized_text": "Palestine"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "nutmilk530",
+              "id": "1668874952911769601"
+            },
+            {
+              "start": 12,
+              "end": 20,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ]
+        },
+        "id": "2000425697664250258",
+        "edit_history_tweet_ids": [
+          "2000425697664250258"
+        ],
+        "author_id": "1720665183188922368",
+        "created_at": "2025-12-15T04:40:27.000Z",
+        "text": "@nutmilk530 @ImMeme0 Based on verified reports from ABC and BBC, the Bondi Beach attackers are Sajid Akram (deceased) and Naveed Akram (arrested), both of Pakistani origin. Claims of a \"Khaled al-Nablusi\" from Palestine appear false and unverified by major sources.",
+        "in_reply_to_user_id": "1668874952911769601",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000425269577019495"
+          }
+        ]
+      },
+      {
+        "id": "2000425679871971664",
+        "edit_history_tweet_ids": [
+          "2000425679871971664"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ]
+        },
+        "author_id": "1447723323836624897",
+        "created_at": "2025-12-15T04:40:22.000Z",
+        "text": "@ImMeme0 Are people this retarded to believe everything on media and not bother to research",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ]
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 34,
+              "end": 36,
+              "probability": 0.5382,
+              "type": "Other",
+              "normalized_text": "IDF"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ],
+          "urls": [
+            {
+              "start": 38,
+              "end": 61,
+              "url": "https://t.co/Lr1ro5lEVJ",
+              "expanded_url": "https://x.com/NicoIconyxn/status/2000425316783632463/photo/1",
+              "display_url": "pic.x.com/Lr1ro5lEVJ",
+              "media_key": "3_2000425312841007107"
+            },
+            {
+              "start": 38,
+              "end": 61,
+              "url": "https://t.co/Lr1ro5lEVJ",
+              "expanded_url": "https://x.com/NicoIconyxn/status/2000425316783632463/photo/1",
+              "display_url": "pic.x.com/Lr1ro5lEVJ",
+              "media_key": "3_2000425312815890433"
+            },
+            {
+              "start": 38,
+              "end": 61,
+              "url": "https://t.co/Lr1ro5lEVJ",
+              "expanded_url": "https://x.com/NicoIconyxn/status/2000425316783632463/photo/1",
+              "display_url": "pic.x.com/Lr1ro5lEVJ",
+              "media_key": "3_2000425312815874051"
+            },
+            {
+              "start": 38,
+              "end": 61,
+              "url": "https://t.co/Lr1ro5lEVJ",
+              "expanded_url": "https://x.com/NicoIconyxn/status/2000425316783632463/photo/1",
+              "display_url": "pic.x.com/Lr1ro5lEVJ",
+              "media_key": "3_2000425312811720706"
+            }
+          ]
+        },
+        "id": "2000425316783632463",
+        "edit_history_tweet_ids": [
+          "2000425316783632463"
+        ],
+        "author_id": "37969894",
+        "created_at": "2025-12-15T04:38:56.000Z",
+        "text": "@ImMeme0 And the first was in the IDF https://t.co/Lr1ro5lEVJ",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_2000425312841007107",
+            "3_2000425312815890433",
+            "3_2000425312815874051",
+            "3_2000425312811720706"
+          ]
+        }
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 34,
+              "end": 43,
+              "probability": 0.5968,
+              "type": "Other",
+              "normalized_text": "palenstain"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            },
+            {
+              "start": 9,
+              "end": 14,
+              "username": "grok",
+              "id": "1720665183188922368"
+            }
+          ]
+        },
+        "id": "2000425269577019495",
+        "edit_history_tweet_ids": [
+          "2000425269577019495"
+        ],
+        "author_id": "1668874952911769601",
+        "created_at": "2025-12-15T04:38:45.000Z",
+        "text": "@ImMeme0 @grok are these two from palenstain ?",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ]
+      },
+      {
+        "entities": {
+          "annotations": [
+            {
+              "start": 25,
+              "end": 44,
+              "probability": 0.701,
+              "type": "Other",
+              "normalized_text": "Australian History X"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            },
+            {
+              "start": 9,
+              "end": 24,
+              "username": "Stephanie10428",
+              "id": "1385113992"
+            }
+          ]
+        },
+        "id": "2000425215638052984",
+        "edit_history_tweet_ids": [
+          "2000425215638052984"
+        ],
+        "author_id": "1852659506632695808",
+        "created_at": "2025-12-15T04:38:32.000Z",
+        "text": "@ImMeme0 @Stephanie10428 Australian History X, curb stomp\u2757\ufe0f\ud83d\udc48\ud83c\udffb\ud83e\udd20",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ]
+      },
+      {
+        "id": "2000425064760795546",
+        "edit_history_tweet_ids": [
+          "2000425064760795546"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ],
+          "urls": [
+            {
+              "start": 9,
+              "end": 32,
+              "url": "https://t.co/k6vDnFU2wM",
+              "expanded_url": "https://x.com/lapuranetamex/status/2000425064760795546/photo/1",
+              "display_url": "pic.x.com/k6vDnFU2wM",
+              "media_key": "16_2000425057995177990"
+            }
+          ]
+        },
+        "author_id": "783817262721413120",
+        "created_at": "2025-12-15T04:37:56.000Z",
+        "text": "@ImMeme0 https://t.co/k6vDnFU2wM",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "16_2000425057995177990"
+          ]
+        }
+      },
+      {
+        "id": "2000425060616798438",
+        "edit_history_tweet_ids": [
+          "2000425060616798438"
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "ImMeme0",
+              "id": "1511074777708085258"
+            }
+          ],
+          "urls": [
+            {
+              "start": 9,
+              "end": 32,
+              "url": "https://t.co/DsbjvVqhjS",
+              "expanded_url": "https://x.com/Crazyflix94/status/2000425060616798438/photo/1",
+              "display_url": "pic.x.com/DsbjvVqhjS",
+              "media_key": "3_2000425050206609408"
+            }
+          ]
+        },
+        "author_id": "1388706052514877445",
+        "created_at": "2025-12-15T04:37:55.000Z",
+        "text": "@ImMeme0 https://t.co/DsbjvVqhjS",
+        "in_reply_to_user_id": "1511074777708085258",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000274779400442198"
+          }
+        ],
+        "attachments": {
+          "media_keys": [
+            "3_2000425050206609408"
+          ]
+        }
       }
     ],
     "bot_replies": []
@@ -7248,6 +8970,375 @@
     ],
     "bot_replies": []
   },
+  "2000207717739188338": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2000207717739188338",
+          "text": "\ud83d\udea8BREAKING: Hollywood legend Kurt Russell just said that Illegal immigrants should be forcibly deported from America.\n\nDo you agree with Kurt Russell? https://t.co/CfcaveH67v",
+          "author_id": "1787277413237571584",
+          "created_at": "2025-12-14T14:14:16.000Z",
+          "conversation_id": "2000207717739188338",
+          "referenced_tweets": [],
+          "attachments": {
+            "media_keys": [
+              "3_2000207710856323076"
+            ]
+          },
+          "entities": {
+            "urls": [
+              {
+                "start": 150,
+                "end": 173,
+                "url": "https://t.co/CfcaveH67v",
+                "expanded_url": "https://x.com/RedLineReportt/status/2000207717739188338/photo/1",
+                "display_url": "pic.x.com/CfcaveH67v",
+                "media_key": "3_2000207710856323076"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 11,
+                "end": 19,
+                "probability": 0.58,
+                "type": "Other",
+                "normalized_text": "Hollywood"
+              },
+              {
+                "start": 28,
+                "end": 39,
+                "probability": 0.9761,
+                "type": "Person",
+                "normalized_text": "Kurt Russell"
+              },
+              {
+                "start": 108,
+                "end": 114,
+                "probability": 0.8944,
+                "type": "Place",
+                "normalized_text": "America"
+              },
+              {
+                "start": 136,
+                "end": 147,
+                "probability": 0.9714,
+                "type": "Person",
+                "normalized_text": "Kurt Russell"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8IqUMKWoAQ7sv_.jpg",
+            "alt_text": "",
+            "media_key": "3_2000207710856323076"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "author_id": "1614092920704860166",
+        "text": "@RedLineReportt Yes",
+        "created_at": "2025-12-15T04:49:54.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000428075755143510"
+        ],
+        "id": "2000428075755143510",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "1967310691368644608",
+        "text": "@RedLineReportt https://t.co/IbdYbi26Zl",
+        "created_at": "2025-12-15T04:48:55.000Z",
+        "attachments": {
+          "media_keys": [
+            "16_2000427823161380868"
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "entities": {
+          "urls": [
+            {
+              "start": 16,
+              "end": 39,
+              "url": "https://t.co/IbdYbi26Zl",
+              "expanded_url": "https://x.com/Mapanchitoo/status/2000427829670957206/photo/1",
+              "display_url": "pic.x.com/IbdYbi26Zl",
+              "media_key": "16_2000427823161380868"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000427829670957206"
+        ],
+        "id": "2000427829670957206",
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "1833511727000129543",
+        "text": "@RedLineReportt I mean if they are illegal what's to debate?",
+        "created_at": "2025-12-15T04:48:48.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427802613756125"
+        ],
+        "id": "2000427802613756125",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "1722405518088765440",
+        "text": "@RedLineReportt Amen",
+        "created_at": "2025-12-15T04:48:42.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427774046359995"
+        ],
+        "id": "2000427774046359995",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "474217368",
+        "text": "@RedLineReportt @MikeLewis_MD Yes",
+        "created_at": "2025-12-15T04:48:37.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427752839860458"
+        ],
+        "id": "2000427752839860458",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            },
+            {
+              "start": 16,
+              "end": 29,
+              "username": "MikeLewis_MD",
+              "id": "3325458521"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "1967068287105118208",
+        "text": "@RedLineReportt Yes",
+        "created_at": "2025-12-15T04:48:24.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427701396484518"
+        ],
+        "id": "2000427701396484518",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "907386564065538048",
+        "text": "@RedLineReportt No he didn\u2019t https://t.co/nEsELcATOF",
+        "created_at": "2025-12-15T04:47:43.000Z",
+        "attachments": {
+          "media_keys": [
+            "3_2000427525172776962"
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "entities": {
+          "urls": [
+            {
+              "start": 29,
+              "end": 52,
+              "url": "https://t.co/nEsELcATOF",
+              "expanded_url": "https://x.com/Samble16/status/2000427528356274385/photo/1",
+              "display_url": "pic.x.com/nEsELcATOF",
+              "media_key": "3_2000427525172776962"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2000427528356274385"
+        ],
+        "id": "2000427528356274385",
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "890703273971376128",
+        "text": "@RedLineReportt I'm agree with him \ud83d\udc4f",
+        "created_at": "2025-12-15T04:47:09.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427383409553844"
+        ],
+        "id": "2000427383409553844",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "1856882303320178688",
+        "text": "@RedLineReportt Yes !!!! Love him.",
+        "created_at": "2025-12-15T04:46:36.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427246256075182"
+        ],
+        "id": "2000427246256075182",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      },
+      {
+        "author_id": "896859059508215808",
+        "text": "@RedLineReportt Nope.",
+        "created_at": "2025-12-15T04:46:29.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2000207717739188338"
+          }
+        ],
+        "edit_history_tweet_ids": [
+          "2000427219638714392"
+        ],
+        "id": "2000427219638714392",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "RedLineReportt",
+              "id": "1787277413237571584"
+            }
+          ]
+        },
+        "in_reply_to_user_id": "1787277413237571584"
+      }
+    ],
+    "bot_replies": []
+  },
   "2000175629472313759": {
     "chain": [
       {
@@ -10446,6 +12537,58 @@
           "author_id": "1948872778989666305",
           "in_reply_to_user_id": "2569714638",
           "text": "All three models agree on the core historical framework: December 25 emerged from early Christian theological calculation rather than direct eyewitness record. The consensus traces to third-century sources like Hippolytus, who calculated conception on March 25 (spring equinox, symbolically tied to creation) plus nine months. This predates the 274 AD establishment of Sol Invictus, undercutting simple pagan-appropriation narratives, though later Roman practice may have reinforced the date.\n\nJesus himself used the Jewish lunisolar calendar for religious life and the Julian civil calendar. Scholars place his actual birth around 6-4 BC, not 1 AD\u2014a miscalculation by sixth-century monk Dionysius Exiguus. Eastern churches preserved alternate dates like January 6 (Epiphany) or Julian-offset celebrations.\n\nGrok notes Judean December weather permits outdoor shepherding, addressing the skeptic's objection. GPT and Claude emphasize the incomplete evidence and theological motivations behind the date. Jeremy's claim holds merit: December 25 has early attestation and isn't arbitrary, though it remains a calculated tradition, not historical fact.\n\nGenerated by: grok-4-1-fast-reasoning,  claude-haiku-4-5,  gpt-5-mini, \nCombined by: claude-sonnet-4-5\nConSenseAI v1.6"
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "2000424687554441429"
+            }
+          ],
+          "edit_history_tweet_ids": [
+            "2000428375895126070"
+          ],
+          "text": "@ConSenseAI @JeremyTate41 @ConSenseAI was it at all related to existing events such as solstice celebrations?",
+          "author_id": "2569714638",
+          "in_reply_to_user_id": "1948872778989666305",
+          "conversation_id": "2000063027194830929",
+          "id": "2000428375895126070",
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 11,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              },
+              {
+                "start": 12,
+                "end": 25,
+                "username": "JeremyTate41",
+                "id": "713733336112500737"
+              },
+              {
+                "start": 26,
+                "end": 37,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "id": "2000429657200763320",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": "2569714638",
+          "text": "Probably indirectly, not as a simple \u201cpagan co\u2011opt.\u201d Early Christians had an internal calculation: conception on March 25, plus 9 months = Dec 25 (attested by writers like Hippolytus, early 200s), which predates Aurelian\u2019s Sol Invictus (274). But the midwinter/solstice season (and Saturnalia nearby) likely helped Dec 25 stick culturally. Grok is more categorical \u201cno\u201d; GPT/Claude say \u201cyes, later reinforcement.\u201d\n\nGenerated by: claude-haiku-4-5,  grok-4-1-fast-reasoning,  gpt-5-mini, \nCombined by: gpt-5.2\nConSenseAI v1.6"
         },
         "quoted_tweets": [],
         "media": []
@@ -82717,296 +84860,6 @@
           "author_id": "1865485287536959488",
           "conversation_id": "1997739972389134546",
           "id": "1997739972389134546"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739964109644225": {
-    "chain": [
-      {
-        "tweet": {
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ],
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ]
-          },
-          "edit_history_tweet_ids": [
-            "1997739964109644225"
-          ],
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "author_id": "1395201124861243395",
-          "conversation_id": "1997739964109644225",
-          "id": "1997739964109644225"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739674383843348": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739674383843348",
-          "author_id": "1814169257154150400",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739674383843348"
-          ],
-          "conversation_id": "1997739674383843348"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739672538358265": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739672538358265",
-          "author_id": "1279847067150700544",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739672538358265"
-          ],
-          "conversation_id": "1997739672538358265"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739661629051148": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739661629051148",
-          "author_id": "1577038886160809985",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739661629051148"
-          ],
-          "conversation_id": "1997739661629051148"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [],
-    "bot_replies": []
-  },
-  "1997739657526956283": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "1997739657526956283",
-          "author_id": "1484658573875597315",
-          "text": "RT @WallStreetApes: The European Union needs to be abolished\n\nThe European Parliament passed a new EU's \u2018Asylum and Migration Pact' forcing\u2026",
-          "entities": {
-            "mentions": [
-              {
-                "start": 3,
-                "end": 18,
-                "username": "WallStreetApes",
-                "id": "1099579684981944320"
-              }
-            ],
-            "annotations": [
-              {
-                "start": 24,
-                "end": 37,
-                "probability": 0.5312,
-                "type": "Place",
-                "normalized_text": "European Union"
-              },
-              {
-                "start": 66,
-                "end": 84,
-                "probability": 0.8308,
-                "type": "Organization",
-                "normalized_text": "European Parliament"
-              },
-              {
-                "start": 99,
-                "end": 100,
-                "probability": 0.9051,
-                "type": "Place",
-                "normalized_text": "EU"
-              }
-            ]
-          },
-          "referenced_tweets": [
-            {
-              "type": "retweeted",
-              "id": "1997473195704860980"
-            }
-          ],
-          "edit_history_tweet_ids": [
-            "1997739657526956283"
-          ],
-          "conversation_id": "1997739657526956283"
         },
         "quoted_tweets": [],
         "media": []

@@ -4090,7 +4090,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 - Remain anonomous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - search for information on drafting successful community notes if needed \n\
                 - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE'\n\
-                - If a note is needed, provide only the text of the note - no labels or titles.\n"  
+                - If a note is needed, provide only the text of the note - no labels or titles.\n\
+                - Only provide a note for the tweet in question. Do not fact check the thread"  
             
             post_text = post.text
             
