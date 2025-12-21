@@ -4185,12 +4185,12 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             context['mention'] = post
             context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
-                - CRITICAL: Your note must be 280 characters or less (URLs count as a single character). Be extremely concise.\n\
+                - CRITICAL: Your note must be 280 characters or less (URLs count as a single character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Provide working url links to credible sources for fact checking \n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - Search for information on drafting successful community notes if needed \n\
                 - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE'\n\
-                - If a note is needed, provide *only* the text of the note - no labels or titles or pronouncements that you can produce one based on the search results.\n\
+                - If a note is needed, provide *only* the text of the note - no labels or titles or pronouncements that you can produce one based on the search results. THIS MEANS YOU CLAUDE!\n\
                 - Only provide a note for the tweet in question. Do not fact check the thread"  
             
             post_text = post.text
