@@ -1855,7 +1855,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
         #higher tier (index 3-5)
         {"name": "grok-4", "client": xai_client, "api": "xai"},
         {"name": "gpt-5.2", "client": openai_client, "api": "openai"},
-        {"name": "claude-Opus-4-5", "client": anthropic_client, "api": "anthropic"}
+        {"name": "claude-opus-4-5", "client": anthropic_client, "api": "anthropic"}
     ]
     
     # Use SystemRandom for cryptographically strong randomness
