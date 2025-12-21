@@ -2961,18 +2961,31 @@ def tweet_to_dict(t):
 def collect_quoted(refs, includes=None):
     quoted_responses = []  # Store full responses for media extraction
     for ref_tweet in refs or []:
-        if ref_tweet.type == "quoted":
+        # Handle both dict and object formats
+        ref_type = None
+        ref_id = None
+        
+        if isinstance(ref_tweet, dict):
+            ref_type = ref_tweet.get('type')
+            ref_id = ref_tweet.get('id')
+        elif hasattr(ref_tweet, 'type'):
+            ref_type = ref_tweet.type
+            ref_id = ref_tweet.id
+        else:
+            continue
+        
+        if ref_type == "quoted":
             try:
                 quoted_response = read_client.get_tweet(
-                    id=ref_tweet.id,
+                    id=ref_id,
                     tweet_fields=["text", "author_id", "created_at", "attachments", "entities"],
                     expansions=["attachments.media_keys"],
                     media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                 )
-                print(f"[DEBUG] Quoted tweet {ref_tweet.id} text length: {len(quoted_response.data.text)} chars")
+                print(f"[DEBUG] Quoted tweet {ref_id} text length: {len(quoted_response.data.text)} chars")
                 quoted_responses.append(quoted_response)
             except tweepy.TweepyException as e:
-                print(f"Error fetching quoted tweet {ref_tweet.id}: {e}")
+                print(f"Error fetching quoted tweet {ref_id}: {e}")
     return quoted_responses
 
 def get_tweet_context(tweet, includes=None, bot_username=None):
@@ -3385,8 +3398,12 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             parent_id = None
             if hasattr(current_tweet, 'referenced_tweets') and current_tweet.referenced_tweets:
                 for ref in current_tweet.referenced_tweets:
-                    if ref.type == 'replied_to':
-                        parent_id = ref.id
+                    # Handle both dict and object formats
+                    ref_type = ref.get('type') if isinstance(ref, dict) else (ref.type if hasattr(ref, 'type') else None)
+                    ref_id = ref.get('id') if isinstance(ref, dict) else (ref.id if hasattr(ref, 'id') else None)
+                    
+                    if ref_type == 'replied_to':
+                        parent_id = ref_id
                         break
             if parent_id is None or parent_id in visited:
                 break
@@ -4223,8 +4240,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 print(f"  Payload: {json.dumps(note_payload, indent=2)}")
                 log_to_file("SUBMISSION: DRY RUN (would submit)")
                 log_to_file(f"PAYLOAD: {json.dumps(note_payload, indent=2)}")
-                log_to_file("SUBMISSION: DRY RUN (would submit)")
-                log_to_file(f"PAYLOAD: {json.dumps(note_payload, indent=2)}")
             else:
                 try:
                     # Submit the note using Twitter API v2 with OAuth 1.0a (CN project keys)
@@ -4264,13 +4279,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     log_to_file(traceback.format_exc())
                     continue
             
-            # Record that we've written a note for this post
-            written_notes[post_id] = {
-                "note": note_text,
-                "test_mode": test_mode,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-            notes_written += 1
+            # Only record notes that were actually submitted (not dry run)
+            if not args.dryrun:
+                written_notes[post_id] = {
+                    "note": note_text,
+                    "test_mode": test_mode,
+                    "timestamp": datetime.datetime.now().isoformat()
+                }
+                notes_written += 1
             
         except Exception as e:
             print(f"[Community Notes] Error processing post {post_id}: {e}")

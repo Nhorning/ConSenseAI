@@ -27,11 +27,14 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 - `followed_rotation_{username}.json` — Rotation state for followed users checking
 - `sent_reply_hashes_{username}.json` — Reply deduplication hashes
 - `approval_queue_{username}.json` — Human approval queue (when enabled)
+- `cn_last_check_{username}.txt` — Last Community Notes check timestamp
+- `cn_written_{username}.json` — Record of Community Notes written (for deduplication)
+- `cn_notes_log_{username}.txt` — Detailed log of all Community Notes processing (flagged posts, generated notes, submission results)
 - `output.log` — Rotating log file (rotates at LOG_MAX_SIZE_MB=10MB, keeps LOG_MAX_ROTATIONS=5 files)
 
 ## Key Features
 
-### Triple Processing Paths
+### Quadruple Processing Paths
 1. **Mention-based** (`fetch_and_process_mentions()`): Monitors @mentions of the bot
 2. **Search-based** (`fetch_and_process_search()`): Proactively searches for keywords (e.g., "fascism")
    - Dynamic daily caps that increase hourly (`get_current_search_cap()`)
@@ -44,6 +47,13 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
    - **State tracking**: `followed_rotation_{username}.json` tracks position in followers list
    - **Cap tracking**: `followed_reply_count_{username}.json` tracks daily reply counts
    - Introduced in commit 62250d7
+4. **Community Notes** (`fetch_and_process_community_notes()`): Fetches posts flagged by Twitter as needing Community Notes
+   - **OAuth 1.0a Authentication**: Uses separate CN project keys or falls back to main keys
+   - **Test Mode**: Submits notes with `test_mode=True` flag for testing before going live
+   - **Integration**: Uses existing fact_check() pipeline for note generation
+   - **Deduplication**: Tracks written notes in `cn_written_{username}.json`
+   - **Comprehensive Logging**: All processing details logged to `cn_notes_log_{username}.txt`
+   - **Configurable**: `--check_community_notes`, `--cn_max_results`, `--cn_test_mode` flags
 
 ### Context Building (`get_tweet_context()`)
 - **Caching strategy**: Prioritizes `ancestor_chains.json` cache before API calls
@@ -133,6 +143,9 @@ python ConSenseAI_v1.4.py \
 - `--followed_users_daily_cap`: Max replies to followed users per day (default: 10)
 - `--followed_users_per_cycle`: Number of followed users to check per cycle (rotation) (default: 3)
 - `--followed_users_max_tweets`: Max tweets to fetch per followed user (default: 5)
+- `--check_community_notes`: Enable Community Notes eligible posts checking (default: False)
+- `--cn_max_results`: Max Community Notes posts to fetch per cycle (default: 5)
+- `--cn_test_mode`: Submit notes in test mode (visible only to you) (default: True)
 
 ## Architecture & Flow
 
@@ -502,6 +515,80 @@ quoted_response = read_client.get_tweet(
 ### 3. Prompt Improvements
 - Fixed typos in combine_msg: "muiltiple" → "multiple", "consise" → "concise"
 - Added instruction to reduce repetition: "Do not repeat descriptions of the same images, links, or content multiple times—describe each once and move on."
+
+### 4. Community Notes Dict/Object Handling Bugs (Dec 21, 2025)
+**Problem**: Community Notes API returns data as dicts, not Tweepy objects, causing `AttributeError: 'dict' object has no attribute 'type'` crashes.
+
+**Root Cause**: Three functions assumed `referenced_tweets` entries were Tweepy objects with `.type` and `.id` attributes, but Community Notes API returns plain dicts.
+
+**Locations Found**:
+1. `collect_quoted()` (~line 2964): `if ref_tweet.type == "quoted"`
+2. `get_tweet_context()` (~line 3401): `if ref.type == 'replied_to'`
+3. `get_tweet_context()` (~line 3187): Already had proper handling with `get_attr()`
+
+**Fix Applied**: Added dict/object handling pattern:
+```python
+# Safe pattern for referenced_tweets iteration:
+for ref in refs:
+    ref_type = ref.get('type') if isinstance(ref, dict) else (ref.type if hasattr(ref, 'type') else None)
+    ref_id = ref.get('id') if isinstance(ref, dict) else (ref.id if hasattr(ref, 'id') else None)
+    
+    if ref_type == 'replied_to':
+        parent_id = ref_id
+```
+
+**Also Fixed**: Duplicate logging in Community Notes dry run mode (lines 4241-4244 had duplicate `log_to_file()` calls).
+
+**Status**: All Community Notes dict/object handling now robust. Bot can process CN eligible posts without crashes.
+
+**Critical Reminder**: ALWAYS check if objects from APIs are dicts or objects before accessing attributes. Use the safe pattern above or the `get_attr()` helper function.
+
+### 5. Network Resilience and Retry Logic (Dec 21, 2025)
+**Problem**: Bot crashed when internet went down during authentication with `socket.gaierror: [Errno -2] Name or service not known - Failed to resolve 'api.twitter.com'`.
+
+**Root Cause**: No retry logic for network failures. Any DNS or connection issue during authentication or API calls caused immediate crash.
+
+**Fix Applied**: Added `retry_with_backoff()` function and comprehensive network error handling:
+
+1. **New retry function** (`retry_with_backoff()`):
+   - Retries network operations with exponential backoff (5s → 10s → 20s → 40s → 80s... up to 300s max)
+   - Handles: `socket.gaierror`, `NameResolutionError`, `MaxRetryError`, `ConnectionError`, `OSError`
+   - Non-network errors raise immediately (no pointless retries)
+   - Default: 5 retries, configurable max_retries and delays
+
+2. **Authentication protection**:
+   - `post_client.get_me()` wrapped with retry_with_backoff()
+   - Main loop `authenticate()` called with `retry_with_backoff(authenticate, max_retries=10, initial_delay=10)`
+   - Can survive ~85 minute outage during auth before giving up
+   - On total auth failure: 60 second wait before full restart
+
+3. **Main loop error handling improvements**:
+   - Network errors (`socket.gaierror`, `ConnectionError`, `OSError`) separated from other exceptions
+   - Network errors trigger 60 second restart delay (allow time for network recovery)
+   - Other errors keep 10 second restart delay
+   - Clear logging shows retry progress and error types
+
+**Retry Timeline Example**:
+```
+Attempt 1: Immediate
+Attempt 2: +10s (total: 10s)
+Attempt 3: +20s (total: 30s)
+Attempt 4: +40s (total: 70s)
+Attempt 5: +80s (total: 150s)
+...continues up to 10 attempts for auth
+```
+
+**Status**: Bot now survives temporary internet outages and automatically recovers when network comes back online.
+
+### 6. Combining Model Retry Logic (Dec 21, 2025)
+**Problem**: If the combining model (final pass) threw an error, the bot would tweet out the error message instead of retrying with a different model.
+
+**Fix Applied**: Added retry logic in `fact_check()`:
+- If combining model fails (verdict starts with "Error:"), automatically retry with different higher-tier model
+- Clear attribution shows retry: `Combined by: gpt-5.2 (failed), retried with claude-sonnet-4-5`
+- If retry also fails, uses original error response (graceful fallback)
+
+**Status**: Bot no longer tweets error messages from model failures; automatically tries alternative models.
 
 ## What NOT to Assume
 - `README.md` contains historical notes and older filenames; do not treat it as authoritative for current runtime behavior
