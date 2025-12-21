@@ -3960,7 +3960,7 @@ import argparse
 parser = argparse.ArgumentParser(description='AutoGrok AI Twitter fact-checking bot')
 parser.add_argument('--username', type=str, help='X username of the bot', default='ConSenseAI')
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
-parser.add_argument('--dryrun', type=bool, help='Print responses but don\'t tweet them', default=False)
+parser.add_argument('--dryrun', type=lambda x: x.lower() in ['true', '1', 'yes'], help='Print responses but don\'t tweet them', default=False)
 #parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
 parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
