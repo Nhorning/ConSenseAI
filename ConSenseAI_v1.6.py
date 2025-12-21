@@ -87,6 +87,7 @@ import sys
 import re
 import webbrowser as web_open
 import ast
+import socket
 
 
 def parse_bot_reply_entry(br):
@@ -2539,6 +2540,51 @@ def append_reply_to_ancestor_chain(conversation_id, reply_id, reply_text, bot_us
         print(f"[Ancestor Cache] Error writing {ANCESTOR_CHAIN_FILE}: {e}")
 
 
+def retry_with_backoff(func, max_retries=5, initial_delay=5, max_delay=300, *args, **kwargs):
+    """
+    Retry a function with exponential backoff for network failures.
+    
+    Args:
+        func: Function to retry
+        max_retries: Maximum number of retry attempts
+        initial_delay: Initial delay in seconds (doubles each retry)
+        max_delay: Maximum delay between retries in seconds
+        *args, **kwargs: Arguments to pass to func
+    
+    Returns:
+        Result of func if successful
+    
+    Raises:
+        Last exception if all retries fail
+    """
+    import socket
+    from urllib3.exceptions import NameResolutionError, MaxRetryError
+    from requests.exceptions import ConnectionError as RequestsConnectionError
+    
+    delay = initial_delay
+    last_exception = None
+    
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except (socket.gaierror, NameResolutionError, MaxRetryError, RequestsConnectionError, ConnectionError, OSError) as e:
+            last_exception = e
+            if attempt < max_retries - 1:
+                print(f"[Retry] Network error on attempt {attempt + 1}/{max_retries}: {e}")
+                print(f"[Retry] Waiting {delay} seconds before retry...")
+                time.sleep(delay)
+                delay = min(delay * 2, max_delay)  # Exponential backoff with cap
+            else:
+                print(f"[Retry] All {max_retries} attempts failed")
+                raise
+        except Exception as e:
+            # For non-network errors, raise immediately
+            print(f"[Retry] Non-network error (not retrying): {e}")
+            raise
+    
+    if last_exception:
+        raise last_exception
+
 def authenticate():
     global read_client
     global post_client
@@ -2564,7 +2610,8 @@ def authenticate():
                 access_token_secret=keys['access_token_secret'],
                 wait_on_rate_limit=False
             )
-            user = post_client.get_me()
+            # Use retry wrapper for network call
+            user = retry_with_backoff(post_client.get_me)
             print(f"Post client authenticated as @{user.data.username} (free tier).")
             # Cache the authenticated bot user id to avoid future get_user calls
             BOT_USER_ID = user.data.id
@@ -4282,7 +4329,15 @@ def main():
             print(f"[Main] Using static search term: {current_search_term}")
     
     while True:
-        authenticate()
+        try:
+            # Authenticate with retry logic for network resilience
+            retry_with_backoff(authenticate, max_retries=10, initial_delay=10)
+        except Exception as e:
+            print(f"[Main] Authentication failed after all retries: {e}")
+            print(f"[Main] Waiting {RESTART_DELAY * 6} seconds before restart...")
+            time.sleep(RESTART_DELAY * 6)  # Longer wait for network issues
+            continue
+        
         user_id = BOT_USER_ID
         
         # Fallback: If BOT_USER_ID is still None after authentication, use hardcoded value
@@ -4400,7 +4455,14 @@ def main():
 
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
-        except (ConnectionError, tweepy.TweepyException, Exception) as e:
+        except (socket.gaierror, ConnectionError, OSError) as e:
+            # Network-related errors - use longer backoff
+            print(f"Network error detected: {e}")
+            print(f"This may be due to internet outage or DNS failure")
+            print(f"Restarting script in {RESTART_DELAY * 6} seconds (60 sec) to allow network recovery...")
+            time.sleep(RESTART_DELAY * 6)
+            continue
+        except (tweepy.TweepyException, Exception) as e:
             print(f"Critical error triggering restart: {e}")
             print(f"Restarting script in {RESTART_DELAY} seconds...")
             time.sleep(RESTART_DELAY)
