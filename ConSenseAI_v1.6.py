@@ -885,7 +885,7 @@ def fetch_and_process_followed_users():
                 context['context_instructions'] = (
                     "\nPrompt: You are ConSenseAI, appropriately respond to this tweet from someone you follow."
                     "IMPORTANT:Do NOT impersonate other users or answer on their behalf."
-                    "Stay Primarily in the role of an AI fact checker providing evidence-based analysis."
+                    "Stay primarily in the role of an AI fact checker providing evidence-based analysis."
                 )
                 
                 # Don't reply to our own tweets
@@ -3962,25 +3962,25 @@ parser.add_argument('--username', type=str, help='X username of the bot', defaul
 parser.add_argument('--delay', type=float, help='Delay between checks in minutes (e.g., 2)')
 parser.add_argument('--dryrun', type=lambda x: x.lower() in ['true', '1', 'yes'], help='Print responses but don\'t tweet them', default=False)
 #parser.add_argument('--accuracy', type=int, help="Accuracy score threshold out of 10. Don't reply to tweets scored above this threshold")
-parser.add_argument('--fetchthread', type=bool, help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
+parser.add_argument('--fetchthread', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, Try to fetch the rest of the thread for additional context. Warning: API request hungry', default=True)
 parser.add_argument('--reply_threshold', type=int, help='Number of times the bot can reply in a thread before skipping further replies (default 5)', default=5)
-parser.add_argument('--per_user_threshold', type=bool, help='If True, enforce reply_threshold per unique user per thread; if False, enforce per-thread total (default True)', default=True)
+parser.add_argument('--per_user_threshold', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, enforce reply_threshold per unique user per thread; if False, enforce per-thread total (default True)', default=True)
 parser.add_argument('--search_term', type=str, help='If provided, periodically search this term and run the pipeline on matching tweets. Use "auto" to automatically generate relevant search terms after each reflection cycle.', default=None)
 parser.add_argument('--search_max_results', type=int, help='Max results to fetch per search (default 10)', default=10)
 parser.add_argument('--search_daily_cap', type=int, help='Max automated replies per day from searches increases every "--search_cap_interval_hours" hours(default 5)', default=5)
 parser.add_argument('--dedupe_window_hours', type=float, help='Window to consider duplicates (hours, default 24)', default=24.0)
-parser.add_argument('--enable_human_approval', type=bool, help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
+parser.add_argument('--enable_human_approval', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, queue candidate replies for human approval instead of auto-posting', default=False)
 parser.add_argument('--search_cap_interval_hours', type=int, help='Number of hours between each increase in search reply cap (default 1)', default=2)
 parser.add_argument('--cap_increase_time', type=str, help='Earliest time of day (HH:MM, 24h) to allow cap increases (default 10:00)', default='10:00')
 parser.add_argument('--post_interval', type=int, help='Number of bot replies between posting a reflection based on recent threads (default 10)', default=10)
 parser.add_argument('--follow_threshold', type=int, help='Minimum number of replies from a user before auto-following them (default 2)', default=2)
-parser.add_argument('--check_followed_users', type=bool, help='If True, periodically check and reply to tweets from followed users (default False)', default=False)
+parser.add_argument('--check_followed_users', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, periodically check and reply to tweets from followed users (default False)', default=False)
 parser.add_argument('--followed_users_max_tweets', type=int, help='Max tweets to check per followed user per cycle (default 5)', default=5)
 parser.add_argument('--followed_users_daily_cap', type=int, help='Max automated replies per day from followed users (default 10)', default=10)
 parser.add_argument('--followed_users_per_cycle', type=int, help='Max followed users to check per cycle for rotation (default 3)', default=3)
-parser.add_argument('--check_community_notes', type=bool, help='If True, periodically fetch and propose Community Notes (default False)', default=False)
+parser.add_argument('--check_community_notes', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, periodically fetch and propose Community Notes (default False)', default=False)
 parser.add_argument('--cn_max_results', type=int, help='Max Community Notes eligible posts to process per cycle (default 5)', default=5)
-parser.add_argument('--cn_test_mode', type=bool, help='If True, submit Community Notes in test mode (recommended for development, default True)', default=True)
+parser.add_argument('--cn_test_mode', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, submit Community Notes in test mode (recommended for development, default True)', default=True)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
@@ -4150,17 +4150,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     for post_data in posts:
         post_id = str(post_data.get('id'))
         
+        
         log_to_file("\n" + "-" * 80)
         log_to_file(f"POST ID: {post_id}")
-        log_to_file(f"POST TEXT: {post_data.get('text', '')}")
-        log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
-        log_to_file(f"CREATED AT: {post_data.get('created_at')}")
-        
         # Skip if we've already written a note for this post
         if post_id in written_notes:
             print(f"[Community Notes] Skipping {post_id} - already written note")
             log_to_file("STATUS: SKIPPED (already wrote note)")
             continue
+
+        log_to_file(f"POST TEXT: {post_data.get('text', '')}")
+        log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
+        log_to_file(f"CREATED AT: {post_data.get('created_at')}")
+    
         
         # Convert post dict to Tweepy-like object for compatibility with existing functions
         # Create a mock tweet object
@@ -4186,7 +4188,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             context['mention'] = post
             context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
                 - CRITICAL: Your note must be 280 characters or less (URLs count as a single character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
-                - Provide working url links to credible sources for fact checking \n\
+                - Provide full (include https etc.) working url links to credible sources for fact checking \n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - Search for information on drafting successful community notes if needed \n\
                 - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE'\n\
@@ -4208,7 +4210,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             log_to_file(f"NOTE GENERATED ({len(note_text)} chars):")
             log_to_file(note_text)
-            log_to_file("")
+            #log_to_file("")
             
             # Check if the response indicates no note is needed
             if any(phrase in note_text.upper() for phrase in ["NO NOTE NEEDED", "NOT MISLEADING", "NO COMMUNITY NOTE"]):
@@ -4237,7 +4239,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if clean_note_text != note_text:
                 log_to_file(f"CLEANED NOTE ({len(clean_note_text)} chars, removed attribution):")
                 log_to_file(clean_note_text)
-                log_to_file("")
+                #log_to_file("")
             
             # Prepare note submission using Twitter API v2
             # Community Notes API endpoint: POST /2/notes
