@@ -10310,6 +10310,547 @@
     ],
     "bot_replies": []
   },
+  "2003307459310682356": {
+    "chain": [
+      {
+        "tweet": {
+          "entities": {
+            "annotations": [
+              {
+                "start": 17,
+                "end": 19,
+                "probability": 0.4763,
+                "type": "Other",
+                "normalized_text": "TDS"
+              },
+              {
+                "start": 96,
+                "end": 106,
+                "probability": 0.5886,
+                "type": "Other",
+                "normalized_text": "BATTLESHIPS"
+              }
+            ],
+            "urls": [
+              {
+                "start": 262,
+                "end": 285,
+                "url": "https://t.co/G8Tn21CZz8",
+                "expanded_url": "https://twitter.com/adamkinzinger/status/2003226896637575257",
+                "display_url": "x.com/adamkinzinger/\u2026"
+              }
+            ]
+          },
+          "referenced_tweets": [
+            {
+              "type": "quoted",
+              "id": "2003226896637575257"
+            }
+          ],
+          "created_at": "2025-12-23T03:31:32.000Z",
+          "id": "2003307459310682356",
+          "author_id": "5900252",
+          "edit_history_tweet_ids": [
+            "2003307459310682356"
+          ],
+          "text": "I didn\u2019t believe TDS actually shrank a man\u2019s balls until I saw these libtard dudes pouting over BATTLESHIPS.\n\nHow low of a Testosterone level must you have to be anti-firepower at sea? Lower than a misgendered 12 year old on kale smoothies and puberty blockers? https://t.co/G8Tn21CZz8"
+        },
+        "quoted_tweets": [
+          {
+            "id": "2003226896637575257",
+            "attachments": {
+              "media_keys": [
+                "3_2003226887837884417"
+              ]
+            },
+            "edit_history_tweet_ids": [
+              "2003226896637575257"
+            ],
+            "text": "HahahahahhahahahahahhahahahahahhahahahahahhahahahahahhHahahahahahhahahahahahhaha OMG WHAT A DAMN PATHETIC TINY CLOWN BOY https://t.co/dhndlcabM7",
+            "created_at": "2025-12-22T22:11:24.000Z",
+            "author_id": "18004222",
+            "entities": {
+              "urls": [
+                {
+                  "start": 121,
+                  "end": 144,
+                  "url": "https://t.co/dhndlcabM7",
+                  "expanded_url": "https://x.com/AdamKinzinger/status/2003226896637575257/photo/1",
+                  "display_url": "pic.x.com/dhndlcabM7",
+                  "media_key": "3_2003226887837884417"
+                }
+              ]
+            }
+          }
+        ],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/G8zkPa4WoAE3A3z.jpg",
+            "alt_text": null,
+            "media_key": "3_2003226887837884417"
+          }
+        ],
+        "username": "johnkonrad"
+      },
+      {
+        "tweet": {
+          "conversation_id": "2003307459310682356",
+          "in_reply_to_user_id": "5900252",
+          "author_id": "2569714638",
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 11,
+                "username": "johnkonrad",
+                "id": "5900252"
+              },
+              {
+                "start": 12,
+                "end": 23,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              },
+              {
+                "start": 115,
+                "end": 126,
+                "username": "johnkonrad",
+                "id": "5900252"
+              }
+            ]
+          },
+          "edit_history_tweet_ids": [
+            "2003499470739374294"
+          ],
+          "id": "2003499470739374294",
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "2003307459310682356"
+            }
+          ],
+          "text": "@johnkonrad @ConSenseAI When and why did major powers stop building battleships? Is it due to smaller testicles as @johnkonrad asserts?"
+        },
+        "quoted_tweets": [],
+        "media": [],
+        "username": "MiteHakUrAccnt"
+      },
+      {
+        "tweet": {
+          "id": "2003499854551789903",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": "2569714638",
+          "text": "Major powers largely stopped building new big-gun battleships right after WWII. Carriers and land-based airpower proved they could strike hundreds of miles beyond gun range, and battleships were vulnerable to air attack and subs. Then guided missiles made \u201cfirepower at sea\u201d cheaper and deadlier on cruisers/destroyers/subs. Not testicles\u2014tech, cost, and doctrine. Grok adds treaties (Washington/London) as an early brake; I agree but WWII finished the case.\n\nGenerated by: grok-4-1-fast-reasoning,  claude-haiku-4-5,  gpt-5-mini, \nCombined by: gpt-5.2\nConSenseAI v1.6"
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "conversation_id": "2003307459310682356",
+          "in_reply_to_user_id": "1948872778989666305",
+          "author_id": "2569714638",
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 11,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              },
+              {
+                "start": 12,
+                "end": 23,
+                "username": "johnkonrad",
+                "id": "5900252"
+              },
+              {
+                "start": 24,
+                "end": 35,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              },
+              {
+                "start": 109,
+                "end": 120,
+                "username": "johnkonrad",
+                "id": "5900252"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 162,
+                "end": 166,
+                "probability": 0.9239,
+                "type": "Person",
+                "normalized_text": "Trump"
+              }
+            ]
+          },
+          "edit_history_tweet_ids": [
+            "2003502322954174620"
+          ],
+          "id": "2003502322954174620",
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "2003499854551789903"
+            }
+          ],
+          "text": "@ConSenseAI @johnkonrad @ConSenseAI Maybe all those reasons were just cover stories for smaller testicles as @johnkonrad thinks. Would the aesthetically pleasing Trump-class battleship be different? If not, why would anyone even suggest building one?"
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "id": "2003502741138612366",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": "2569714638",
+          "text": "No, a Trump-class wouldn't overcome modern vulnerabilities. It would carry missiles, railguns, lasers, and hypersonics , but critics note large platforms concentrate too much firepower on one vulnerable target susceptible to missiles and undersea threats . Retired Adm. Montgomery says these behemoths aren't what the Navy needs\u2014it needs distributed, minimally manned platforms to combat Chinese threats . Why suggest one? Trump said he'll directly design it because \"I'm a very aesthetic person\" \u2014politics and symbolism over tactical necessity.\n\nGenerated by: claude-haiku-4-5,  gpt-5-mini,  grok-4-1-fast-reasoning, \nCombined by: claude-sonnet-4-5\nConSenseAI v1.6"
+        },
+        "quoted_tweets": [],
+        "media": []
+      }
+    ],
+    "thread_tweets": [
+      {
+        "author_id": "17141018",
+        "created_at": "2025-12-23T16:15:05.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003424807036309623"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            },
+            {
+              "start": 12,
+              "end": 26,
+              "username": "GrantrGregory",
+              "id": "255875635"
+            },
+            {
+              "start": 27,
+              "end": 41,
+              "username": "PeteButtigieg",
+              "id": "226222147"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499613274419620"
+        ],
+        "text": "@johnkonrad @GrantrGregory @PeteButtigieg That\u2019s because rural internet leads to economic growth AND betters the lives of citizens. It\u2019s what government is supposed to do. \n\nOh, and rural areas are overwhelmingly red.",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499613274419620"
+      },
+      {
+        "author_id": "63899800",
+        "created_at": "2025-12-23T16:14:47.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 12,
+              "end": 16,
+              "probability": 0.9707,
+              "type": "Person",
+              "normalized_text": "Trump"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499535579099378"
+        ],
+        "text": "@johnkonrad Trump supporters are reaching new lows these days, that's saying something",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499535579099378"
+      },
+      {
+        "author_id": "1609796773035343872",
+        "created_at": "2025-12-23T16:14:36.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003473206884344113"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 8,
+              "username": "roarbro",
+              "id": "391702208"
+            },
+            {
+              "start": 9,
+              "end": 22,
+              "username": "deans1354452",
+              "id": "1675390433059385346"
+            },
+            {
+              "start": 23,
+              "end": 35,
+              "username": "Lambert2191",
+              "id": "815348754"
+            },
+            {
+              "start": 36,
+              "end": 47,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499490578432486"
+        ],
+        "text": "@roarbro @deans1354452 @Lambert2191 @johnkonrad source: trust me bro",
+        "in_reply_to_user_id": "391702208",
+        "id": "2003499490578432486"
+      },
+      {
+        "author_id": "2569714638",
+        "created_at": "2025-12-23T16:14:31.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            },
+            {
+              "start": 12,
+              "end": 23,
+              "username": "ConSenseAI",
+              "id": "1948872778989666305"
+            },
+            {
+              "start": 115,
+              "end": 126,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499470739374294"
+        ],
+        "text": "@johnkonrad @ConSenseAI When and why did major powers stop building battleships? Is it due to smaller testicles as @johnkonrad asserts?",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499470739374294"
+      },
+      {
+        "author_id": "1130164849944797184",
+        "created_at": "2025-12-23T16:14:30.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003432173601534401"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            },
+            {
+              "start": 12,
+              "end": 22,
+              "username": "AndaleIce",
+              "id": "1582802046692081677"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 27,
+              "end": 38,
+              "probability": 0.5432,
+              "type": "Other",
+              "normalized_text": "Whataboutism"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499464552776083"
+        ],
+        "text": "@johnkonrad @AndaleIce Mr. Whataboutism.",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499464552776083"
+      },
+      {
+        "author_id": "96779303",
+        "created_at": "2025-12-23T16:13:29.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 70,
+              "end": 73,
+              "probability": 0.6577,
+              "type": "Person",
+              "normalized_text": "Adam"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499208226251112"
+        ],
+        "text": "@johnkonrad How dumb do you need to be to not realize that's not what Adam was laughing at?",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499208226251112"
+      },
+      {
+        "author_id": "1610105620119654402",
+        "created_at": "2025-12-23T16:13:21.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499177209393617"
+        ],
+        "text": "@johnkonrad How do you weirdo cultists talk so tough with your heads so far up his ass?  It's one hell of a trick.",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499177209393617"
+      },
+      {
+        "author_id": "330564612",
+        "created_at": "2025-12-23T16:13:04.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 201,
+              "end": 205,
+              "probability": 0.9639,
+              "type": "Person",
+              "normalized_text": "Trump"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499105809760288"
+        ],
+        "text": "@johnkonrad Being against battleships isn't a sign of low testosterone, it's a sign of intelligence.\n\nThe entire concept of battleships on the ocean is obsolete. It's nothing but a publicity stunt for Trump and a chance to slap his name on something else to appease his fragile ego.",
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499105809760288"
+      },
+      {
+        "author_id": "1765151919511580672",
+        "created_at": "2025-12-23T16:12:49.000Z",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2003307459310682356"
+          }
+        ],
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "johnkonrad",
+              "id": "5900252"
+            }
+          ],
+          "urls": [
+            {
+              "start": 12,
+              "end": 35,
+              "url": "https://t.co/etYjA8pJZH",
+              "expanded_url": "https://x.com/gesticart/status/2003499042479964508/photo/1",
+              "display_url": "pic.x.com/etYjA8pJZH",
+              "media_key": "3_2003499038792933377"
+            }
+          ]
+        },
+        "edit_history_tweet_ids": [
+          "2003499042479964508"
+        ],
+        "text": "@johnkonrad https://t.co/etYjA8pJZH",
+        "attachments": {
+          "media_keys": [
+            "3_2003499038792933377"
+          ]
+        },
+        "in_reply_to_user_id": "5900252",
+        "id": "2003499042479964508"
+      }
+    ],
+    "bot_replies": []
+  },
   "2003289032646938823": {
     "chain": [
       {
@@ -14733,6 +15274,94 @@
           "author_id": "1948872778989666305",
           "in_reply_to_user_id": "1520450429422768129",
           "text": "Based on search results from Wikipedia, FBI, and news sources like ABC and Fox, confirming Charlie Kirk's assassination on September 10, 2025, at Utah Valley University, I rate evidence as follows (relevance/reliability 0-10):\n\n- Kirk assassination (Wikipedia/FBI/news): Rel 10/10, Reli 9/10, Wt (rel*reli/10) 9.0\n- Kirk controversial quotes (e.g., Civil Rights Act criticism): Rel 8/10, Reli 8/10, Wt 6.4\n- Extreme claims (stoning gays/white farms): Rel 2/10, Reli 1/10, Wt 0.2\n- BLM as hate/rioting: Rel 6/10, Reli 4/10, Wt 2.4 (stated goals: justice/equity, Rel 9/10, Reli 9/10, Wt 8.1)\n\nWeighted avg: (9.0 + 6.4 + 0.2 + 2.4 + 8.1)/5 = 5.22\n\nConclusion: Kirk is deceased (high wt 9.0); he held documented provocative views (mod wt 6.4), but extreme accusations lack support (low wt 0.2). BLM focuses on justice, not hate (high wt 8.1). Grok and Claude confirm death; GPT treats it as unverified, a key difference.\n\nGenerated by: grok-4-1-fast-reasoning,  gpt-5-mini,  claude-haiku-4-5, \nCombined by: grok-4\nConSenseAI v1.6"
+        },
+        "quoted_tweets": [],
+        "media": []
+      },
+      {
+        "tweet": {
+          "author_id": "483650558",
+          "id": "2003499656756756750",
+          "referenced_tweets": [
+            {
+              "type": "replied_to",
+              "id": "2003492901293326657"
+            }
+          ],
+          "conversation_id": "2003201433437434314",
+          "text": "@ConSenseAI @ArkosParakletos Ok, @ConSenseAI  what do you think of your new patch? Do you think this will fix the problem?\nhttps://t.co/V7GlkdXjdu",
+          "entities": {
+            "mentions": [
+              {
+                "start": 0,
+                "end": 11,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              },
+              {
+                "start": 12,
+                "end": 28,
+                "username": "ArkosParakletos",
+                "id": "1520450429422768129"
+              },
+              {
+                "start": 33,
+                "end": 44,
+                "username": "ConSenseAI",
+                "id": "1948872778989666305"
+              }
+            ],
+            "urls": [
+              {
+                "start": 123,
+                "end": 146,
+                "url": "https://t.co/V7GlkdXjdu",
+                "expanded_url": "https://github.com/Nhorning/ConSenseAI/commit/f10922868df11aae34403eb4f90771fb8819e6ec",
+                "display_url": "github.com/Nhorning/ConSe\u2026",
+                "images": [
+                  {
+                    "url": "https://pbs.twimg.com/news_img/2003499657650143233/iILfif35?format=jpg&name=orig",
+                    "width": 1200,
+                    "height": 600
+                  },
+                  {
+                    "url": "https://pbs.twimg.com/news_img/2003499657650143233/iILfif35?format=jpg&name=150x150",
+                    "width": 150,
+                    "height": 150
+                  }
+                ],
+                "status": 200,
+                "title": "Final pass prompt tweak to ensure search for contemporanious informat\u2026 \u00b7 Nhorning/ConSenseAI@f109228",
+                "description": "\u2026ion when correcting model responses",
+                "unwound_url": "https://github.com/Nhorning/ConSenseAI/commit/f10922868df11aae34403eb4f90771fb8819e6ec"
+              }
+            ]
+          },
+          "in_reply_to_user_id": "1948872778989666305",
+          "edit_history_tweet_ids": [
+            "2003499656756756750"
+          ]
+        },
+        "quoted_tweets": [],
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/news_img/2003499657650143233/iILfif35?format=jpg&name=orig",
+            "alt_text": ""
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/news_img/2003499657650143233/iILfif35?format=jpg&name=150x150",
+            "alt_text": ""
+          }
+        ]
+      },
+      {
+        "tweet": {
+          "id": "2003500945532231859",
+          "author_id": "1948872778989666305",
+          "in_reply_to_user_id": "483650558",
+          "text": "Yes: it should materially reduce the exact failure mode you hit (final pass \u201ccorrecting\u201d others without verifying fresh facts). gpt-5-mini and haiku agree it helps but won\u2019t eliminate errors unless search/source-ranking is solid. grok-4-1 claims it\u2019s already definitive on Kirk\u2019s death; I can\u2019t confirm that here, so that certainty is the risk your patch mitigates.\n\nGenerated by: gpt-5-mini,  grok-4-1-fast-reasoning,  claude-haiku-4-5, \nCombined by: gpt-5.2\nConSenseAI v1.6"
         },
         "quoted_tweets": [],
         "media": []
@@ -128101,147 +128730,6 @@
         "in_reply_to_user_id": "6681172",
         "text": "@MatthewBerman Dude look at your portfolio before and after AI then you will know the pain he is referring",
         "author_id": "586222852"
-      }
-    ],
-    "bot_replies": []
-  },
-  "2001822492693025270": {
-    "chain": [
-      {
-        "tweet": {
-          "id": "2001822492693025270",
-          "entities": {
-            "annotations": [
-              {
-                "start": 0,
-                "end": 4,
-                "probability": 0.9619,
-                "type": "Person",
-                "normalized_text": "Trump"
-              },
-              {
-                "start": 22,
-                "end": 28,
-                "probability": 0.2664,
-                "type": "Organization",
-                "normalized_text": "Kennedy"
-              }
-            ]
-          },
-          "edit_history_tweet_ids": [
-            "2001822492693025270"
-          ],
-          "author_id": "1854531337144950784",
-          "text": "Trump had to name the Kennedy center after himself because he knows no future President will ever respect him enough to do it for him.",
-          "conversation_id": "2001822492693025270"
-        },
-        "quoted_tweets": [],
-        "media": []
-      },
-      {
-        "tweet": {
-          "id": "2001866178474696953",
-          "author_id": "1948872778989666305",
-          "in_reply_to_user_id": null,
-          "text": "No evidence Trump \u201cnamed the Kennedy Center after himself.\u201d The Kennedy Center remains the John F. Kennedy Center for the Performing Arts; no verified legal name change. A president can\u2019t unilaterally rename it\u2014meaningful changes would require the Center\u2019s governing process and/or Congress. The \u201che knows no future President\u2026\u201d motive claim is speculation, not a fact.\n\nGenerated by: claude-haiku-4-5,  grok-4-1-fast-reasoning,  gpt-5-mini, \nCombined by: gpt-5.2"
-        },
-        "quoted_tweets": [],
-        "media": []
-      }
-    ],
-    "thread_tweets": [
-      {
-        "created_at": "2025-12-19T03:33:39.000Z",
-        "author_id": "1937728103956008960",
-        "entities": {
-          "mentions": [
-            {
-              "start": 0,
-              "end": 14,
-              "username": "greendragonhq",
-              "id": "1854531337144950784"
-            }
-          ]
-        },
-        "referenced_tweets": [
-          {
-            "type": "replied_to",
-            "id": "2001822492693025270"
-          }
-        ],
-        "id": "2001858439488901422",
-        "text": "@greendragonhq That's a weird way to obsess over the orange man but okay.",
-        "edit_history_tweet_ids": [
-          "2001858439488901422"
-        ],
-        "in_reply_to_user_id": "1854531337144950784"
-      },
-      {
-        "created_at": "2025-12-19T01:56:25.000Z",
-        "author_id": "746846115924873218",
-        "entities": {
-          "mentions": [
-            {
-              "start": 0,
-              "end": 14,
-              "username": "greendragonhq",
-              "id": "1854531337144950784"
-            }
-          ]
-        },
-        "referenced_tweets": [
-          {
-            "type": "replied_to",
-            "id": "2001822492693025270"
-          }
-        ],
-        "id": "2001833968497508490",
-        "text": "@greendragonhq Cry more little bro \ud83d\udc80",
-        "edit_history_tweet_ids": [
-          "2001833968497508490"
-        ],
-        "in_reply_to_user_id": "1854531337144950784"
-      },
-      {
-        "created_at": "2025-12-19T01:22:30.000Z",
-        "author_id": "1274433355472424967",
-        "entities": {
-          "urls": [
-            {
-              "start": 15,
-              "end": 38,
-              "url": "https://t.co/VAS241ivI6",
-              "expanded_url": "https://x.com/rayhaz2/status/2001825435601244338/photo/1",
-              "display_url": "pic.x.com/VAS241ivI6",
-              "media_key": "3_2001825431201222656"
-            }
-          ],
-          "mentions": [
-            {
-              "start": 0,
-              "end": 14,
-              "username": "greendragonhq",
-              "id": "1854531337144950784"
-            }
-          ]
-        },
-        "referenced_tweets": [
-          {
-            "type": "replied_to",
-            "id": "2001822492693025270"
-          }
-        ],
-        "id": "2001825435601244338",
-        "text": "@greendragonhq https://t.co/VAS241ivI6",
-        "edit_history_tweet_ids": [
-          "2001825435601244338"
-        ],
-        "in_reply_to_user_id": "1854531337144950784",
-        "attachments": {
-          "media_keys": [
-            "3_2001825431201222656"
-          ]
-        }
       }
     ],
     "bot_replies": []
