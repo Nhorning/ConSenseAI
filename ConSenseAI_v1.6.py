@@ -4251,9 +4251,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
             urls_in_note = re.findall(url_pattern, clean_note_text)
             
-            # Calculate effective length (URLs count as 23 chars each on Twitter)
+            # Calculate effective length (URLs count as 1 char each for Community Notes)
             text_without_urls = re.sub(url_pattern, '', clean_note_text)
-            effective_length = len(text_without_urls) + (len(urls_in_note) * 23)
+            effective_length = len(text_without_urls) + len(urls_in_note)
             
             # Retry logic if note is too long
             max_retries = 1
