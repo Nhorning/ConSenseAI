@@ -545,8 +545,9 @@ def fetch_and_process_search(search_term: str, user_id=None):
             since_id=last_id,
             max_results=min(args.search_max_results, 100),
             tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
-            expansions=["referenced_tweets.id", "attachments.media_keys"],
-            media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
+            expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
+            media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"],
+            user_fields=["username"]
         )
     except tweepy.TweepyException as e:
         error_str = str(e)
@@ -561,8 +562,9 @@ def fetch_and_process_search(search_term: str, user_id=None):
                     query=search_term,
                     max_results=min(args.search_max_results, 100),
                     tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
-                    expansions=["referenced_tweets.id", "attachments.media_keys"],
-                    media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
+                    expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
+                    media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"],
+                    user_fields=["username"]
                 )
             except tweepy.TweepyException as retry_e:
                 print(f"[Search] API error on retry: {retry_e}")
@@ -861,8 +863,9 @@ def fetch_and_process_followed_users():
                 since_id=since_id,
                 max_results=min(max_tweets_per_user, 100),
                 tweet_fields=["id", "text", "conversation_id", "in_reply_to_user_id", "author_id", "referenced_tweets", "attachments", "entities"],
-                expansions=["referenced_tweets.id", "attachments.media_keys"],
-                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
+                expansions=["referenced_tweets.id", "attachments.media_keys", "author_id"],
+                media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"],
+                user_fields=["username"]
             )
             
             if not resp or not getattr(resp, 'data', None):
