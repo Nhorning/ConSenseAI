@@ -4540,17 +4540,17 @@ def main():
                         # Only advance the baseline if a reflection was actually posted
                         if created_id:
                             last_summary_count = current_count
-                        
-                        # Run Community Notes check on reflection cycle if enabled
-                        if getattr(args, 'check_community_notes', False) and cn_on_reflection:
-                            try:
-                                print(f"[Reflection] Checking for Community Notes eligible posts")
-                                cn_max_results = getattr(args, 'cn_max_results', 5)
-                                cn_test_mode = getattr(args, 'cn_test_mode', True)
-                                fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode)
-                            except Exception as e:
-                                print(f"[Reflection] Community Notes check error: {e}")
-                                # Don't raise - just log and continue
+                            
+                            # Run Community Notes check on reflection cycle if enabled
+                            if getattr(args, 'check_community_notes', False) and cn_on_reflection:
+                                try:
+                                    print(f"[Reflection] Checking for Community Notes eligible posts")
+                                    cn_max_results = getattr(args, 'cn_max_results', 5)
+                                    cn_test_mode = getattr(args, 'cn_test_mode', True)
+                                    fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode)
+                                except Exception as e:
+                                    print(f"[Reflection] Community Notes check error: {e}")
+                                    # Don't raise - just log and continue
                             
                             # If in auto search mode, generate a new search term
                             if auto_search_mode:
