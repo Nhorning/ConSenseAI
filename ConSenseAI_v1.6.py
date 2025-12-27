@@ -4191,7 +4191,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             context['mention'] = post
             context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
-                - Provide full (include https etc.) working url links to credible sources for fact checking. Do not provide urls that you haven't visited (to be sure they are working) \n\
+                - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - Search for information on drafting successful community notes if needed \n\
