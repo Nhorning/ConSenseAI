@@ -4264,8 +4264,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     log_to_file(f"VALIDATION FAILED: Note too long ({effective_length} effective chars > 280) (attempt {retry_count + 1}/{max_retries + 1})")
                     if retry_count < max_retries:
                         log_to_file("RETRYING: Asking final model to shorten note...")
-                        # Re-run with explicit instruction to shorten
-                        context['context_instructions'] += f"\n\nIMPORTANT: Your previous response was {effective_length} chars (too long). You MUST make it under 280 chars total. Be more concise."
+                        # Re-run with explicit instruction to shorten, showing the previous version
+                        context['context_instructions'] += f"\n\nIMPORTANT: Your previous note was {effective_length} effective chars (too long - must be under 280). Here is your previous version:\n\n\"\"\"\n{clean_note_text}\n\"\"\"\n\nPlease revise this SAME note to be under 280 effective chars (URLs count as 1 char each). Keep the same sources and main points, but make the text more concise. Remove unnecessary words and phrases."
                         note_text = fact_check(post_text, post_id, context=context, generate_only=True)
                         # Re-clean the note
                         lines = note_text.split('\n')
@@ -4273,7 +4273,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         clean_note_text = '\n'.join(filtered_lines).strip()
                         urls_in_note = re.findall(url_pattern, clean_note_text)
                         text_without_urls = re.sub(url_pattern, '', clean_note_text)
-                        effective_length = len(text_without_urls) + (len(urls_in_note) * 23)
+                        effective_length = len(text_without_urls) + len(urls_in_note)
                         retry_count += 1
                         log_to_file(f"RETRY RESULT ({len(clean_note_text)} chars, {len(urls_in_note)} URLs, {effective_length} effective):")
                         log_to_file(clean_note_text)
