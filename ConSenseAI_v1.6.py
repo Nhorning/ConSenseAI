@@ -4249,8 +4249,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 #log_to_file("")
             
             # Validate note meets Community Notes requirements
-            # Requirements: 1-280 chars effective length
+            # Requirements: 1-280 chars effective length, valid URLs, appropriate tone, addresses claims
             import re
+            import requests
             url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
             urls_in_note = re.findall(url_pattern, clean_note_text)
             
@@ -4258,39 +4259,187 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             text_without_urls = re.sub(url_pattern, '', clean_note_text)
             effective_length = len(text_without_urls) + len(urls_in_note)
             
-            # Retry logic if note is too long
+            # Validation functions
+            def validate_url_validity(urls):
+                """Check if all URLs return HTTP 200. Returns (passed, details)."""
+                if not urls:
+                    return False, "No URLs provided - notes need credible sources"
+                
+                invalid_urls = []
+                for url in urls:
+                    # Skip obvious invalid patterns
+                    if any(bad in url.lower() for bad in ['/search', '/photos/', '/gallery/', '/mediaindex', 'gettyimages.com/photos']):
+                        invalid_urls.append(f"{url} (appears to be search/gallery page)")
+                        continue
+                    
+                    # Check HTTP status (with timeout)
+                    try:
+                        response = requests.head(url, timeout=5, allow_redirects=True)
+                        if response.status_code != 200:
+                            # Try GET if HEAD fails (some servers block HEAD)
+                            response = requests.get(url, timeout=5, allow_redirects=True, stream=True)
+                            if response.status_code != 200:
+                                invalid_urls.append(f"{url} (HTTP {response.status_code})")
+                    except requests.RequestException as e:
+                        invalid_urls.append(f"{url} (error: {str(e)[:50]})")
+                
+                if invalid_urls:
+                    return False, f"Invalid URLs: {'; '.join(invalid_urls[:3])}"
+                return True, f"All {len(urls)} URLs validated (HTTP 200)"
+            
+            def validate_harassment_abuse(text):
+                """Check for inflammatory language. Returns (passed, details)."""
+                # Words that suggest harassment, sarcasm, or mockery
+                inflammatory = ['stupid', 'idiot', 'moron', 'dumb', 'ridiculous', 'absurd', 'pathetic', 
+                               'laughable', 'joke', 'clown', 'loser', 'fool', 'insane', 'crazy']
+                
+                text_lower = text.lower()
+                found = [word for word in inflammatory if word in text_lower]
+                
+                if found:
+                    return False, f"Contains inflammatory language: {', '.join(found)}"
+                
+                # Check for excessive punctuation (!!!!, ????)
+                if '!!!' in text or '???' in text:
+                    return False, "Excessive punctuation suggests emotional tone"
+                
+                # Check for all caps words (excluding acronyms like USA, FBI)
+                words = text.split()
+                caps_words = [w for w in words if w.isupper() and len(w) > 3]
+                if len(caps_words) > 1:
+                    return False, f"Multiple all-caps words suggest shouting: {', '.join(caps_words[:3])}"
+                
+                return True, "Tone is neutral and professional"
+            
+            def validate_claim_opinion(text):
+                """Check if note addresses claims without opinion/speculation. Returns (passed, details)."""
+                # Opinion/speculation words that should be avoided
+                speculation_words = ['may', 'might', 'could', 'possibly', 'likely', 'unlikely', 
+                                    'appears', 'seems', 'suggests', 'indicates', 'implies', 
+                                    'probably', 'perhaps', 'maybe', 'allegedly']
+                
+                text_lower = text.lower()
+                found_speculation = [word for word in speculation_words if f' {word} ' in f' {text_lower} ']
+                
+                if found_speculation:
+                    return False, f"Contains speculative language: {', '.join(found_speculation[:3])}"
+                
+                # Check for subjective judgments
+                subjective = ['misleading', 'false', 'wrong', 'incorrect', 'inaccurate', 'untrue']
+                found_subjective = [word for word in subjective if word in text_lower]
+                
+                if found_subjective:
+                    return False, f"Contains subjective judgments - state facts instead: {', '.join(found_subjective[:2])}"
+                
+                # Good: should contain factual indicators
+                factual_indicators = ['according to', 'data shows', 'records show', 'reported', 
+                                     'confirmed', 'verified', 'documented', 'published']
+                has_factual = any(indicator in text_lower for indicator in factual_indicators)
+                
+                if not has_factual and len(text) > 100:
+                    return False, "Note should cite sources with phrases like 'according to', 'data shows', etc."
+                
+                return True, "Addresses claims with facts, not opinion"
+            
+            # Run validations
+            validation_results = []
+            
+            # 1. Length validation (existing)
+            length_valid = effective_length <= 280
+            validation_results.append(("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG"))
+            
+            # 2. URL Validity (95%+ must pass)
+            url_valid, url_details = validate_url_validity(urls_in_note)
+            validation_results.append(("UrlValidity", url_valid, url_details))
+            
+            # 3. Harassment/Abuse (98%+ must pass)
+            harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
+            validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
+            
+            # 4. Claim/Opinion (30%+ must pass) - COMMENTED OUT FOR NOW
+            # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
+            # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
+            
+            # Log all validation results
+            log_to_file("VALIDATION RESULTS:")
+            for name, passed, details in validation_results:
+                status = "✓ PASS" if passed else "✗ FAIL"
+                log_to_file(f"  {name}: {status} - {details}")
+            
+            # Check if any critical validations failed
+            failed_validations = [name for name, passed, _ in validation_results if not passed]
+            
+            # Retry logic if note is too long or fails validation
             max_retries = 1
             retry_count = 0
             
             while retry_count <= max_retries:
-                if effective_length > 280:
-                    log_to_file(f"VALIDATION FAILED: Note too long ({effective_length} effective chars > 280) (attempt {retry_count + 1}/{max_retries + 1})")
+                if failed_validations:
+                    log_to_file(f"VALIDATION FAILED: {', '.join(failed_validations)} (attempt {retry_count + 1}/{max_retries + 1})")
                     if retry_count < max_retries:
-                        log_to_file("RETRYING: Asking final model to shorten note...")
-                        # Re-run with explicit instruction to shorten, showing the previous version
-                        context['context_instructions'] += f"\n\nIMPORTANT: Your previous note was {effective_length} effective chars (too long - must be under 280). Here is your previous version:\n\n\"\"\"\n{clean_note_text}\n\"\"\"\n\nPlease revise this SAME note to be under 280 effective chars (URLs count as 1 char each). Keep the same sources and main points, but make the text more concise. Remove unnecessary words and phrases."
+                        log_to_file("RETRYING: Asking model to fix validation issues...")
+                        
+                        # Build specific feedback for the model
+                        feedback = f"\n\nIMPORTANT: Your previous note failed validation. Here is your previous version:\n\n\"\"\"\n{clean_note_text}\n\"\"\"\n\nIssues to fix:\n"
+                        for name, passed, details in validation_results:
+                            if not passed:
+                                feedback += f"- {name}: {details}\n"
+                        
+                        feedback += "\nPlease revise the note to address these issues. "
+                        if not length_valid:
+                            feedback += f"Make it under 280 effective chars (currently {effective_length}). "
+                        if not url_valid:
+                            feedback += "Use only direct, accessible URLs from authoritative sources (no search pages, galleries, or broken links). "
+                        if not harassment_valid:
+                            feedback += "Use neutral, professional tone - remove inflammatory language. "
+                        # if not claim_valid:
+                        #     feedback += "State only verifiable facts - avoid speculation words like 'may', 'might', 'could', 'appears', 'seems'. "
+                        
+                        context['context_instructions'] += feedback
                         note_text = fact_check(post_text, post_id, context=context, generate_only=True)
-                        # Re-clean the note
+                        
+                        # Re-clean and re-validate
                         lines = note_text.split('\n')
                         filtered_lines = [line for line in lines if not (line.strip().startswith('Generated by:') or line.strip().startswith('Combined by:'))]
                         clean_note_text = '\n'.join(filtered_lines).strip()
                         urls_in_note = re.findall(url_pattern, clean_note_text)
                         text_without_urls = re.sub(url_pattern, '', clean_note_text)
                         effective_length = len(text_without_urls) + len(urls_in_note)
-                        retry_count += 1
-                        log_to_file(f"RETRY RESULT ({len(clean_note_text)} chars, {len(urls_in_note)} URLs, {effective_length} effective):")
+                        
+                        # Re-run validations
+                        validation_results = []
+                        length_valid = effective_length <= 280
+                        validation_results.append(("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG"))
+                        
+                        url_valid, url_details = validate_url_validity(urls_in_note)
+                        validation_results.append(("UrlValidity", url_valid, url_details))
+                        
+                        harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
+                        validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
+                        
+                        # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
+                        # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
+                        
+                        log_to_file(f"RETRY RESULT:")
                         log_to_file(clean_note_text)
+                        log_to_file("RETRY VALIDATION RESULTS:")
+                        for name, passed, details in validation_results:
+                            status = "✓ PASS" if passed else "✗ FAIL"
+                            log_to_file(f"  {name}: {status} - {details}")
+                        
+                        failed_validations = [name for name, passed, _ in validation_results if not passed]
+                        retry_count += 1
                     else:
-                        log_to_file("VALIDATION: Note still too long after retry, skipping submission")
+                        log_to_file("VALIDATION: Note still fails validation after retry, skipping submission")
                         break
                 else:
-                    # Note passes validation
-                    log_to_file(f"VALIDATION: PASSED ({len(urls_in_note)} URLs, {effective_length} effective chars)")
+                    # Note passes all validations
+                    log_to_file(f"VALIDATION: ALL CHECKS PASSED")
                     break
             
             # Skip submission if validation failed after retries
-            if effective_length > 280:
-                log_to_file("SUBMISSION: SKIPPED (validation failed)")
+            if failed_validations:
+                log_to_file(f"SUBMISSION: SKIPPED (validation failed: {', '.join(failed_validations)})")
                 log_to_file("")
                 continue
             
