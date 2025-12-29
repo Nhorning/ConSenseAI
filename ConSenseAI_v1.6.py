@@ -4462,8 +4462,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             feedback += f"Make it under 280 effective chars (currently {effective_length}). "
                         if not url_valid:
                             feedback += "Use only direct, accessible URLs from authoritative sources (no search pages, galleries, or broken links). "
-                        if not harassment_valid:
-                            feedback += "Use neutral, professional tone - remove inflammatory language. "
+                        # if not harassment_valid:
+                        #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
                         #     feedback += "State only verifiable facts - avoid speculation words like 'may', 'might', 'could', 'appears', 'seems'. "
                         
