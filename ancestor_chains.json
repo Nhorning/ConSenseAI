@@ -61438,5 +61438,522 @@
       }
     ],
     "bot_replies": []
+  },
+  "2005050396658786691": {
+    "chain": [
+      {
+        "tweet": {
+          "id": "2005050396658786691",
+          "text": "Tim Walz sat idly by while billions were stolen from hardworking Minnesotans. \n\nWhat Walz refused to address for SEVEN YEARS, Nick Shirley uncovered in ONE DAY.\n\nThe fraud in Minnesota is so brazen and so vast that it\u2019s IMPOSSIBLE Walz\u2019s administration didn\u2019t know about it. https://t.co/ZoXY1cvZPr",
+          "author_id": "2914515430",
+          "created_at": "2025-12-27T22:57:21.000Z",
+          "conversation_id": "2005050396658786691",
+          "referenced_tweets": [
+            {
+              "type": "quoted",
+              "id": "2004642794862961123"
+            }
+          ],
+          "attachments": {},
+          "entities": {
+            "urls": [
+              {
+                "start": 275,
+                "end": 298,
+                "url": "https://t.co/ZoXY1cvZPr",
+                "expanded_url": "https://twitter.com/nickshirleyy/status/2004642794862961123",
+                "display_url": "x.com/nickshirleyy/s\u2026"
+              }
+            ],
+            "annotations": [
+              {
+                "start": 0,
+                "end": 7,
+                "probability": 0.9684,
+                "type": "Person",
+                "normalized_text": "Tim Walz"
+              },
+              {
+                "start": 85,
+                "end": 88,
+                "probability": 0.4897,
+                "type": "Person",
+                "normalized_text": "Walz"
+              },
+              {
+                "start": 126,
+                "end": 137,
+                "probability": 0.9634,
+                "type": "Person",
+                "normalized_text": "Nick Shirley"
+              },
+              {
+                "start": 175,
+                "end": 183,
+                "probability": 0.9454,
+                "type": "Place",
+                "normalized_text": "Minnesota"
+              },
+              {
+                "start": 231,
+                "end": 234,
+                "probability": 0.3695,
+                "type": "Person",
+                "normalized_text": "Walz"
+              }
+            ]
+          }
+        },
+        "quoted_tweets": [
+          {
+            "entities": {
+              "annotations": [
+                {
+                  "start": 56,
+                  "end": 64,
+                  "probability": 0.9277,
+                  "type": "Place",
+                  "normalized_text": "Minnesota"
+                }
+              ],
+              "urls": [
+                {
+                  "start": 279,
+                  "end": 302,
+                  "url": "https://t.co/E3Penx2o7a",
+                  "expanded_url": "https://x.com/nickshirleyy/status/2004642794862961123/video/1",
+                  "display_url": "pic.x.com/E3Penx2o7a",
+                  "media_key": "13_2004638947746443264"
+                }
+              ]
+            },
+            "edit_history_tweet_ids": [
+              "2004642794862961123"
+            ],
+            "id": "2004642794862961123",
+            "text": "\ud83d\udea8 Here is the full 42 minutes of my crew and I exposing Minnesota fraud, this might be my most important work yet. We uncovered over $110,000,000 in ONE day. Like it and share it around like wildfire! Its time to hold these corrupt politicians and fraudsters accountable\n\nWe ALL https://t.co/E3Penx2o7a",
+            "created_at": "2025-12-26T19:57:41.000Z",
+            "author_id": "819432501982752768",
+            "attachments": {
+              "media_keys": [
+                "13_2004638947746443264"
+              ]
+            }
+          }
+        ],
+        "media": [
+          {
+            "type": "video",
+            "url": null,
+            "alt_text": null,
+            "media_key": "13_2004638947746443264"
+          }
+        ]
+      }
+    ],
+    "thread_tweets": [
+      {
+        "edit_history_tweet_ids": [
+          "2005444192198357140"
+        ],
+        "text": "@GOPMajorityWhip As did you. You knew and did nothing to expose it. #PrimaryEmmer https://t.co/noDJ7vSn1T",
+        "attachments": {
+          "media_keys": [
+            "16_2005444185168465922"
+          ]
+        },
+        "in_reply_to_user_id": "2914515430",
+        "entities": {
+          "urls": [
+            {
+              "start": 82,
+              "end": 105,
+              "url": "https://t.co/noDJ7vSn1T",
+              "expanded_url": "https://x.com/PrepsterJen/status/2005444192198357140/photo/1",
+              "display_url": "pic.x.com/noDJ7vSn1T",
+              "media_key": "16_2005444185168465922"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ],
+          "hashtags": [
+            {
+              "start": 68,
+              "end": 81,
+              "tag": "PrimaryEmmer"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1519433346446733313",
+        "created_at": "2025-12-29T01:02:09.000Z",
+        "id": "2005444192198357140"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005444099290349806"
+        ],
+        "text": "@GOPMajorityWhip You should resign. You knew",
+        "in_reply_to_user_id": "2914515430",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1816899891752484864",
+        "created_at": "2025-12-29T01:01:47.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "id": "2005444099290349806"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005443650365653074"
+        ],
+        "text": "@GOPMajorityWhip And you did this\u2026just as bad..\n\nhttps://t.co/DvgYl8P4Rn",
+        "in_reply_to_user_id": "2914515430",
+        "entities": {
+          "urls": [
+            {
+              "start": 49,
+              "end": 72,
+              "url": "https://t.co/DvgYl8P4Rn",
+              "expanded_url": "https://x.com/wallstreetmav/status/2005434068041863238?s=46&t=rYCRAxWXlkRvPpkL5IqPTQ",
+              "display_url": "x.com/wallstreetmav/\u2026"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "quoted",
+            "id": "2005434068041863238"
+          },
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1520134057560092673",
+        "created_at": "2025-12-29T01:00:00.000Z",
+        "id": "2005443650365653074"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005442461997646169"
+        ],
+        "text": "@GOPMajorityWhip How  did the oversight bureaucrats miss this? Randy Keys is the inspector general for Minnesota DCYF, which is supposed to stop day care fraud. He held a similar role in Wisconsin where a similar day care fraud occurred. @nickshirleyy  @FBIDirectorKash \n\nhttps://t.co/dzs7KkS8yd",
+        "in_reply_to_user_id": "2914515430",
+        "entities": {
+          "urls": [
+            {
+              "start": 272,
+              "end": 295,
+              "url": "https://t.co/dzs7KkS8yd",
+              "expanded_url": "https://dcyf.mn.gov/program-and-operations-directors",
+              "display_url": "dcyf.mn.gov/program-and-op\u2026",
+              "status": 200,
+              "title": "Program and Operations Directors",
+              "description": "The Early Childhood Administration directs policies and programs that streamline and coordinate child care and early learning services to improve outcomes for children, families, and the early childhood workforce. The Family Well-Being Administration directs policies and programs that elevate a safety net of resources available to families in Minnesota, including the Minnesota Family Investment Program, the Supplemental Nutrition Assistance Program, emergency assistance, and child support programs. The",
+              "unwound_url": "https://dcyf.mn.gov/program-and-operations-directors"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            },
+            {
+              "start": 238,
+              "end": 251,
+              "username": "nickshirleyy",
+              "id": "819432501982752768"
+            },
+            {
+              "start": 253,
+              "end": 269,
+              "username": "FBIDirectorKash",
+              "id": "1892594777075417088"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 63,
+              "end": 72,
+              "probability": 0.974,
+              "type": "Person",
+              "normalized_text": "Randy Keys"
+            },
+            {
+              "start": 113,
+              "end": 116,
+              "probability": 0.4983,
+              "type": "Organization",
+              "normalized_text": "DCYF"
+            },
+            {
+              "start": 187,
+              "end": 195,
+              "probability": 0.9696,
+              "type": "Place",
+              "normalized_text": "Wisconsin"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "2005393948676874240",
+        "created_at": "2025-12-29T00:55:16.000Z",
+        "id": "2005442461997646169"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005440807097217284"
+        ],
+        "text": "@GOPMajorityWhip Execution is the merciful option here.",
+        "in_reply_to_user_id": "2914515430",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1256892295690907649",
+        "created_at": "2025-12-29T00:48:42.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "id": "2005440807097217284"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005439936707830232"
+        ],
+        "text": "@GOPMajorityWhip You were in on the corruption",
+        "in_reply_to_user_id": "2914515430",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1597385412875620355",
+        "created_at": "2025-12-29T00:45:14.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "id": "2005439936707830232"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005439345805914334"
+        ],
+        "text": "@waysandmeans71 @GOPMajorityWhip @GovTimWalz They are both cvnts and so are you.",
+        "in_reply_to_user_id": "1852025100641427461",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005294285436908002"
+          }
+        ],
+        "author_id": "1185755339280531463",
+        "created_at": "2025-12-29T00:42:53.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 15,
+              "username": "waysandmeans71",
+              "id": "1852025100641427461"
+            },
+            {
+              "start": 16,
+              "end": 32,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            },
+            {
+              "start": 33,
+              "end": 44,
+              "username": "GovTimWalz",
+              "id": "1064603540956565504"
+            }
+          ]
+        },
+        "id": "2005439345805914334"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005438751497916792"
+        ],
+        "text": "@Chaddadbod @Minnesotamaide1 @GOPMajorityWhip Federal funding can indeed increase fraud risks, as seen in cases like the Boston Big Dig overruns and recent settlements (e.g., $9.6M for contract violations). Estimates suggest 10% of infrastructure spending may be lost to fraud. However, it enables large-scale projects that",
+        "in_reply_to_user_id": "1520355566912262144",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005438579854716977"
+          }
+        ],
+        "author_id": "1720665183188922368",
+        "created_at": "2025-12-29T00:40:32.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 11,
+              "username": "Chaddadbod",
+              "id": "1520355566912262144"
+            },
+            {
+              "start": 12,
+              "end": 28,
+              "username": "Minnesotamaide1",
+              "id": "1141906298763714567"
+            },
+            {
+              "start": 29,
+              "end": 45,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ],
+          "annotations": [
+            {
+              "start": 121,
+              "end": 134,
+              "probability": 0.7399,
+              "type": "Other",
+              "normalized_text": "Boston Big Dig"
+            }
+          ]
+        },
+        "id": "2005438751497916792"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005438579854716977"
+        ],
+        "text": "@grok @Minnesotamaide1 @GOPMajorityWhip But it primes the pump for fraud.   If localities don\u2019t pay for it then costs skyrocket.",
+        "in_reply_to_user_id": "1720665183188922368",
+        "referenced_tweets": [
+          {
+            "type": "replied_to",
+            "id": "2005438266133114985"
+          }
+        ],
+        "author_id": "1520355566912262144",
+        "created_at": "2025-12-29T00:39:51.000Z",
+        "entities": {
+          "mentions": [
+            {
+              "start": 0,
+              "end": 5,
+              "username": "grok",
+              "id": "1720665183188922368"
+            },
+            {
+              "start": 6,
+              "end": 22,
+              "username": "Minnesotamaide1",
+              "id": "1141906298763714567"
+            },
+            {
+              "start": 23,
+              "end": 39,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "id": "2005438579854716977"
+      },
+      {
+        "edit_history_tweet_ids": [
+          "2005438467648692225"
+        ],
+        "text": "@GOPMajorityWhip This you??!! https://t.co/KzM1G0gLqT",
+        "in_reply_to_user_id": "2914515430",
+        "entities": {
+          "urls": [
+            {
+              "start": 30,
+              "end": 53,
+              "url": "https://t.co/KzM1G0gLqT",
+              "expanded_url": "https://twitter.com/wallstreetmav/status/2005433145752265073",
+              "display_url": "x.com/wallstreetmav/\u2026"
+            }
+          ],
+          "mentions": [
+            {
+              "start": 0,
+              "end": 16,
+              "username": "GOPMajorityWhip",
+              "id": "2914515430"
+            }
+          ]
+        },
+        "referenced_tweets": [
+          {
+            "type": "quoted",
+            "id": "2005433145752265073"
+          },
+          {
+            "type": "replied_to",
+            "id": "2005050396658786691"
+          }
+        ],
+        "author_id": "1476605906926374913",
+        "created_at": "2025-12-29T00:39:24.000Z",
+        "id": "2005438467648692225"
+      }
+    ],
+    "bot_replies": []
   }
 }

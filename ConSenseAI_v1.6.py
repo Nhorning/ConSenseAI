@@ -4252,40 +4252,93 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # Requirements: 1-280 chars effective length, valid URLs, appropriate tone, addresses claims
             import re
             import requests
-            url_pattern = r'https?://[^\s<>"]+|www\.[^\s<>"]+'
-            urls_in_note = re.findall(url_pattern, clean_note_text)
+            import html
+            
+            # Use Twitter's URL extraction pattern for accurate effective length calculation
+            url_pattern = re.compile(
+                r"""
+                (?:
+                    https?://               # optional scheme
+                )?
+                (?:www\.)?                  # optional www
+                [\w\-._~%]+                 # subdomain or domain name chars
+                \.[a-zA-Z]{2,}              # dot + top level domain (≥2 letters)
+                (?:/[^\s]*)?                # optional query/fragment
+                """,
+                re.VERBOSE,
+            )
+            urls_in_note = url_pattern.findall(clean_note_text)
             
             # Calculate effective length (URLs count as 1 char each for Community Notes)
-            text_without_urls = re.sub(url_pattern, '', clean_note_text)
+            text_without_urls = url_pattern.sub('', clean_note_text)
             effective_length = len(text_without_urls) + len(urls_in_note)
             
             # Validation functions
-            def validate_url_validity(urls):
-                """Check if all URLs return HTTP 200. Returns (passed, details)."""
-                if not urls:
-                    return False, "No URLs provided - notes need credible sources"
+            def validate_url_validity(note_text):
+                """Check if all URLs return HTTP 200 using Twitter's official logic. Returns (passed, details)."""
+                import html
                 
-                invalid_urls = []
-                for url in urls:
-                    # Skip obvious invalid patterns
-                    if any(bad in url.lower() for bad in ['/search', '/photos/', '/gallery/', '/mediaindex', 'gettyimages.com/photos']):
-                        invalid_urls.append(f"{url} (appears to be search/gallery page)")
-                        continue
+                # Unescape HTML entities (Twitter's unescape function)
+                def unescape(text):
+                    return html.unescape(html.unescape(text)) if isinstance(text, str) else text
+                
+                # Extract URLs using Twitter's regex pattern
+                def extract_urls(text):
+                    """Return list of URL variants for each URL found."""
+                    pattern = re.compile(
+                        r"""
+                        (?:
+                            https?://               # optional scheme
+                        )?
+                        (?:www\.)?                  # optional www
+                        [\w\-._~%]+                 # subdomain or domain name chars
+                        \.[a-zA-Z]{2,}              # dot + top level domain (≥2 letters)
+                        (?:/[^\s]*)?                # optional query/fragment
+                        """,
+                        re.VERBOSE,
+                    )
+                    raw_matches = pattern.findall(text)
                     
-                    # Check HTTP status (with timeout)
+                    # Strip common trailing punctuation and create variants
+                    strip_trailing = ".,;:!?)]}\"'"
+                    results = []
+                    for match in raw_matches:
+                        variants = [match]
+                        stripped_variant = match.rstrip(strip_trailing)
+                        if stripped_variant != match:
+                            variants.append(stripped_variant)
+                        results.append(variants)
+                    return results
+                
+                # Check single URL
+                def check_url(url):
+                    """Check if URL returns HTTP 200."""
                     try:
                         response = requests.head(url, timeout=5, allow_redirects=True)
                         if response.status_code != 200:
-                            # Try GET if HEAD fails (some servers block HEAD)
+                            # Try GET if HEAD fails
                             response = requests.get(url, timeout=5, allow_redirects=True, stream=True)
-                            if response.status_code != 200:
-                                invalid_urls.append(f"{url} (HTTP {response.status_code})")
-                    except requests.RequestException as e:
-                        invalid_urls.append(f"{url} (error: {str(e)[:50]})")
+                        return response.status_code == 200
+                    except requests.RequestException:
+                        return False
                 
-                if invalid_urls:
-                    return False, f"Invalid URLs: {'; '.join(invalid_urls[:3])}"
-                return True, f"All {len(urls)} URLs validated (HTTP 200)"
+                # Main validation logic (matches Twitter's check_all_urls_for_note)
+                note_text_unescaped = unescape(note_text)
+                url_variant_lists = extract_urls(note_text_unescaped)
+                
+                if len(url_variant_lists) == 0:
+                    return False, "No URLs found in note text"
+                
+                for url_variant_list in url_variant_lists:
+                    at_least_one_good_url_variant = False
+                    for url_variant in url_variant_list:
+                        if check_url(url_variant):
+                            at_least_one_good_url_variant = True
+                            break
+                    if not at_least_one_good_url_variant:
+                        return False, f"No valid URL variant found for {url_variant_list[0]}"
+                
+                return True, f"All {len(url_variant_lists)} URLs validated (HTTP 200)"
             
             def validate_harassment_abuse(text):
                 """Check for inflammatory language. Returns (passed, details)."""
@@ -4348,8 +4401,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             length_valid = effective_length <= 280
             validation_results.append(("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG"))
             
-            # 2. URL Validity (95%+ must pass)
-            url_valid, url_details = validate_url_validity(urls_in_note)
+            # 2. URL Validity (95%+ must pass) - Uses Twitter's official validator logic
+            url_valid, url_details = validate_url_validity(clean_note_text)
             validation_results.append(("UrlValidity", url_valid, url_details))
             
             # 3. Harassment/Abuse (98%+ must pass)
@@ -4402,8 +4455,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         lines = note_text.split('\n')
                         filtered_lines = [line for line in lines if not (line.strip().startswith('Generated by:') or line.strip().startswith('Combined by:'))]
                         clean_note_text = '\n'.join(filtered_lines).strip()
-                        urls_in_note = re.findall(url_pattern, clean_note_text)
-                        text_without_urls = re.sub(url_pattern, '', clean_note_text)
+                        urls_in_note = url_pattern.findall(clean_note_text)
+                        text_without_urls = url_pattern.sub('', clean_note_text)
                         effective_length = len(text_without_urls) + len(urls_in_note)
                         
                         # Re-run validations
@@ -4411,7 +4464,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         length_valid = effective_length <= 280
                         validation_results.append(("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG"))
                         
-                        url_valid, url_details = validate_url_validity(urls_in_note)
+                        url_valid, url_details = validate_url_validity(clean_note_text)
                         validation_results.append(("UrlValidity", url_valid, url_details))
                         
                         harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
