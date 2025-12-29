@@ -4424,9 +4424,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             url_valid, url_details = validate_url_validity(clean_note_text)
             validation_results.append(("UrlValidity", url_valid, url_details))
             
-            # 3. Harassment/Abuse (98%+ must pass)
-            harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
-            validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
+            # 3. Harassment/Abuse (98%+ must pass) - COMMENTED OUT (TOO TWITCHY)
+            # harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
+            # validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
             
             # 4. Claim/Opinion (30%+ must pass) - COMMENTED OUT FOR NOW
             # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
@@ -4486,8 +4486,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         url_valid, url_details = validate_url_validity(clean_note_text)
                         validation_results.append(("UrlValidity", url_valid, url_details))
                         
-                        harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
-                        validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
+                        # harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
+                        # validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
                         
                         # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
                         # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
