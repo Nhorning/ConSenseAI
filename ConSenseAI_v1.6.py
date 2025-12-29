@@ -4312,15 +4312,34 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 
                 # Check single URL
                 def check_url(url):
-                    """Check if URL returns HTTP 200."""
-                    try:
-                        response = requests.head(url, timeout=5, allow_redirects=True)
-                        if response.status_code != 200:
-                            # Try GET if HEAD fails
-                            response = requests.get(url, timeout=5, allow_redirects=True, stream=True)
-                        return response.status_code == 200
-                    except requests.RequestException:
-                        return False
+                    """Check if URL returns HTTP 200. Retries with browser headers and scheme handling."""
+                    # Auto-add HTTPS scheme if missing (AI models sometimes omit it)
+                    if not url.startswith(('http://', 'https://')):
+                        url = 'https://' + url
+                    
+                    # Use browser-like headers to avoid anti-bot protection (e.g. Wikipedia, NYTimes)
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                    }
+                    
+                    # Retry logic: Twitter docs say "retries for a short time"
+                    for attempt in range(2):
+                        try:
+                            # Try HEAD first (faster)
+                            response = requests.head(url, timeout=10, allow_redirects=True, headers=headers)
+                            if response.status_code == 200:
+                                return True
+                            # Try GET if HEAD doesn't return 200
+                            response = requests.get(url, timeout=10, allow_redirects=True, headers=headers, stream=True)
+                            return response.status_code == 200
+                        except requests.RequestException:
+                            if attempt == 0:
+                                # Retry once on failure
+                                continue
+                            return False
+                    return False
                 
                 # Main validation logic (matches Twitter's check_all_urls_for_note)
                 note_text_unescaped = unescape(note_text)
