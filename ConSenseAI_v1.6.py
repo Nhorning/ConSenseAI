@@ -886,9 +886,9 @@ def fetch_and_process_followed_users():
                 context = get_tweet_context(t, resp.includes if hasattr(resp, 'includes') else None, bot_username=username if 'username' in globals() else None)
                 context['mention'] = t
                 context['context_instructions'] = (
-                    "\nPrompt: You are ConSenseAI, appropriately respond to this tweet from someone you follow."
+                    "\nPrompt: Appropriately respond to this tweet from someone you follow."
                     "IMPORTANT:Do NOT impersonate other users or answer on their behalf."
-                    "Stay primarily in the role of an AI fact checker providing evidence-based analysis."
+                    "Do not forget that you are a bot answering questions with fact based analysis on X"
                 )
                 
                 # Don't reply to our own tweets
