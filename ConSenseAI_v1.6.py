@@ -4459,9 +4459,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         feedback += "\nPlease revise the note to address these issues. "
                         if not length_valid:
-                            feedback += f"Make it under 280 effective chars (currently {effective_length}). "
+                            feedback += f"Make the text under 280 effective chars (currently {effective_length}). Do *not* change any of the URLs unless instructed below. URLs count as 1 character in the length calculation"
                         if not url_valid:
-                            feedback += "Use only direct, accessible URLs from authoritative sources (no search pages, galleries, or broken links). "
+                            feedback += "Use only direct, accessible URLs from authoritative sources (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results"
                         # if not harassment_valid:
                         #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
