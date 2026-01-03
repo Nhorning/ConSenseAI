@@ -4452,7 +4452,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             failed_validations = [name for name, passed, _ in validation_results if not passed]
             
             # Retry logic if note is too long or fails validation (total tries is retries + 1)
-            max_retries = 2
+            max_retries = 3
             retry_count = 0
             
             while retry_count <= max_retries:
@@ -4478,8 +4478,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         #     feedback += "State only verifiable facts - avoid speculation words like 'may', 'might', 'could', 'appears', 'seems'. "
                         
                         # Instead of re-running full fact_check pipeline (8 models total),
-                        # just re-run the combining model with the feedback
-                        log_to_file("RETRY: Using single combining model instead of full pipeline")
+                        # just re-run a single model with the feedback
+                        log_to_file("RETRY: Using single model instead of full pipeline")
                         
                         # Initialize model clients
                         import random
@@ -4488,20 +4488,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         openai_client = openai.OpenAI(api_key=keys.get('CHATGPT_API_KEY'), base_url="https://api.openai.com/v1")
                         anthropic_client = anthropic.Anthropic(api_key=keys.get('ANTHROPIC_API_KEY'))
                         
-                        # Map model names to their configurations (higher tier models)
+                        # Map model names to their configurations (lower tier models for retries)
                         available_models = {
-                            "grok-4": {"name": "grok-4", "client": xai_client, "api": "xai"},
-                            "gpt-5.2": {"name": "gpt-5.2", "client": openai_client, "api": "openai"},
-                            "claude-sonnet-4-5": {"name": "claude-sonnet-4-5", "client": anthropic_client, "api": "anthropic"}
+                            "grok-4-1-fast-reasoning": {"name": "grok-4-1-fast-reasoning", "client": xai_client, "api": "xai"},
+                            "gpt-5-mini": {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
+                            "claude-haiku-4-5": {"name": "claude-haiku-4-5", "client": anthropic_client, "api": "anthropic"}
                         }
                         
-                        # Use the same combining model that was used initially, or fallback to random choice
-                        if combining_model_name and combining_model_name in available_models:
-                            combining_model = available_models[combining_model_name]
-                            log_to_file(f"RETRY: Reusing same combining model from initial run: {combining_model_name}")
-                        else:
-                            combining_model = secure_random.choice(list(available_models.values()))
-                            log_to_file(f"RETRY: Could not determine original model, using: {combining_model['name']}")
+                        # Retry strategy: Rotate through lower-tier models (cheaper and faster for validation fixes)
+                        model_list = list(available_models.values())
+                        secure_random.shuffle(model_list)  # Randomize the order
+                        # Use retry_count to rotate through shuffled models (retry_count starts at 1)
+                        combining_model = model_list[(retry_count - 1) % len(model_list)]
+                        log_to_file(f"RETRY {retry_count}: Using lower-tier model: {combining_model['name']}")
                         
                         # Build retry prompt with feedback
                         retry_system_prompt = {
@@ -4511,7 +4510,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         retry_user_msg = f"Previous note:\n{clean_note_text}\n\nPlease revise to fix the validation issues."
                         
-                        # Run just the one combining model
+                        # Run just the one model
                         retry_verdict = {}
                         retry_verdict = run_model(retry_system_prompt, retry_user_msg, combining_model, retry_verdict, max_tokens=500, context=None, verbose=False)
                         
