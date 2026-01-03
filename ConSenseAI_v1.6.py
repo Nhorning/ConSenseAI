@@ -4694,6 +4694,16 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     "timestamp": datetime.datetime.now().isoformat()
                 }
                 notes_written += 1
+                
+                # Save after each successful submission for real-time tracking
+                try:
+                    with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                        json.dump(written_notes, f, indent=2)
+                    print(f"[Community Notes] Updated tracking file: {len(written_notes)} total processed posts")
+                    log_to_file(f"TRACKING: Updated {COMMUNITY_NOTES_WRITTEN_FILE} with {len(written_notes)} entries")
+                except Exception as save_error:
+                    print(f"[Community Notes] Error saving tracking file after post {post_id}: {save_error}")
+                    log_to_file(f"TRACKING ERROR: Failed to save file - {save_error}")
             
         except Exception as e:
             print(f"[Community Notes] Error processing post {post_id}: {e}")
