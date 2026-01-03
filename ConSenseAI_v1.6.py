@@ -4197,10 +4197,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
-                - Search for information on drafting successful community notes if needed \n\
-                - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE'\n\
-                - If a note is needed, provide *only* the text of the note - no labels or titles or pronouncements that you can produce one based on the search results. THIS MEANS YOU CLAUDE!\n\
-                - Only provide a note for the tweet in question. Do not fact check the thread"  
+                - Search for information on drafting successful community notes if needed.\n\
+                - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE. A parser will reject the note. Do *NOT* use any of these terms if a not is needed, even when discussing what other models say.\n\
+                - If a note is needed, provide *only* the text of the note - no labels, titles or thinking outloud.\n\
+                - Only provide a note for the tweet in question. Do not fact check the thread."  
             
             post_text = post.text
             
