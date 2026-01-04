@@ -887,8 +887,10 @@ def fetch_and_process_followed_users():
                 context['mention'] = t
                 context['context_instructions'] = (
                     "\nPrompt: Appropriately respond to this tweet from someone you follow."
-                    "IMPORTANT:Do NOT impersonate other users or answer on their behalf."
-                    "Do not forget that you are a bot answering questions with fact based analysis on X"
+                    "- IMPORTANT:Do NOT impersonate other users or answer on their behalf."
+                    "- Do not forget that you are a bot answering questions with fact based analysis on X"
+                    "- If you atta"
+
                 )
                 
                 # Don't reply to our own tweets
@@ -1751,6 +1753,19 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             "role": "user",
                             "content": [*image_messages]
                         })
+                
+                # Enable extended thinking for Claude Sonnet models (improves reasoning)
+                # Uses special "thinking" parameter to allow model to show its reasoning process
+                thinking_config = {}
+                if "sonnet" in model['name'].lower():
+                    thinking_config = {
+                        "thinking": {
+                            "type": "enabled",
+                            "budget_tokens": 5000  # Allow up to 5000 tokens for reasoning
+                        }
+                    }
+                    print(f"[Claude] Extended thinking enabled for {model['name']} (budget: 5000 tokens)")
+                
                 response = model['client'].messages.create(
                     model=model['name'],
                     system=system_prompt['content'],
@@ -1759,7 +1774,8 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     tools=[{
                         "type": "web_search_20250305",
                         "name": "web_search"
-                        }]
+                        }],
+                    **thinking_config
                 )
                 # Collect all valid text blocks
                 text_responses = []
