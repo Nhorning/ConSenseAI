@@ -1754,12 +1754,16 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             "content": [*image_messages]
                         })
                 
-                # Enable extended thinking for Claude Sonnet models (improves reasoning)
+                # Enable extended thinking for Claude models (improves reasoning)
                 # Uses special "thinking" parameter to allow model to show its reasoning process
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
-                if "sonnet" in model['name'].lower():
-                    thinking_budget = 2000  # Reduced from 5000 - still enough for complex reasoning
+                if "claude" in model['name'].lower():
+                    # Use smaller budget for Haiku (faster/cheaper), larger for Sonnet
+                    if "haiku" in model['name'].lower():
+                        thinking_budget = 1000  # Smaller budget for Haiku
+                    else:
+                        thinking_budget = 2000  # Larger budget for Sonnet
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
