@@ -1757,20 +1757,24 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 # Enable extended thinking for Claude Sonnet models (improves reasoning)
                 # Uses special "thinking" parameter to allow model to show its reasoning process
                 thinking_config = {}
+                adjusted_max_tokens = max_tokens
                 if "sonnet" in model['name'].lower():
+                    thinking_budget = 5000
+                    # max_tokens must be greater than thinking budget, so add them together
+                    adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
                         "thinking": {
                             "type": "enabled",
-                            "budget_tokens": 5000  # Allow up to 5000 tokens for reasoning
+                            "budget_tokens": thinking_budget
                         }
                     }
-                    print(f"[Claude] Extended thinking enabled for {model['name']} (budget: 5000 tokens)")
+                    print(f"[Claude] Extended thinking enabled for {model['name']} (budget: {thinking_budget} tokens, total max_tokens: {adjusted_max_tokens})")
                 
                 response = model['client'].messages.create(
                     model=model['name'],
                     system=system_prompt['content'],
                     messages=messages,
-                    max_tokens=max_tokens,
+                    max_tokens=adjusted_max_tokens,
                     tools=[{
                         "type": "web_search_20250305",
                         "name": "web_search"
