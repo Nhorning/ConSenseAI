@@ -3012,8 +3012,12 @@ def collect_quoted(refs, includes=None):
                     expansions=["attachments.media_keys"],
                     media_fields=["media_key", "type", "url", "preview_image_url", "alt_text"]
                 )
-                print(f"[DEBUG] Quoted tweet {ref_id} text length: {len(quoted_response.data.text)} chars")
-                quoted_responses.append(quoted_response)
+                # Check if response and data exist before accessing
+                if quoted_response and quoted_response.data:
+                    print(f"[DEBUG] Quoted tweet {ref_id} text length: {len(quoted_response.data.text)} chars")
+                    quoted_responses.append(quoted_response)
+                else:
+                    print(f"[DEBUG] Quoted tweet {ref_id} returned no data")
             except tweepy.TweepyException as e:
                 print(f"Error fetching quoted tweet {ref_id}: {e}")
     return quoted_responses
