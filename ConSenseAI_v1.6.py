@@ -1754,16 +1754,12 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             "content": [*image_messages]
                         })
                 
-                # Enable extended thinking for Claude models (improves reasoning)
-                # Uses special "thinking" parameter to allow model to show its reasoning process
+                # Enable extended thinking for all Claude models (improves reasoning)
+                # Always enabled and filtered from output - simplifies logic and future-proofs upgrades
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
-                if "claude" in model['name'].lower():
-                    # Use smaller budget for Haiku (faster/cheaper), larger for Sonnet
-                    if "haiku" in model['name'].lower():
-                        thinking_budget = 1000  # Smaller budget for Haiku
-                    else:
-                        thinking_budget = 2000  # Larger budget for Sonnet
+                if model['api'] == "anthropic":
+                    thinking_budget = 1500  # Balanced budget for all Claude models
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
@@ -1772,7 +1768,6 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             "budget_tokens": thinking_budget
                         }
                     }
-                    print(f"[Claude] Extended thinking enabled for {model['name']} (budget: {thinking_budget} tokens, total max_tokens: {adjusted_max_tokens})")
                 
                 response = model['client'].messages.create(
                     model=model['name'],
