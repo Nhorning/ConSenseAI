@@ -4458,49 +4458,53 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             url_valid, url_details = validate_url_validity(clean_note_text)
             validation_results.append(("UrlValidity", url_valid, url_details))
             
-            # 3. Twitter's Evaluate Note API - Official scoring from Twitter
+            # 3. Twitter's Evaluate Note API - Only call if length and URL checks pass (save API quota)
             twitter_eval_valid = True
-            twitter_eval_details = "Not evaluated"
+            twitter_eval_details = "Skipped (other validations failed)"
             twitter_claim_score = None
             
-            try:
-                # Call Twitter's evaluate_note API for official scoring
-                eval_payload = {
-                    "note_text": clean_note_text,
-                    "post_id": post_id
-                }
-                
-                eval_response = oauth.post(
-                    "https://api.x.com/2/evaluate_note",
-                    json=eval_payload
-                )
-                
-                if eval_response.status_code == 200:
-                    eval_data = eval_response.json()
-                    if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
-                        twitter_claim_score = eval_data['data']['claim_opinion_score']
-                        # Lower scores are better (more claim-based, less opinion)
-                        # Based on Twitter docs, scores above certain thresholds indicate too much opinion
-                        if twitter_claim_score <= 50:
-                            twitter_eval_valid = True
-                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
-                        elif twitter_claim_score <= 70:
-                            twitter_eval_valid = True
-                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+            # Only evaluate with Twitter API if basic checks pass
+            if length_valid and url_valid:
+                try:
+                    # Call Twitter's evaluate_note API for official scoring
+                    eval_payload = {
+                        "note_text": clean_note_text,
+                        "post_id": post_id
+                    }
+                    
+                    eval_response = oauth.post(
+                        "https://api.x.com/2/evaluate_note",
+                        json=eval_payload
+                    )
+                    
+                    if eval_response.status_code == 200:
+                        eval_data = eval_response.json()
+                        if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                            twitter_claim_score = eval_data['data']['claim_opinion_score']
+                            # Lower scores are better (more claim-based, less opinion)
+                            # Based on Twitter docs, scores above certain thresholds indicate too much opinion
+                            if twitter_claim_score <= 50:
+                                twitter_eval_valid = True
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
+                            elif twitter_claim_score <= 70:
+                                twitter_eval_valid = True
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+                            else:
+                                twitter_eval_valid = False
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
+                            
+                            log_to_file(f"TWITTER EVALUATE API: {twitter_eval_details}")
                         else:
-                            twitter_eval_valid = False
-                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
-                        
-                        log_to_file(f"TWITTER EVALUATE API: {twitter_eval_details}")
+                            twitter_eval_details = "API returned no score"
+                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response: {eval_data}")
                     else:
-                        twitter_eval_details = "API returned no score"
-                        log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response: {eval_data}")
-                else:
-                    twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
-                    log_to_file(f"TWITTER EVALUATE API: Error {eval_response.status_code}: {eval_response.text}")
-            except Exception as eval_error:
-                twitter_eval_details = f"API call failed: {str(eval_error)}"
-                log_to_file(f"TWITTER EVALUATE API: Exception - {eval_error}")
+                        twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
+                        log_to_file(f"TWITTER EVALUATE API: Error {eval_response.status_code}: {eval_response.text}")
+                except Exception as eval_error:
+                    twitter_eval_details = f"API call failed: {str(eval_error)}"
+                    log_to_file(f"TWITTER EVALUATE API: Exception - {eval_error}")
+            else:
+                log_to_file(f"TWITTER EVALUATE API: Skipped (length_valid={length_valid}, url_valid={url_valid})")
             
             validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
             
