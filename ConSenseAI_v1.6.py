@@ -889,7 +889,7 @@ def fetch_and_process_followed_users():
                     "\nPrompt: Appropriately respond to this tweet from someone you follow."
                     "- IMPORTANT:Do NOT impersonate other users or answer on their behalf."
                     "- Do not forget that you are a bot answering questions with fact based analysis on X"
-                    "- If you atta"
+                    "- If you detect satire respond humorously"
 
                 )
                 
@@ -1777,14 +1777,19 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         }],
                     **thinking_config
                 )
-                # Collect all valid text blocks
+                # Collect all valid text blocks (exclude thinking blocks)
                 text_responses = []
                 for block in response.content:
+                    # Only include text blocks, skip thinking blocks
                     if block.type == "text":
                         text_responses.append(block.text.strip())
+                    elif block.type == "thinking" and verbose:
+                        # Optionally log thinking content for debugging
+                        print(f"[Claude Thinking] {block.thinking[:200]}..." if len(block.thinking) > 200 else f"[Claude Thinking] {block.thinking}")
+                
                 # Join valid text blocks or use fallback
-                    if text_responses:
-                        verdict[model['name']] = " ".join(text_responses)
+                if text_responses:
+                    verdict[model['name']] = " ".join(text_responses)
         
                 # Handle minimal or unhelpful responses
                 if verdict[model['name']] in [".", "", "No results"]:
