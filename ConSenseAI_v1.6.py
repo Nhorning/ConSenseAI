@@ -1759,7 +1759,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
                 if "sonnet" in model['name'].lower():
-                    thinking_budget = 5000
+                    thinking_budget = 2000  # Reduced from 5000 - still enough for complex reasoning
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
@@ -4459,11 +4459,57 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             url_valid, url_details = validate_url_validity(clean_note_text)
             validation_results.append(("UrlValidity", url_valid, url_details))
             
-            # 3. Harassment/Abuse (98%+ must pass) - COMMENTED OUT (TOO TWITCHY)
+            # 3. Twitter's Evaluate Note API - Official scoring from Twitter
+            twitter_eval_valid = True
+            twitter_eval_details = "Not evaluated"
+            twitter_claim_score = None
+            
+            try:
+                # Call Twitter's evaluate_note API for official scoring
+                eval_payload = {
+                    "note_text": clean_note_text,
+                    "post_id": post_id
+                }
+                
+                eval_response = oauth.post(
+                    "https://api.x.com/2/evaluate_note",
+                    json=eval_payload
+                )
+                
+                if eval_response.status_code == 200:
+                    eval_data = eval_response.json()
+                    if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                        twitter_claim_score = eval_data['data']['claim_opinion_score']
+                        # Lower scores are better (more claim-based, less opinion)
+                        # Based on Twitter docs, scores above certain thresholds indicate too much opinion
+                        if twitter_claim_score <= 50:
+                            twitter_eval_valid = True
+                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
+                        elif twitter_claim_score <= 70:
+                            twitter_eval_valid = True
+                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+                        else:
+                            twitter_eval_valid = False
+                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
+                        
+                        log_to_file(f"TWITTER EVALUATE API: {twitter_eval_details}")
+                    else:
+                        twitter_eval_details = "API returned no score"
+                        log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response: {eval_data}")
+                else:
+                    twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
+                    log_to_file(f"TWITTER EVALUATE API: Error {eval_response.status_code}: {eval_response.text}")
+            except Exception as eval_error:
+                twitter_eval_details = f"API call failed: {str(eval_error)}"
+                log_to_file(f"TWITTER EVALUATE API: Exception - {eval_error}")
+            
+            validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
+            
+            # 4. Harassment/Abuse (98%+ must pass) - COMMENTED OUT (TOO TWITCHY)
             # harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
             # validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
             
-            # 4. Claim/Opinion (30%+ must pass) - COMMENTED OUT FOR NOW
+            # 5. Claim/Opinion (30%+ must pass) - COMMENTED OUT (replaced by Twitter API)
             # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
             # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
             
@@ -4511,9 +4557,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         feedback += "\nPlease revise the note to address these issues. "
                         if not length_valid:
-                            feedback += f"Make the text under 280 effective chars (currently {effective_length}). Do *not* change any of the URLs unless instructed below. URLs count as 1 character in the length calculation"
+                            feedback += f"Make the text under 280 effective chars (currently {effective_length}). Do *not* change any of the URLs unless instructed below. URLs count as 1 character in the length calculation. "
                         if not url_valid:
-                            feedback += "Use only direct, accessible URLs from authoritative sources which you found in your search results (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results"
+                            feedback += "Use only direct, accessible URLs from authoritative sources which you found in your search results (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results. "
+                        if not twitter_eval_valid and twitter_claim_score is not None:
+                            feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}/100 on claim vs opinion (lower is better). The note is too opinionated. Focus on stating verifiable facts with authoritative sources rather than making subjective judgments. "
                         # if not harassment_valid:
                         #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
@@ -4607,6 +4655,45 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         url_valid, url_details = validate_url_validity(clean_note_text)
                         validation_results.append(("UrlValidity", url_valid, url_details))
+                        
+                        # Re-run Twitter evaluation
+                        twitter_eval_valid = True
+                        twitter_eval_details = "Not evaluated"
+                        twitter_claim_score = None
+                        
+                        try:
+                            eval_payload = {
+                                "note_text": clean_note_text,
+                                "post_id": post_id
+                            }
+                            
+                            eval_response = oauth.post(
+                                "https://api.x.com/2/evaluate_note",
+                                json=eval_payload
+                            )
+                            
+                            if eval_response.status_code == 200:
+                                eval_data = eval_response.json()
+                                if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                                    twitter_claim_score = eval_data['data']['claim_opinion_score']
+                                    if twitter_claim_score <= 50:
+                                        twitter_eval_valid = True
+                                        twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
+                                    elif twitter_claim_score <= 70:
+                                        twitter_eval_valid = True
+                                        twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+                                    else:
+                                        twitter_eval_valid = False
+                                        twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
+                                    log_to_file(f"TWITTER EVALUATE API (retry): {twitter_eval_details}")
+                                else:
+                                    twitter_eval_details = "API returned no score"
+                            else:
+                                twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
+                        except Exception as eval_error:
+                            twitter_eval_details = f"API call failed: {str(eval_error)}"
+                        
+                        validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
                         
                         # harassment_valid, harassment_details = validate_harassment_abuse(clean_note_text)
                         # validation_results.append(("HarassmentAbuse", harassment_valid, harassment_details))
