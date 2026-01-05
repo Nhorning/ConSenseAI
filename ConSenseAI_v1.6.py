@@ -1755,11 +1755,11 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         })
                 
                 # Enable extended thinking for all Claude models (improves reasoning)
-                # Always enabled and filtered from output - simplifies logic and future-proofs upgrades
+                # Lower budget reduces verbose thinking output in Community Notes
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
                 if model['api'] == "anthropic":
-                    thinking_budget = 1500  # Balanced budget for all Claude models
+                    thinking_budget = 1000  # Reduced to minimize thinking verbosity
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
