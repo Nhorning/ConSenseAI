@@ -4496,19 +4496,12 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             else:
                                 twitter_eval_valid = False
                                 twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
-                            
-                            log_to_file(f"TWITTER EVALUATE API: {twitter_eval_details}")
                         else:
                             twitter_eval_details = "API returned no score"
-                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response: {eval_data}")
                     else:
                         twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
-                        log_to_file(f"TWITTER EVALUATE API: Error {eval_response.status_code}: {eval_response.text}")
                 except Exception as eval_error:
                     twitter_eval_details = f"API call failed: {str(eval_error)}"
-                    log_to_file(f"TWITTER EVALUATE API: Exception - {eval_error}")
-            else:
-                log_to_file(f"TWITTER EVALUATE API: Skipped (length_valid={length_valid}, url_valid={url_valid})")
             
             validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
             
@@ -4694,15 +4687,12 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                         else:
                                             twitter_eval_valid = False
                                             twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
-                                        log_to_file(f"TWITTER EVALUATE API (retry): {twitter_eval_details}")
                                     else:
                                         twitter_eval_details = "API returned no score"
                                 else:
                                     twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
                             except Exception as eval_error:
                                 twitter_eval_details = f"API call failed: {str(eval_error)}"
-                        else:
-                            log_to_file(f"TWITTER EVALUATE API (retry): Skipped (length_valid={length_valid}, url_valid={url_valid})")
                         
                         validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
                         
