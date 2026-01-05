@@ -1062,7 +1062,30 @@ def load_ancestor_chains():
     return {}
 
 def save_ancestor_chain(conversation_id, chain, additional_context=None):
-    chains = load_ancestor_chains()
+    # Try to load existing chains
+    chains = {}
+    load_failed = False
+    if os.path.exists(ANCESTOR_CHAIN_FILE):
+        try:
+            with open(ANCESTOR_CHAIN_FILE, 'r') as f:
+                chains = json.load(f)
+                chains = {str(k): v for k, v in chains.items()}
+        except Exception as e:
+            print(f"[Ancestor Cache] ERROR loading {ANCESTOR_CHAIN_FILE}: {e}")
+            print(f"[Ancestor Cache] CRITICAL: Cannot save - file is corrupted. Creating backup.")
+            load_failed = True
+            # Create backup of corrupted file
+            import shutil
+            backup_name = f"{ANCESTOR_CHAIN_FILE}.corrupted.{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            try:
+                shutil.copy2(ANCESTOR_CHAIN_FILE, backup_name)
+                print(f"[Ancestor Cache] Corrupted file backed up to: {backup_name}")
+            except Exception as backup_error:
+                print(f"[Ancestor Cache] Failed to create backup: {backup_error}")
+            # ABORT - do not overwrite corrupted data
+            print(f"[Ancestor Cache] ABORTING save to prevent data loss. Fix {ANCESTOR_CHAIN_FILE} manually.")
+            return
+    
     # Convert chain to serializable format
     serializable_chain = []
     for entry in chain:
