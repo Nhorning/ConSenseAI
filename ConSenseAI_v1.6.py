@@ -4228,6 +4228,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             print(f"[Community Notes] Error loading written notes file: {e}")
     
     notes_written = 0
+    posts_skipped_already_written = 0
+    posts_not_needing_notes = 0
+    posts_failed_generation = 0
     posts = resp.get('data', [])
     includes = resp.get('includes', {})
     
@@ -4244,6 +4247,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         if post_id in written_notes:
             print(f"[Community Notes] Skipping {post_id} - already written note")
             log_to_file("STATUS: SKIPPED (already wrote note)")
+            posts_skipped_already_written += 1
             continue
 
         log_to_file(f"POST TEXT: {post_data.get('text', '')}")
@@ -4305,6 +4309,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if not isinstance(note_text, str) or not note_text:
                 print(f"[Community Notes] No note generated for {post_id}")
                 log_to_file("NOTE GENERATION: Failed (empty response)")
+                posts_failed_generation += 1
                 continue
             
             log_to_file(f"NOTE GENERATED ({len(note_text)} chars):")
@@ -4319,6 +4324,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     "reason": "not_misleading",
                     "timestamp": datetime.datetime.now().isoformat()
                 }
+                posts_not_needing_notes += 1
                 continue
             
             # Strip model attribution tags from the note text before submission
@@ -4899,7 +4905,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     
     # Save written notes record
     log_to_file("\n" + "=" * 80)
-    log_to_file(f"RUN COMPLETE: {notes_written} notes processed")
+    log_to_file(f"RUN COMPLETE: Processed {len(posts)} eligible posts")
+    log_to_file(f"  - Notes written/submitted: {notes_written}")
+    log_to_file(f"  - Posts not needing notes: {posts_not_needing_notes}")
+    log_to_file(f"  - Posts skipped (already processed): {posts_skipped_already_written}")
+    log_to_file(f"  - Failed generations: {posts_failed_generation}")
     log_to_file("=" * 80 + "\n")
     
     try:
@@ -4916,7 +4926,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     except Exception as e:
         print(f"[Community Notes] Error saving last check file: {e}")
     
-    print(f"[Community Notes] Completed: {notes_written} notes written")
+    print(f"[Community Notes] Completed: Processed {len(posts)} eligible posts")
+    print(f"  - Notes written/submitted: {notes_written}")
+    print(f"  - Posts not needing notes: {posts_not_needing_notes}")
+    print(f"  - Posts skipped (already processed): {posts_skipped_already_written}")
+    print(f"  - Failed generations: {posts_failed_generation}")
     print(f"[Community Notes] Full log saved to {log_filename}")
     return notes_written
 
