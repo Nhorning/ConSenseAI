@@ -2243,7 +2243,8 @@ def get_total_bot_reply_count():
     try:
         chains = load_ancestor_chains()
         bot_tweets = load_bot_tweets()
-        bot_ids = set(bot_tweets.keys())
+        # Filter out special keys like '_' and 'cn_' prefixed IDs
+        bot_ids = set(k for k in bot_tweets.keys() if not str(k).startswith('_') and not str(k).startswith('cn_'))
         if not chains:
             return len(bot_ids)
         
@@ -2278,8 +2279,8 @@ def compute_baseline_replies_since_last_direct_post():
     """
     try:
         bot_tweets = load_bot_tweets()  # dict of id->text
-        # Filter out special keys like '_followed_users' that aren't tweet IDs
-        bot_ids = set(str(k) for k in bot_tweets.keys() if not str(k).startswith('_'))
+        # Filter out special keys like '_followed_users' and 'cn_' prefixed Community Notes IDs
+        bot_ids = set(str(k) for k in bot_tweets.keys() if not str(k).startswith('_') and not str(k).startswith('cn_'))
 
         # Collect bot ids that appear in ancestor chains (i.e., replies)
         chains = load_ancestor_chains()
@@ -2337,7 +2338,8 @@ def generate_auto_search_term(n=20, current_term=None, used_terms=None):
             return None
 
         bot_tweets = load_bot_tweets()
-        bot_ids = set(bot_tweets.keys())
+        # Filter out special keys like '_' and 'cn_' prefixed IDs
+        bot_ids = set(k for k in bot_tweets.keys() if not str(k).startswith('_') and not str(k).startswith('cn_'))
 
         # Gather recent conversations with bot participation
         convs_with_bot = []
@@ -2457,7 +2459,8 @@ def post_reflection_on_recent_bot_threads(n=10):
             return
 
         bot_tweets = load_bot_tweets()
-        bot_ids = set(bot_tweets.keys())
+        # Filter out special keys like '_' and 'cn_' prefixed IDs
+        bot_ids = set(k for k in bot_tweets.keys() if not str(k).startswith('_') and not str(k).startswith('cn_'))
         
         # Load Community Notes to include in reflections
         cn_written = {}
