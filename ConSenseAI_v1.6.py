@@ -1759,7 +1759,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
                 if model['api'] == "anthropic":
-                    thinking_budget = 1000  # Reduced to minimize thinking verbosity
+                    thinking_budget = 1024  # Reduced to minimize thinking verbosity
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens + thinking_budget
                     thinking_config = {
@@ -2422,13 +2422,38 @@ def post_reflection_on_recent_bot_threads(n=10):
 
         bot_tweets = load_bot_tweets()
         bot_ids = set(bot_tweets.keys())
+        
+        # Load Community Notes to include in reflections
+        cn_written = {}
+        COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
+        if os.path.exists(COMMUNITY_NOTES_WRITTEN_FILE):
+            try:
+                with open(COMMUNITY_NOTES_WRITTEN_FILE, 'r') as f:
+                    cn_written = json.load(f)
+                print(f"[Reflection] Loaded {len(cn_written)} Community Notes for reflection")
+            except Exception as e:
+                print(f"[Reflection] Error loading Community Notes: {e}")
 
         # Gather conversations where the bot has posted and pick the most recent N
-        convs_with_bot = []  # list of (most_recent_bot_time, conv_id, cache_entry)
+        convs_with_bot = []  # list of (most_recent_bot_time, conv_id, cache_entry, has_cn_note)
         for conv_id, cache_entry in chains.items():
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
             most_recent_ts = 0
             bot_found = False
+            has_cn_note = False
+            
+            # Check if this conversation has a Community Note
+            for post_id, cn_data in cn_written.items():
+                if cn_data.get('conversation_id') == conv_id and cn_data.get('note'):
+                    has_cn_note = True
+                    bot_found = True  # CN counts as bot participation
+                    # Use CN timestamp if available for recency
+                    try:
+                        cn_ts = datetime.datetime.fromisoformat(cn_data['timestamp']).timestamp()
+                        most_recent_ts = max(most_recent_ts, int(cn_ts))
+                    except Exception:
+                        pass
+            
             for entry in chain:
                 if not isinstance(entry, dict):
                     continue
@@ -2456,7 +2481,7 @@ def post_reflection_on_recent_bot_threads(n=10):
                     bot_found = True
                     most_recent_ts = max(most_recent_ts, ts)
             if bot_found:
-                convs_with_bot.append((most_recent_ts, conv_id, cache_entry))
+                convs_with_bot.append((most_recent_ts, conv_id, cache_entry, has_cn_note))
 
         if not convs_with_bot:
             print("[Reflection] No conversations with bot replies found in cache.")
@@ -2466,13 +2491,25 @@ def post_reflection_on_recent_bot_threads(n=10):
         convs_with_bot.sort(key=lambda x: x[0], reverse=True)
         selected = convs_with_bot[:n]
 
-        # Build a multi-thread context for fact_check using only the ancestor chains (the thread hierarchy)
+        # Build a multi-thread context for fact_check using ancestor chains + Community Notes text
         summary_points = []
         aggregated_chain = []
-        for ts, conv_id, cache_entry in selected:
+        for ts, conv_id, cache_entry, has_cn_note in selected:
             chain = cache_entry.get('chain', cache_entry) if isinstance(cache_entry, dict) else cache_entry
-            # Use only the ancestor chain (thread) text for the summary — do not include broader thread_tweets
-            summary_points.append(f"Thread {conv_id[:8]}:\n" + build_ancestor_chain(chain, indent=0, from_cache=True))
+            
+            # Build the thread text
+            thread_text = build_ancestor_chain(chain, indent=0, from_cache=True)
+            
+            # If this thread has a Community Note, append it
+            if has_cn_note:
+                for post_id, cn_data in cn_written.items():
+                    if cn_data.get('conversation_id') == conv_id and cn_data.get('note'):
+                        cn_text = cn_data['note']
+                        thread_text += f"\n  → Community Note: {cn_text}"
+                        print(f"[Reflection] Including Community Note for conversation {conv_id[:8]}")
+                        break
+            
+            summary_points.append(f"Thread {conv_id[:8]}:\n{thread_text}")
             # aggregate the chain entries for context
             for entry in chain:
                 if isinstance(entry, dict):
@@ -4235,6 +4272,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             context = get_tweet_context(post, includes, bot_username=username)
             log_to_file(f"CONTEXT: Gathered {len(context.get('ancestor_chain', []))} ancestor tweets, {len(context.get('media', []))} media items")
             
+            # Save the conversation context to ancestor_chains for reflection building
+            # This allows reflections to include Community Notes threads
+            conv_id = str(post.conversation_id) if hasattr(post, 'conversation_id') else str(post_id)
+            if context.get('ancestor_chain'):
+                additional_context = {
+                    'thread_tweets': context.get('thread_tweets', []),
+                    'bot_replies': context.get('bot_replies_in_thread', []),
+                    'media': context.get('media', [])
+                }
+                save_ancestor_chain(conv_id, context['ancestor_chain'], additional_context)
+                log_to_file(f"SAVED CONTEXT: Conversation {conv_id} saved to ancestor_chains.json")
+            
             context['mention'] = post
             context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
@@ -4819,9 +4868,16 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 written_notes[post_id] = {
                     "note": clean_note_text,
                     "test_mode": test_mode,
-                    "timestamp": datetime.datetime.now().isoformat()
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "conversation_id": conv_id  # Track which conversation this belongs to
                 }
                 notes_written += 1
+                
+                # Save Community Note to bot_tweets for reflection tracking
+                # Use a special CN prefix to distinguish from regular tweets
+                cn_tracking_id = f"cn_{post_id}"
+                save_bot_tweet(cn_tracking_id, clean_note_text)
+                log_to_file(f"TRACKING: Saved note to bot_tweets.json as {cn_tracking_id}")
                 
                 # Save after each successful submission for real-time tracking
                 try:
