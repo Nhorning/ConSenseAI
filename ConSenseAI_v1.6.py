@@ -1107,6 +1107,19 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
         # Remove oldest conversations (keep most recent)
         sorted_chains = sorted(chains.items(), key=lambda x: x[0], reverse=True)
         chains = dict(sorted_chains[:MAX_ANCESTOR_CHAINS])
+    
+    # Test serialization BEFORE writing to file to prevent corruption
+    try:
+        test_json = json.dumps(chains)
+    except Exception as e:
+        print(f"[Ancestor Cache] CRITICAL: Cannot serialize chains to JSON: {e}")
+        print(f"[Ancestor Cache] ABORTING save to prevent file corruption.")
+        print(f"[Ancestor Cache] Problem with conversation {conversation_id}")
+        import traceback
+        traceback.print_exc()
+        return
+    
+    # Only write if serialization test passed
     try:
         with open(ANCESTOR_CHAIN_FILE, 'w') as f:
             json.dump(chains, f, indent=2)
@@ -3051,6 +3064,7 @@ def fetch_and_process_mentions(user_id, username):
 from collections import defaultdict
 
 def tweet_to_dict(t):
+    """Convert a Tweet object to a JSON-serializable dict, handling nested objects."""
     # If already a dict, return as-is
     if isinstance(t, dict):
         return t
@@ -3058,8 +3072,21 @@ def tweet_to_dict(t):
     elif hasattr(t, 'data') and isinstance(t.data, dict):
         return t.data
     elif hasattr(t, '__dict__'):
-        # Only keep serializable fields
-        return {k: v for k, v in t.__dict__.items() if isinstance(v, (str, int, float, dict, list, type(None)))}
+        # Recursively convert nested Tweet objects
+        result = {}
+        for k, v in t.__dict__.items():
+            if isinstance(v, (str, int, float, bool, type(None))):
+                result[k] = v
+            elif isinstance(v, dict):
+                result[k] = v
+            elif isinstance(v, list):
+                # Recursively handle lists (e.g., referenced_tweets)
+                result[k] = [tweet_to_dict(item) if hasattr(item, '__dict__') else item for item in v]
+            elif hasattr(v, '__dict__'):
+                # Nested object - recursively convert
+                result[k] = tweet_to_dict(v)
+            # Skip non-serializable types
+        return result
     else:
         return str(t)
 
