@@ -1780,15 +1780,30 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         }],
                     **thinking_config
                 )
+                
+                # Debug: Log the full response structure to understand what we're getting
+                if verbose and thinking_config:
+                    print(f"[Claude Response Debug] Extended thinking enabled: {bool(thinking_config)}")
+                    print(f"[Claude Response Debug] Number of content blocks: {len(response.content)}")
+                    for i, block in enumerate(response.content):
+                        print(f"[Claude Response Debug] Block {i}: type={getattr(block, 'type', 'NO_TYPE')}")
+                
                 # Collect all valid text blocks (exclude thinking blocks)
                 text_responses = []
                 for block in response.content:
-                    # Only include text blocks, skip thinking blocks
-                    if block.type == "text":
-                        text_responses.append(block.text.strip())
-                    elif block.type == "thinking" and verbose:
-                        # Optionally log thinking content for debugging
-                        print(f"[Claude Thinking] {block.thinking[:200]}..." if len(block.thinking) > 200 else f"[Claude Thinking] {block.thinking}")
+                    # Check block type carefully
+                    if hasattr(block, 'type'):
+                        if block.type == "thinking":
+                            # This is a thinking block - skip it
+                            if verbose:
+                                thinking_text = getattr(block, 'thinking', getattr(block, 'text', str(block)))
+                                print(f"[Claude Thinking Block Found] {thinking_text[:200]}..." if len(thinking_text) > 200 else f"[Claude Thinking Block Found] {thinking_text}")
+                            continue
+                        elif block.type == "text":
+                            # This is a text block - include it
+                            text_responses.append(block.text.strip())
+                            if verbose:
+                                print(f"[Claude Text Block] {block.text[:150]}..." if len(block.text) > 150 else f"[Claude Text Block] {block.text}")
                 
                 # Join valid text blocks or use fallback
                 if text_responses:
