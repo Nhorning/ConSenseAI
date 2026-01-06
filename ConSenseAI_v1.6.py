@@ -3359,10 +3359,38 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 # Collect media and quoted tweets for the mention and append to the in-memory chain
                 mention_media = extract_media(tweet, includes)
                 quoted_in_mention = [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))]
+                
+                # Extract username from includes
+                mention_username = None
+                if includes:
+                    tweet_author_id = getattr(tweet, 'author_id', None)
+                    print(f"[Mention Username] Looking for author_id: {tweet_author_id}")
+                    users_list = None
+                    if isinstance(includes, dict):
+                        users_list = includes.get('users', [])
+                    elif hasattr(includes, 'users'):
+                        users_list = includes.users
+                    
+                    if users_list:
+                        print(f"[Mention Username] Found {len(users_list)} users in includes")
+                        for user in users_list:
+                            user_id = user.id if hasattr(user, 'id') else user.get('id')
+                            user_name = user.username if hasattr(user, 'username') else user.get('username')
+                            print(f"[Mention Username] User: id={user_id}, username={user_name}")
+                            if str(user_id) == str(tweet_author_id):
+                                mention_username = user_name
+                                print(f"[Mention Username] MATCH! Setting username to: {mention_username}")
+                                break
+                    else:
+                        print(f"[Mention Username] No users in includes")
+                else:
+                    print(f"[Mention Username] No includes available")
+                
                 context['ancestor_chain'].append({
                     'tweet': tweet,
                     'quoted_tweets': quoted_in_mention,
-                    'media': mention_media
+                    'media': mention_media,
+                    'username': mention_username
                 })
                 # Also expose mention media in the top-level context media list
                 context['media'].extend(mention_media)
