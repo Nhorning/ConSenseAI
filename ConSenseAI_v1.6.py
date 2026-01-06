@@ -1100,7 +1100,15 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
         serializable_chain.append(chain_entry)
     cache_entry = {"chain": serializable_chain}
     if additional_context:
-        cache_entry.update(additional_context)
+        # Convert any Tweet objects in additional_context to dicts
+        serialized_additional = {}
+        for key, value in additional_context.items():
+            if isinstance(value, list):
+                # Convert list items that are Tweet objects
+                serialized_additional[key] = [tweet_to_dict(item) if hasattr(item, '__dict__') else item for item in value]
+            else:
+                serialized_additional[key] = value
+        cache_entry.update(serialized_additional)
 
     chains[str(conversation_id)] = cache_entry
     if len(chains) > MAX_ANCESTOR_CHAINS:
@@ -3488,13 +3496,15 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             quoted_responses = collect_quoted(getattr(current_tweet, 'referenced_tweets', None))
             quoted = [qr.data for qr in quoted_responses]  # Extract data for storage
             quoted_from_api.extend(quoted)
-            # Extract media, passing includes if available
+            # Extract media and username, passing includes if available
             # For first iteration (current_tweet == tweet), use the includes passed to get_tweet_context
-            # For subsequent iterations, use parent_response.includes
+            # For subsequent iterations, use includes from when we fetched this parent (stored as parent_response.includes)
             if current_tweet.id == tweet.id:
                 current_includes = includes
+            elif 'parent_response' in locals() and hasattr(parent_response, 'includes'):
+                current_includes = parent_response.includes
             else:
-                current_includes = parent_response.includes if 'parent_response' in locals() and hasattr(parent_response, 'includes') else None
+                current_includes = None
             media = extract_media(current_tweet, current_includes)
             # Extract media from quoted tweets
             for qr in quoted_responses:
