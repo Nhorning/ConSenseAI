@@ -1848,7 +1848,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 if model['api'] == "anthropic":
                     thinking_budget = 1024  # Reduced to minimize thinking verbosity
                     # max_tokens must be greater than thinking budget, so add them together
-                    adjusted_max_tokens = int(max_tokens/5) + thinking_budget
+                    adjusted_max_tokens = max_tokens//5 + thinking_budget
                     thinking_config = {
                         "thinking": {
                             "type": "enabled",
