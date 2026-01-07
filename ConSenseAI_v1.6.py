@@ -1100,14 +1100,36 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
         serializable_chain.append(chain_entry)
     cache_entry = {"chain": serializable_chain}
     if additional_context:
-        # Convert any Tweet objects in additional_context to dicts
+        # Recursively convert any Tweet objects in additional_context to dicts
+        def deep_convert(obj, depth=0):
+            """Recursively convert Tweet objects to dicts in nested structures"""
+            indent = "  " * depth
+            # Check types in correct order - basic types first, then complex
+            if obj is None:
+                return None
+            elif isinstance(obj, (str, int, float, bool)):
+                return obj
+            elif isinstance(obj, list):
+                # Recursively process list items
+                return [deep_convert(item, depth+1) for item in obj]
+            elif isinstance(obj, dict):
+                # Recursively process dict values
+                return {k: deep_convert(v, depth+1) for k, v in obj.items()}
+            elif hasattr(obj, '__dict__'):
+                # This is an object (like Tweet) - convert it
+                print(f"[Ancestor Cache]{indent} Converting object of type {type(obj).__name__} to dict")
+                return tweet_to_dict(obj)
+            else:
+                # Unknown type - should not happen
+                print(f"[Ancestor Cache]{indent} WARNING: Unknown type {type(obj).__name__}, attempting conversion")
+                try:
+                    return tweet_to_dict(obj)
+                except:
+                    return str(obj)
+        
         serialized_additional = {}
         for key, value in additional_context.items():
-            if isinstance(value, list):
-                # Convert list items that are Tweet objects
-                serialized_additional[key] = [tweet_to_dict(item) if hasattr(item, '__dict__') else item for item in value]
-            else:
-                serialized_additional[key] = value
+            serialized_additional[key] = deep_convert(value)
         cache_entry.update(serialized_additional)
 
     chains[str(conversation_id)] = cache_entry
@@ -1123,6 +1145,27 @@ def save_ancestor_chain(conversation_id, chain, additional_context=None):
         print(f"[Ancestor Cache] CRITICAL: Cannot serialize chains to JSON: {e}")
         print(f"[Ancestor Cache] ABORTING save to prevent file corruption.")
         print(f"[Ancestor Cache] Problem with conversation {conversation_id}")
+        
+        # Debug: Try to find which conversation has the problem
+        print(f"[Ancestor Cache] Testing each conversation individually...")
+        for conv_id, conv_data in chains.items():
+            try:
+                json.dumps({conv_id: conv_data})
+                print(f"[Ancestor Cache]   Conversation {conv_id}: OK")
+            except Exception as conv_e:
+                print(f"[Ancestor Cache]   Conversation {conv_id}: FAILED - {conv_e}")
+                # Try to find which key in the conversation data
+                if isinstance(conv_data, dict):
+                    for key, value in conv_data.items():
+                        try:
+                            json.dumps({key: value})
+                            print(f"[Ancestor Cache]     Key '{key}': OK")
+                        except Exception as key_e:
+                            print(f"[Ancestor Cache]     Key '{key}': FAILED - {key_e}")
+                            print(f"[Ancestor Cache]     Key '{key}' type: {type(value)}")
+                            if isinstance(value, list) and len(value) > 0:
+                                print(f"[Ancestor Cache]     First item type: {type(value[0])}")
+        
         import traceback
         traceback.print_exc()
         return
@@ -4266,7 +4309,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         params = {
             "test_mode": str(test_mode).lower(),
             "max_results": max_results,
-            "tweet.fields": "author_id,created_at,referenced_tweets,attachments,entities,conversation_id",
+            "tweet.fields": "author_id,created_at,referenced_tweets,attachments,entities,conversation_id,suggested_source_links,suggested_source_links_with_counts",
             "expansions": "attachments.media_keys,referenced_tweets.id,referenced_tweets.id.attachments.media_keys",
             "media.fields": "media_key,type,url,preview_image_url,alt_text,height,width"
         }
@@ -4344,8 +4387,51 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         log_to_file(f"POST TEXT: {post_data.get('text', '')}")
         log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
         log_to_file(f"CREATED AT: {post_data.get('created_at')}")
-    
         
+        # Extract suggested source links from post data (provided by Twitter Community Notes)
+        # Field requested: suggested_source_links_with_counts
+        suggested_urls = []
+        suggested_links_data = post_data.get('suggested_source_links_with_counts', [])
+        
+        print(f"[Community Notes] Checking for suggested_source_links_with_counts field...")
+        log_to_file(f"SUGGESTED SOURCE LINKS: Checking post_data for field 'suggested_source_links_with_counts'")
+        
+        if suggested_links_data:
+            print(f"[Community Notes] Found suggested source links data: {suggested_links_data}")
+            log_to_file(f"SUGGESTED SOURCE LINKS (raw data): {suggested_links_data}")
+            log_to_file(f"SUGGESTED SOURCE LINKS (data type): {type(suggested_links_data)}")
+            
+            # Extract URLs and counts
+            for link_data in suggested_links_data:
+                if isinstance(link_data, dict):
+                    url = link_data.get('url')
+                    count = link_data.get('count', 1)
+                    if url:
+                        suggested_urls.append(url)
+                        print(f"[Community Notes] Suggested URL: {url} (suggested {count} times)")
+                        log_to_file(f"  - URL: {url} (count: {count})")
+                elif isinstance(link_data, str):
+                    # Fallback if it's just a string
+                    suggested_urls.append(link_data)
+                    print(f"[Community Notes] Suggested URL (string): {link_data}")
+                    log_to_file(f"  - URL (string format): {link_data}")
+                else:
+                    log_to_file(f"  - WARNING: Unexpected link_data type: {type(link_data)} = {link_data}")
+            
+            if suggested_urls:
+                log_to_file(f"SUGGESTED URLs ({len(suggested_urls)} found): {', '.join(suggested_urls)}")
+                print(f"[Community Notes] Total suggested URLs: {len(suggested_urls)}")
+            else:
+                log_to_file("SUGGESTED SOURCE LINKS: Field present but no URLs extracted")
+                print(f"[Community Notes] WARNING: suggested_source_links_with_counts present but empty after parsing")
+        else:
+            print(f"[Community Notes] No suggested_source_links_with_counts field in post data")
+            log_to_file("SUGGESTED SOURCE LINKS: Field not present in post_data")
+            # Debug: Show what fields ARE present
+            available_fields = list(post_data.keys())
+            log_to_file(f"SUGGESTED SOURCE LINKS: Available fields in post_data: {available_fields}")
+            print(f"[Community Notes] Available fields: {available_fields}")
+                
         # Convert post dict to Tweepy-like object for compatibility with existing functions
         # Create a mock tweet object
         class MockTweet:
@@ -4380,7 +4466,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 log_to_file(f"SAVED CONTEXT: Conversation {conv_id} saved to ancestor_chains.json")
             
             context['mention'] = post
-            context['context_instructions'] = "\nThis post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note\n\
+            
+            # Build context instructions with suggested URLs if available
+            suggested_urls_text = ""
+            if suggested_urls:
+                suggested_urls_text = f"\n- SUGGESTED SOURCE URLs (provided by Twitter Community Notes): {', '.join(suggested_urls)}\n  Consider using these if they're relevant and reliable, but verify them first."
+                print(f"[Community Notes] Adding {len(suggested_urls)} suggested URLs to prompt")
+                log_to_file(f"SUGGESTED URLs: Added to prompt - {', '.join(suggested_urls)}")
+            else:
+                print(f"[Community Notes] No suggested URLs to add to prompt")
+                log_to_file("SUGGESTED URLs: None available to add to prompt")
+            
+            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
