@@ -1848,7 +1848,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                 if model['api'] == "anthropic":
                     thinking_budget = 1024  # Reduced to minimize thinking verbosity
                     # max_tokens must be greater than thinking budget, so add them together
-                    adjusted_max_tokens = max_tokens + thinking_budget
+                    adjusted_max_tokens = max_tokens/5 + thinking_budget
                     thinking_config = {
                         "thinking": {
                             "type": "enabled",
@@ -1881,10 +1881,10 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     # Check block type carefully
                     if hasattr(block, 'type'):
                         if block.type == "thinking":
-                            # This is a thinking block - skip it
+                            # This is a thinking block - skip it from response but show full thinking if verbose
                             if verbose:
                                 thinking_text = getattr(block, 'thinking', getattr(block, 'text', str(block)))
-                                print(f"[Claude Thinking Block Found] {thinking_text[:200]}..." if len(thinking_text) > 200 else f"[Claude Thinking Block Found] {thinking_text}")
+                                print(f"[Claude Thinking Block Found]\n{thinking_text}")
                             continue
                         elif block.type == "text":
                             # This is a text block - include it
