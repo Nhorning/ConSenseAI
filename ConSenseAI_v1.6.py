@@ -4314,13 +4314,12 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             "media.fields": "media_key,type,url,preview_image_url,alt_text,height,width"
         }
         
-        response = oauth.get(
-            "https://api.twitter.com/2/notes/search/posts_eligible_for_notes",
-            params=params
-        )
+        endpoint_url = "https://api.twitter.com/2/notes/search/posts_eligible_for_notes"
+        response = oauth.get(endpoint_url, params=params)
         
         if response.status_code == 200:
             resp = response.json()
+            
             if not resp or not resp.get('data'):
                 print("[Community Notes] No eligible posts found")
                 log_to_file("No eligible posts found")
@@ -4389,48 +4388,32 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         log_to_file(f"CREATED AT: {post_data.get('created_at')}")
         
         # Extract suggested source links from post data (provided by Twitter Community Notes)
-        # Field requested: suggested_source_links_with_counts
         suggested_urls = []
-        suggested_links_data = post_data.get('suggested_source_links_with_counts', [])
         
-        print(f"[Community Notes] Checking for suggested_source_links_with_counts field...")
-        log_to_file(f"SUGGESTED SOURCE LINKS: Checking post_data for field 'suggested_source_links_with_counts'")
+        # Try the _with_counts version first (has count data)
+        suggested_links_data = post_data.get('suggested_source_links_with_counts')
         
         if suggested_links_data:
-            print(f"[Community Notes] Found suggested source links data: {suggested_links_data}")
-            log_to_file(f"SUGGESTED SOURCE LINKS (raw data): {suggested_links_data}")
-            log_to_file(f"SUGGESTED SOURCE LINKS (data type): {type(suggested_links_data)}")
-            
             # Extract URLs and counts
             for link_data in suggested_links_data:
                 if isinstance(link_data, dict):
                     url = link_data.get('url')
-                    count = link_data.get('count', 1)
+                    count = link_data.get('count', '1')
                     if url:
                         suggested_urls.append(url)
-                        print(f"[Community Notes] Suggested URL: {url} (suggested {count} times)")
-                        log_to_file(f"  - URL: {url} (count: {count})")
-                elif isinstance(link_data, str):
-                    # Fallback if it's just a string
-                    suggested_urls.append(link_data)
-                    print(f"[Community Notes] Suggested URL (string): {link_data}")
-                    log_to_file(f"  - URL (string format): {link_data}")
-                else:
-                    log_to_file(f"  - WARNING: Unexpected link_data type: {type(link_data)} = {link_data}")
+                        log_to_file(f"  Suggested URL: {url} (count: {count})")
             
             if suggested_urls:
-                log_to_file(f"SUGGESTED URLs ({len(suggested_urls)} found): {', '.join(suggested_urls)}")
-                print(f"[Community Notes] Total suggested URLs: {len(suggested_urls)}")
-            else:
-                log_to_file("SUGGESTED SOURCE LINKS: Field present but no URLs extracted")
-                print(f"[Community Notes] WARNING: suggested_source_links_with_counts present but empty after parsing")
+                log_to_file(f"SUGGESTED URLs: {len(suggested_urls)} found - {', '.join(suggested_urls)}")
         else:
-            print(f"[Community Notes] No suggested_source_links_with_counts field in post data")
-            log_to_file("SUGGESTED SOURCE LINKS: Field not present in post_data")
-            # Debug: Show what fields ARE present
-            available_fields = list(post_data.keys())
-            log_to_file(f"SUGGESTED SOURCE LINKS: Available fields in post_data: {available_fields}")
-            print(f"[Community Notes] Available fields: {available_fields}")
+            # Fallback to plain suggested_source_links (no count data)
+            suggested_links_data = post_data.get('suggested_source_links')
+            if suggested_links_data:
+                suggested_urls = [url for url in suggested_links_data if isinstance(url, str)]
+                if suggested_urls:
+                    log_to_file(f"SUGGESTED URLs: {len(suggested_urls)} found - {', '.join(suggested_urls)}")
+            else:
+                log_to_file("SUGGESTED URLs: None provided")
                 
         # Convert post dict to Tweepy-like object for compatibility with existing functions
         # Create a mock tweet object
@@ -4471,11 +4454,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             suggested_urls_text = ""
             if suggested_urls:
                 suggested_urls_text = f"\n- SUGGESTED SOURCE URLs (provided by Twitter Community Notes): {', '.join(suggested_urls)}\n  Consider using these if they're relevant and reliable, but verify them first."
-                print(f"[Community Notes] Adding {len(suggested_urls)} suggested URLs to prompt")
-                log_to_file(f"SUGGESTED URLs: Added to prompt - {', '.join(suggested_urls)}")
-            else:
-                print(f"[Community Notes] No suggested URLs to add to prompt")
-                log_to_file("SUGGESTED URLs: None available to add to prompt")
+            log_to_file(f"Added {len(suggested_urls)} suggested URLs to prompt")
             
             context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
