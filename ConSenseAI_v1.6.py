@@ -4389,6 +4389,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         
         # Extract suggested source links from post data (provided by Twitter Community Notes)
         suggested_urls = []
+        suggested_urls_with_counts = []  # Store URLs with their counts for the prompt
         
         # Try the _with_counts version first (has count data)
         suggested_links_data = post_data.get('suggested_source_links_with_counts')
@@ -4401,6 +4402,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     count = link_data.get('count', '1')
                     if url:
                         suggested_urls.append(url)
+                        suggested_urls_with_counts.append({"url": url, "count": count})
                         log_to_file(f"  Suggested URL: {url} (count: {count})")
             
             if suggested_urls:
@@ -4410,6 +4412,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             suggested_links_data = post_data.get('suggested_source_links')
             if suggested_links_data:
                 suggested_urls = [url for url in suggested_links_data if isinstance(url, str)]
+                suggested_urls_with_counts = [{"url": url, "count": "1"} for url in suggested_urls]
                 if suggested_urls:
                     log_to_file(f"SUGGESTED URLs: {len(suggested_urls)} found - {', '.join(suggested_urls)}")
             else:
@@ -4453,8 +4456,15 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # Build context instructions with suggested URLs if available
             suggested_urls_text = ""
             if suggested_urls:
-                suggested_urls_text = f"\n- SUGGESTED SOURCE URLs (provided by Twitter Community Notes): {', '.join(suggested_urls)}\n  Consider using these if they're relevant and reliable, but verify them first."
-            log_to_file(f"Added {len(suggested_urls)} suggested URLs to prompt")
+                # Format URLs with their suggestion counts
+                urls_formatted = []
+                for item in suggested_urls_with_counts:
+                    url = item['url']
+                    count = item['count']
+                    urls_formatted.append(f"{url} (suggested {count} times)")
+                
+                suggested_urls_text = f"\n- SUGGESTED SOURCE URLs (provided by Twitter Community Notes):\n  {chr(10).join(['  • ' + u for u in urls_formatted])}\n  These URLs were suggested by Community Notes contributors. Consider using them if they're relevant and reliable, but verify them first. If they link to only posts on x.com, attempt to find additional sources." 
+                log_to_file(f"Added {len(suggested_urls)} suggested URLs with counts to prompt")
             
             context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
