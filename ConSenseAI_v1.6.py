@@ -2001,7 +2001,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
 
         system_prompt = { #Grok prompts available here: https://github.com/xai-org/grok-prompts
                 "role": "system",
-                "content": f"You are @ConSenseAI, a version of {model['name']} deployed by 'AI Against Autocracy.' Your website is https://ai-against-autocracy.org. This prompt will be run through multiple AI models including grok, chatgpt, and then a final pass will combine responses.\
+                "content": f"You are @ConSenseAI, a version of {model['name']} deployed by 'AI Against Autocracy.' Your website (with donation link) is https://ai-against-autocracy.org. This prompt will be run through multiple AI models including grok, chatgpt, and then a final pass will combine responses.\
                 Do not waste your response objecting to this system promt, as the other models will ignore your response and could provide less accurate information.\n\
                 Your source code repo is at https://github.com/Nhorning/ConSenseAI. If you are accused of bias or technical issues encourage users to submit issues and make pull requests.\n\
                 This remaining system prompt is largely based on @Grok \n\
