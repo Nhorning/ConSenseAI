@@ -5062,7 +5062,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             import time
                             time.sleep(2)  # Brief delay to allow Twitter to process the note
                             
-                            verify_response = cn_post_client.get(
+                            verify_response = oauth_submit.get(
                                 "https://api.x.com/2/notes/search/notes_written",
                                 params={
                                     "test_mode": str(test_mode).lower(),
