@@ -5056,6 +5056,48 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         print(f"  Note text: {clean_note_text}")
                         log_to_file(f"SUBMISSION: SUCCESS (HTTP {submit_response.status_code})")
                         log_to_file(f"RESPONSE: {submit_response.text}")
+                        
+                        # Retrieve the submitted note to verify score bucket
+                        try:
+                            import time
+                            time.sleep(2)  # Brief delay to allow Twitter to process the note
+                            
+                            verify_response = cn_post_client.get(
+                                "https://api.x.com/2/notes/search/notes_written",
+                                params={
+                                    "test_mode": str(test_mode).lower(),
+                                    "max_results": 10,
+                                    "note.fields": "id,info,status,test_result"
+                                }
+                            )
+                            
+                            if verify_response.status_code == 200:
+                                verify_data = verify_response.json()
+                                log_to_file(f"VERIFICATION RESPONSE: {json.dumps(verify_data, indent=2)}")
+                                
+                                # Find our note by post_id
+                                if 'data' in verify_data:
+                                    for note in verify_data['data']:
+                                        if note.get('post_id') == post_id:
+                                            log_to_file(f"VERIFIED NOTE FOUND: {json.dumps(note, indent=2)}")
+                                            
+                                            # Extract test_result data
+                                            if 'test_result' in note:
+                                                test_result = note['test_result']
+                                                evaluator_score_bucket = test_result.get('evaluator_score_bucket', 'unknown')
+                                                evaluator_type = test_result.get('evaluator_type', 'unknown')
+                                                
+                                                print(f"[Community Notes] Note verification:")
+                                                print(f"  Evaluator Score Bucket: {evaluator_score_bucket}")
+                                                print(f"  Evaluator Type: {evaluator_type}")
+                                                log_to_file(f"NOTE SCORE BUCKET: {evaluator_score_bucket}")
+                                                log_to_file(f"NOTE EVALUATOR TYPE: {evaluator_type}")
+                                                log_to_file(f"ORIGINAL CLAIM/OPINION SCORE: {twitter_claim_score if 'twitter_claim_score' in locals() else 'N/A'}")
+                                            break
+                            else:
+                                log_to_file(f"VERIFICATION FAILED: HTTP {verify_response.status_code} - {verify_response.text}")
+                        except Exception as verify_error:
+                            log_to_file(f"VERIFICATION EXCEPTION: {verify_error}")
                     elif submit_response.status_code == 403 and "already created a note" in submit_response.text:
                         # Twitter says we already submitted a note for this post - sync our local tracking
                         print(f"[Community Notes] Note already exists on Twitter for {post_id} - syncing local tracking")
