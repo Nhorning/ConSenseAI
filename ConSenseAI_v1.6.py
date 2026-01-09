@@ -4761,17 +4761,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                             twitter_claim_score = eval_data['data']['claim_opinion_score']
-                            # ASSUMPTION: Lower scores are better (more claim-based, less opinion)
-                            # WARNING: These thresholds are guesses - not from official docs
-                            if twitter_claim_score <= 50:
+                            # Score appears to range roughly from -5 to +5
+                            # Negative = more fact-based, Positive = more opinion-based
+                            # Based on observed data: all successful notes score between -3.5 and +1.0
+                            if twitter_claim_score <= 2.0:
                                 twitter_eval_valid = True
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
-                            elif twitter_claim_score <= 70:
-                                twitter_eval_valid = True
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+                                if twitter_claim_score < 0:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - strongly fact-based)"
+                                elif twitter_claim_score <= 1.0:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - fact-based)"
+                                else:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - mostly factual)"
                             else:
                                 twitter_eval_valid = False
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too opinionated - score above 2.0 threshold)"
                         else:
                             twitter_eval_details = "API returned no score"
                             log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
@@ -4956,15 +4959,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                     eval_data = eval_response.json()
                                     if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                                         twitter_claim_score = eval_data['data']['claim_opinion_score']
-                                        if twitter_claim_score <= 50:
+                                        # Score ranges roughly -5 to +5 (negative = fact-based, positive = opinion)
+                                        if twitter_claim_score <= 2.0:
                                             twitter_eval_valid = True
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
-                                        elif twitter_claim_score <= 70:
-                                            twitter_eval_valid = True
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (good)"
+                                            if twitter_claim_score < 0:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - strongly fact-based)"
+                                            elif twitter_claim_score <= 1.0:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - fact-based)"
+                                            else:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - mostly factual)"
                                         else:
                                             twitter_eval_valid = False
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
+                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too opinionated - score above 2.0 threshold)"
                                     else:
                                         twitter_eval_details = "API returned no score"
                                 else:
