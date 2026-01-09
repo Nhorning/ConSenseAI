@@ -1,4 +1,6 @@
 import requests
+import http.client
+import urllib3.exceptions
 
 # Fetch the full text of a tweet using twitterapi.io
 def get_full_text_twitterapiio(tweet_id, api_key):
@@ -4436,7 +4438,31 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         # Get full context for the post
         try:
             log_to_file("STATUS: Processing")
-            context = get_tweet_context(post, includes, bot_username=username)
+            
+            # Retry logic for get_tweet_context (handles network errors)
+            max_context_retries = 3
+            context = None
+            for attempt in range(max_context_retries):
+                try:
+                    context = get_tweet_context(post, includes, bot_username=username)
+                    break  # Success - exit retry loop
+                except (requests.exceptions.ConnectionError, 
+                        http.client.RemoteDisconnected,
+                        urllib3.exceptions.ProtocolError) as net_err:
+                    if attempt < max_context_retries - 1:
+                        retry_delay = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                        print(f"[Community Notes] Network error fetching context for {post_id}, retrying in {retry_delay}s (attempt {attempt + 1}/{max_context_retries})")
+                        log_to_file(f"NETWORK ERROR: {net_err}, retrying in {retry_delay}s")
+                        import time
+                        time.sleep(retry_delay)
+                    else:
+                        print(f"[Community Notes] Failed to fetch context after {max_context_retries} attempts: {net_err}")
+                        log_to_file(f"CONTEXT FETCH FAILED: {net_err}")
+                        raise  # Re-raise to trigger outer exception handler
+            
+            if context is None:
+                raise Exception("Failed to get context after retries")
+                
             log_to_file(f"CONTEXT: Gathered {len(context.get('ancestor_chain', []))} ancestor tweets, {len(context.get('media', []))} media items")
             
             # Save the conversation context to ancestor_chains for reflection building
@@ -4730,10 +4756,13 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     
                     if eval_response.status_code == 200:
                         eval_data = eval_response.json()
+                        # Log full response to understand the API better
+                        log_to_file(f"TWITTER EVALUATE API RESPONSE: {json.dumps(eval_data, indent=2)}")
+                        
                         if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                             twitter_claim_score = eval_data['data']['claim_opinion_score']
-                            # Lower scores are better (more claim-based, less opinion)
-                            # Based on Twitter docs, scores above certain thresholds indicate too much opinion
+                            # ASSUMPTION: Lower scores are better (more claim-based, less opinion)
+                            # WARNING: These thresholds are guesses - not from official docs
                             if twitter_claim_score <= 50:
                                 twitter_eval_valid = True
                                 twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (excellent - fact-based)"
@@ -4745,8 +4774,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score}/100 (too opinionated - needs more facts)"
                         else:
                             twitter_eval_details = "API returned no score"
+                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
                     else:
                         twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
+                        log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text}")
                 except Exception as eval_error:
                     twitter_eval_details = f"API call failed: {str(eval_error)}"
             
