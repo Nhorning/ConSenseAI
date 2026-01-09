@@ -5078,20 +5078,30 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 # Find our note by post_id
                                 if 'data' in verify_data:
                                     for note in verify_data['data']:
-                                        if note.get('post_id') == post_id:
+                                        note_info = note.get('info', {})
+                                        if note_info.get('post_id') == post_id:
                                             log_to_file(f"VERIFIED NOTE FOUND: {json.dumps(note, indent=2)}")
                                             
-                                            # Extract test_result data
-                                            if 'test_result' in note:
-                                                test_result = note['test_result']
-                                                evaluator_score_bucket = test_result.get('evaluator_score_bucket', 'unknown')
-                                                evaluator_type = test_result.get('evaluator_type', 'unknown')
+                                            # Extract and process test_result data
+                                            if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
+                                                evaluation_outcomes = note['test_result']['evaluation_outcome']
+                                                
+                                                # Build score bucket summary
+                                                score_summary = {}
+                                                for outcome in evaluation_outcomes:
+                                                    evaluator_type = outcome.get('evaluator_type', 'unknown')
+                                                    score_bucket = outcome.get('evaluator_score_bucket', 'unknown')
+                                                    score_summary[evaluator_type] = score_bucket
                                                 
                                                 print(f"[Community Notes] Note verification:")
-                                                print(f"  Evaluator Score Bucket: {evaluator_score_bucket}")
-                                                print(f"  Evaluator Type: {evaluator_type}")
-                                                log_to_file(f"NOTE SCORE BUCKET: {evaluator_score_bucket}")
-                                                log_to_file(f"NOTE EVALUATOR TYPE: {evaluator_type}")
+                                                print(f"  HarassmentAbuse: {score_summary.get('HarassmentAbuse', 'N/A')}")
+                                                print(f"  UrlValidity: {score_summary.get('UrlValidity', 'N/A')}")
+                                                print(f"  ClaimOpinion: {score_summary.get('ClaimOpinion', 'N/A')}")
+                                                
+                                                log_to_file(f"SCORE BUCKETS:")
+                                                log_to_file(f"  HarassmentAbuse: {score_summary.get('HarassmentAbuse', 'N/A')}")
+                                                log_to_file(f"  UrlValidity: {score_summary.get('UrlValidity', 'N/A')}")
+                                                log_to_file(f"  ClaimOpinion: {score_summary.get('ClaimOpinion', 'N/A')}")
                                                 log_to_file(f"ORIGINAL CLAIM/OPINION SCORE: {twitter_claim_score if 'twitter_claim_score' in locals() else 'N/A'}")
                                             break
                             else:
@@ -5168,6 +5178,90 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     log_to_file(f"  - Posts skipped (already processed): {posts_skipped_already_written}")
     log_to_file(f"  - Failed generations: {posts_failed_generation}")
     log_to_file("=" * 80 + "\n")
+    
+    # Generate end-of-run verification report
+    if notes_written > 0 and not args.dryrun:
+        try:
+            log_to_file("\n" + "=" * 80)
+            log_to_file("END-OF-RUN VERIFICATION REPORT")
+            log_to_file("=" * 80)
+            print(f"[Community Notes] Generating verification report for {notes_written} submitted notes...")
+            
+            # Re-establish OAuth session for verification
+            cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+            cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+            cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+            cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+            
+            oauth_verify = OAuth1Session(
+                client_key=cn_api_key,
+                client_secret=cn_api_secret,
+                resource_owner_key=cn_access_token,
+                resource_owner_secret=cn_access_secret
+            )
+            
+            verify_response = oauth_verify.get(
+                "https://api.x.com/2/notes/search/notes_written",
+                params={
+                    "test_mode": str(test_mode).lower(),
+                    "max_results": min(notes_written, 100),  # API max is 100
+                    "note.fields": "id,info,status,test_result"
+                }
+            )
+            
+            if verify_response.status_code == 200:
+                verify_data = verify_response.json()
+                log_to_file(f"FINAL VERIFICATION RESPONSE: {json.dumps(verify_data, indent=2)}")
+                
+                if 'data' in verify_data:
+                    # Count score buckets by evaluator type
+                    claim_opinion_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                    url_validity_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                    harassment_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                    
+                    for note in verify_data['data']:
+                        if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
+                            for outcome in note['test_result']['evaluation_outcome']:
+                                evaluator_type = outcome.get('evaluator_type', '')
+                                score_bucket = outcome.get('evaluator_score_bucket', '')
+                                
+                                if evaluator_type == 'ClaimOpinion' and score_bucket in claim_opinion_buckets:
+                                    claim_opinion_buckets[score_bucket] += 1
+                                elif evaluator_type == 'UrlValidity' and score_bucket in url_validity_buckets:
+                                    url_validity_buckets[score_bucket] += 1
+                                elif evaluator_type == 'HarassmentAbuse' and score_bucket in harassment_buckets:
+                                    harassment_buckets[score_bucket] += 1
+                    
+                    # Log summary
+                    log_to_file(f"\nVERIFICATION SUMMARY ({len(verify_data['data'])} notes retrieved):")
+                    log_to_file(f"\nClaimOpinion Score Buckets:")
+                    log_to_file(f"  High (fact-based):   {claim_opinion_buckets['High']}")
+                    log_to_file(f"  Medium:              {claim_opinion_buckets['Medium']}")
+                    log_to_file(f"  Low (opinion-based): {claim_opinion_buckets['Low']}")
+                    log_to_file(f"\nUrlValidity Score Buckets:")
+                    log_to_file(f"  High:   {url_validity_buckets['High']}")
+                    log_to_file(f"  Medium: {url_validity_buckets['Medium']}")
+                    log_to_file(f"  Low:    {url_validity_buckets['Low']}")
+                    log_to_file(f"\nHarassmentAbuse Score Buckets:")
+                    log_to_file(f"  High:   {harassment_buckets['High']}")
+                    log_to_file(f"  Medium: {harassment_buckets['Medium']}")
+                    log_to_file(f"  Low:    {harassment_buckets['Low']}")
+                    
+                    # Print summary to console
+                    print(f"\n[Community Notes] Verification Summary:")
+                    print(f"  ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
+                    print(f"  UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
+                    print(f"  HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
+                else:
+                    log_to_file("No notes data in verification response")
+            else:
+                log_to_file(f"FINAL VERIFICATION FAILED: HTTP {verify_response.status_code} - {verify_response.text}")
+            
+            log_to_file("=" * 80 + "\n")
+        except Exception as verify_error:
+            log_to_file(f"END-OF-RUN VERIFICATION ERROR: {verify_error}")
+            import traceback
+            log_to_file(traceback.format_exc())
     
     try:
         with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
