@@ -303,6 +303,123 @@ def get_current_search_cap(max_daily_cap, interval_hours, cap_increase_time='10:
     cap = min(1 + increments, max_daily_cap)
     return cap
 
+def _get_cn_score_history_file(username):
+    """Get filename for Community Notes score history tracking."""
+    return f"cn_score_history_{username}.json"
+
+def load_score_history(username):
+    """Load the rolling history of last 50 ClaimOpinion scores."""
+    filename = _get_cn_score_history_file(username)
+    if os.path.exists(filename):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+                return data.get('scores', [])
+        except Exception as e:
+            print(f"Error loading score history: {e}")
+    return []
+
+def save_score_history(username, scores):
+    """Save rolling history of last 50 ClaimOpinion scores."""
+    filename = _get_cn_score_history_file(username)
+    # Keep only last 50
+    scores = scores[-50:] if len(scores) > 50 else scores
+    data = {
+        'scores': scores,
+        'last_updated': datetime.datetime.now().isoformat()
+    }
+    try:
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"Error saving score history: {e}")
+
+def add_score_to_history(username, score):
+    """Add a new score to the rolling history."""
+    scores = load_score_history(username)
+    scores.append(score)
+    save_score_history(username, scores)
+
+def get_score_distribution(username):
+    """
+    Calculate distribution of last 50 scores.
+    Returns dict with 'high_pct', 'medium_pct', 'low_pct' based on predicted buckets.
+    
+    Score to bucket mapping (empirically verified):
+    - >= 0.3: High bucket
+    - >= 0: High bucket  
+    - >= -0.5: High/Medium bucket (borderline)
+    - >= -2.0: Medium bucket (likely)
+    - < -2.0: Low bucket
+    """
+    scores = load_score_history(username)
+    if not scores:
+        return {'high_pct': 100.0, 'medium_pct': 0.0, 'low_pct': 0.0, 'count': 0}
+    
+    high_count = 0
+    medium_count = 0
+    low_count = 0
+    
+    for score in scores:
+        if score >= 0:
+            high_count += 1
+        elif score >= -2.0:
+            medium_count += 1
+        else:
+            low_count += 1
+    
+    total = len(scores)
+    return {
+        'high_pct': (high_count / total) * 100,
+        'medium_pct': (medium_count / total) * 100,
+        'low_pct': (low_count / total) * 100,
+        'count': total
+    }
+
+def should_reject_score(username, score):
+    """
+    Determine if a score should be rejected based on rolling distribution.
+    
+    Rules:
+    - At least 30% must score High on ClaimOpinion
+    - No more than 30% can score Low on ClaimOpinion
+    
+    Strategy:
+    - If Low scores approaching 30%, reject Low scores
+    - If High scores below 30%, reject both Medium and Low scores
+    - Otherwise accept all scores >= -2.0
+    """
+    dist = get_score_distribution(username)
+    
+    # Not enough data yet - be lenient
+    if dist['count'] < 10:
+        return score < -2.0, f"Score: {score:.3f} (insufficient history, using lenient threshold)"
+    
+    # Predict what bucket this score would be
+    if score >= 0:
+        predicted_bucket = "High"
+    elif score >= -2.0:
+        predicted_bucket = "Medium"
+    else:
+        predicted_bucket = "Low"
+    
+    # Check if High percentage is below 30% - if so, we need more High scores
+    if dist['high_pct'] < 30:
+        if predicted_bucket != "High":
+            return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: need more High scores, currently {dist['high_pct']:.1f}%)"
+        else:
+            return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: boosting High %, currently {dist['high_pct']:.1f}%)"
+    
+    # Check if Low percentage is approaching 30% - if so, reject Low scores
+    if dist['low_pct'] >= 25:  # Start rejecting at 25% to stay under 30%
+        if predicted_bucket == "Low":
+            return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: Low at {dist['low_pct']:.1f}%, approaching 30% limit)"
+        else:
+            return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: Low at {dist['low_pct']:.1f}%)"
+    
+    # Otherwise, accept all scores
+    return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: within acceptable range, High={dist['high_pct']:.1f}%, Low={dist['low_pct']:.1f}%)"
+
 def _add_sent_hash(reply_text: str):
     # store hash keyed by timestamp
     data = _load_json_file(SENT_HASHES_FILE, {})
@@ -4742,59 +4859,67 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             # Only evaluate with Twitter API if basic checks pass
             if length_valid and url_valid:
-                try:
-                    # Call Twitter's evaluate_note API for official scoring
-                    eval_payload = {
-                        "note_text": clean_note_text,
-                        "post_id": post_id
-                    }
-                    
-                    eval_response = oauth.post(
-                        "https://api.x.com/2/evaluate_note",
-                        json=eval_payload
-                    )
-                    
-                    if eval_response.status_code == 200:
-                        eval_data = eval_response.json()
-                        # Log full response to understand the API better
-                        log_to_file(f"TWITTER EVALUATE API RESPONSE: {json.dumps(eval_data, indent=2)}")
+                # Retry API call up to 3 times on connection errors
+                max_api_retries = 3
+                for api_attempt in range(max_api_retries):
+                    try:
+                        # Call Twitter's evaluate_note API for official scoring
+                        eval_payload = {
+                            "note_text": clean_note_text,
+                            "post_id": post_id
+                        }
                         
-                        if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
-                            twitter_claim_score = eval_data['data']['claim_opinion_score']
-                            # EMPIRICAL DATA ANALYSIS: Score meanings are REVERSED from initial assumption!
-                            # High ClaimOpinion bucket (GOOD/fact-based) correlates with POSITIVE scores
-                            # Medium/Low buckets correlate with NEGATIVE scores
-                            # Example: +0.356 → High bucket, -1.17 → Medium bucket
-                            # Therefore: HIGHER (more positive) scores = BETTER
-                            # Using lenient threshold (-2.0) to avoid rejecting Medium-bucket notes
-                            if twitter_claim_score >= -2.0:
-                                twitter_eval_valid = True
-                                if twitter_claim_score >= 0.3:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
-                                elif twitter_claim_score >= 0:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
-                                elif twitter_claim_score >= -0.5:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - likely High/Medium bucket)"
+                        eval_response = oauth.post(
+                            "https://api.x.com/2/evaluate_note",
+                            json=eval_payload
+                        )
+                        
+                        if eval_response.status_code == 200:
+                            eval_data = eval_response.json()
+                            # Log full response to understand the API better
+                            log_to_file(f"TWITTER EVALUATE API RESPONSE: {json.dumps(eval_data, indent=2)}")
+                            
+                            if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                                twitter_claim_score = eval_data['data']['claim_opinion_score']
+                                
+                                # Use dynamic threshold based on rolling score distribution
+                                # Rules: At least 30% must be High, no more than 30% can be Low
+                                should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
+                                
+                                if should_reject:
+                                    twitter_eval_valid = False
+                                    twitter_eval_details = rejection_reason
                                 else:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (borderline - may be Medium bucket)"
+                                    twitter_eval_valid = True
+                                    twitter_eval_details = rejection_reason
+                                break  # Success - exit retry loop
+                            else:
+                                # API returned no score - this is a real failure, not a connection issue
+                                twitter_eval_valid = False
+                                twitter_eval_details = "API returned no score - note may not be scoreable"
+                                log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
+                                break  # Don't retry - this is a real response
+                        else:
+                            # API error - could be temporary, retry
+                            if api_attempt < max_api_retries - 1:
+                                log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                time.sleep(2)  # Brief delay before retry
+                                continue
                             else:
                                 twitter_eval_valid = False
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Low bucket)"
+                                twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
+                                log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text} - all retries exhausted")
+                    except Exception as eval_error:
+                        # Connection error - retry if we have attempts left
+                        if api_attempt < max_api_retries - 1:
+                            log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                            time.sleep(2)  # Brief delay before retry
+                            continue
                         else:
-                            # API returned no score - mark as invalid to trigger retry
+                            # All retries exhausted
                             twitter_eval_valid = False
-                            twitter_eval_details = "API returned no score - retry needed"
-                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response - marking as invalid to retry")
-                    else:
-                        # API error - mark as invalid to trigger retry
-                        twitter_eval_valid = False
-                        twitter_eval_details = f"API error: HTTP {eval_response.status_code} - retry needed"
-                        log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text} - marking as invalid to retry")
-                except Exception as eval_error:
-                    # Exception during API call - mark as invalid to trigger retry
-                    twitter_eval_valid = False
-                    twitter_eval_details = f"API call failed: {str(eval_error)} - retry needed"
-                    log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - marking as invalid to retry")
+                            twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
+                            log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - all retries exhausted")
             
             validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
             
@@ -4956,46 +5081,57 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         # Only evaluate with Twitter API if basic checks pass
                         if length_valid and url_valid:
-                            try:
-                                eval_payload = {
-                                    "note_text": clean_note_text,
-                                    "post_id": post_id
-                                }
-                                
-                                eval_response = oauth.post(
-                                    "https://api.x.com/2/evaluate_note",
-                                    json=eval_payload
-                                )
-                                
-                                if eval_response.status_code == 200:
-                                    eval_data = eval_response.json()
-                                    if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
-                                        twitter_claim_score = eval_data['data']['claim_opinion_score']
-                                        # EMPIRICAL DATA: Higher (more positive) scores = better ClaimOpinion buckets
-                                        # +0.356 → High bucket, -1.17 → Medium bucket
-                                        # Using lenient threshold (-2.0) to avoid rejecting Medium-bucket notes
-                                        if twitter_claim_score >= -2.0:
-                                            twitter_eval_valid = True
-                                            if twitter_claim_score >= 0.3:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
-                                            elif twitter_claim_score >= 0:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
-                                            elif twitter_claim_score >= -0.5:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - likely High/Medium bucket)"
+                            # Retry API call up to 3 times on connection errors
+                            max_api_retries = 3
+                            for api_attempt in range(max_api_retries):
+                                try:
+                                    eval_payload = {
+                                        "note_text": clean_note_text,
+                                        "post_id": post_id
+                                    }
+                                    
+                                    eval_response = oauth.post(
+                                        "https://api.x.com/2/evaluate_note",
+                                        json=eval_payload
+                                    )
+                                    
+                                    if eval_response.status_code == 200:
+                                        eval_data = eval_response.json()
+                                        if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                                            twitter_claim_score = eval_data['data']['claim_opinion_score']
+                                            
+                                            # Use dynamic threshold based on rolling score distribution
+                                            should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
+                                            
+                                            if should_reject:
+                                                twitter_eval_valid = False
+                                                twitter_eval_details = rejection_reason
                                             else:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (borderline - may be Medium bucket)"
+                                                twitter_eval_valid = True
+                                                twitter_eval_details = rejection_reason
+                                            break  # Success - exit retry loop
                                         else:
                                             twitter_eval_valid = False
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Low bucket)"
+                                            twitter_eval_details = "API returned no score - note may not be scoreable"
+                                            break  # Don't retry - this is a real response
+                                    else:
+                                        # API error - could be temporary, retry
+                                        if api_attempt < max_api_retries - 1:
+                                            log_to_file(f"RETRY: TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                            time.sleep(2)
+                                            continue
+                                        else:
+                                            twitter_eval_valid = False
+                                            twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
+                                except Exception as eval_error:
+                                    # Connection error - retry if we have attempts left
+                                    if api_attempt < max_api_retries - 1:
+                                        log_to_file(f"RETRY: TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                        time.sleep(2)
+                                        continue
                                     else:
                                         twitter_eval_valid = False
-                                        twitter_eval_details = "API returned no score - retry needed"
-                                else:
-                                    twitter_eval_valid = False
-                                    twitter_eval_details = f"API error: HTTP {eval_response.status_code} - retry needed"
-                            except Exception as eval_error:
-                                twitter_eval_valid = False
-                                twitter_eval_details = f"API call failed: {str(eval_error)} - retry needed"
+                                        twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
                         
                         validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
                         
@@ -5075,6 +5211,13 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         print(f"  Note text: {clean_note_text}")
                         log_to_file(f"SUBMISSION: SUCCESS (HTTP {submit_response.status_code})")
                         log_to_file(f"RESPONSE: {submit_response.text}")
+                        
+                        # Add score to rolling history for tracking distribution
+                        if twitter_claim_score is not None:
+                            add_score_to_history(username, twitter_claim_score)
+                            log_to_file(f"SCORE TRACKING: Added score {twitter_claim_score} to history")
+                            dist = get_score_distribution(username)
+                            log_to_file(f"CURRENT DISTRIBUTION: High={dist['high_pct']:.1f}%, Medium={dist['medium_pct']:.1f}%, Low={dist['low_pct']:.1f}% (n={dist['count']})")
                         
                         # Retrieve the submitted note to verify score bucket
                         try:
