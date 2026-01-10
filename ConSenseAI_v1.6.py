@@ -397,8 +397,8 @@ def should_reject_score(username, score):
     else:
         predicted_bucket = "Low"
     
-    # Check if High percentage is below 30% - if so, we need more High scores
-    if dist['high_pct'] < 30:
+    # Check if High percentage is below 32% - if so, we need more High scores (32% provides margin above 30% requirement)
+    if dist['high_pct'] < 32:
         if predicted_bucket != "High":
             return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: need more High scores, currently {dist['high_pct']:.1f}%)"
         else:
