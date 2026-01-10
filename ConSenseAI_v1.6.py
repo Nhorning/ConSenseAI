@@ -5220,19 +5220,29 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             if verify_response.status_code == 200:
                 verify_data = verify_response.json()
-                log_to_file(f"FINAL VERIFICATION RESPONSE: {json.dumps(verify_data, indent=2)}")
+                # Log raw response to file only (not printed)
+                log_to_file(f"FINAL VERIFICATION RAW RESPONSE: {json.dumps(verify_data, indent=2)}")
                 
                 if 'data' in verify_data:
-                    # Count score buckets by evaluator type
+                    # Count score buckets by evaluator type and track individual notes
                     claim_opinion_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
                     url_validity_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
                     harassment_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
                     
+                    # Track individual note scores for detailed reporting
+                    note_details = []
+                    
                     for note in verify_data['data']:
+                        note_info = note.get('info', {})
+                        post_id = note_info.get('post_id', 'unknown')
+                        note_text = note_info.get('text', '')[:100] + '...' if len(note_info.get('text', '')) > 100 else note_info.get('text', '')
+                        
+                        scores = {}
                         if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
                             for outcome in note['test_result']['evaluation_outcome']:
                                 evaluator_type = outcome.get('evaluator_type', '')
                                 score_bucket = outcome.get('evaluator_score_bucket', '')
+                                scores[evaluator_type] = score_bucket
                                 
                                 if evaluator_type == 'ClaimOpinion' and score_bucket in claim_opinion_buckets:
                                     claim_opinion_buckets[score_bucket] += 1
@@ -5240,9 +5250,24 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                     url_validity_buckets[score_bucket] += 1
                                 elif evaluator_type == 'HarassmentAbuse' and score_bucket in harassment_buckets:
                                     harassment_buckets[score_bucket] += 1
+                        
+                        note_details.append({
+                            'post_id': post_id,
+                            'text': note_text,
+                            'scores': scores
+                        })
                     
-                    # Log summary
-                    log_to_file(f"\nVERIFICATION SUMMARY ({len(verify_data['data'])} notes retrieved):")
+                    # Log detailed note-by-note results
+                    log_to_file(f"\nVERIFICATION DETAILS ({len(verify_data['data'])} notes retrieved):")
+                    for detail in note_details:
+                        log_to_file(f"\nPost ID: {detail['post_id']}")
+                        log_to_file(f"  Note: {detail['text']}")
+                        log_to_file(f"  ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                        log_to_file(f"  UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                        log_to_file(f"  HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
+                    
+                    # Log aggregate summary
+                    log_to_file(f"\nAGGREGATE SUMMARY:")
                     log_to_file(f"\nClaimOpinion Score Buckets:")
                     log_to_file(f"  High (fact-based):   {claim_opinion_buckets['High']}")
                     log_to_file(f"  Medium:              {claim_opinion_buckets['Medium']}")
@@ -5256,11 +5281,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     log_to_file(f"  Medium: {harassment_buckets['Medium']}")
                     log_to_file(f"  Low:    {harassment_buckets['Low']}")
                     
-                    # Print summary to console
-                    print(f"\n[Community Notes] Verification Summary:")
-                    print(f"  ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
-                    print(f"  UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
-                    print(f"  HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
+                    # Print detailed summary to console (user-friendly, no raw JSON)
+                    print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
+                    print(f"\n  Individual Note Scores:")
+                    for i, detail in enumerate(note_details, 1):
+                        print(f"\n  Note {i} (Post {detail['post_id']}):")
+                        print(f"    Text: {detail['text']}")
+                        print(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                        print(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                        print(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
+                    
+                    print(f"\n  Aggregate Summary:")
+                    print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
+                    print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
+                    print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
                 else:
                     log_to_file("No notes data in verification response")
             else:
