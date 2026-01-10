@@ -4868,8 +4868,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     
                     if eval_response.status_code == 200:
                         eval_data = eval_response.json()
-                        # Log full response to understand the API better
-                        log_to_file(f"TWITTER EVALUATE API RESPONSE: {json.dumps(eval_data, indent=2)}")
                         
                         if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                             twitter_claim_score = eval_data['data']['claim_opinion_score']
