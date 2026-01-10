@@ -4736,7 +4736,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             validation_results.append(("UrlValidity", url_valid, url_details))
             
             # 3. Twitter's Evaluate Note API - Only call if length and URL checks pass (save API quota)
-            twitter_eval_valid = True
+            twitter_eval_valid = False  # Default to False - must get valid score to pass
             twitter_eval_details = "Skipped (other validations failed)"
             twitter_claim_score = None
             
