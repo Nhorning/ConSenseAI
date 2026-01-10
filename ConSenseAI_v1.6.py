@@ -5030,6 +5030,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         retry_user_msg += f"\n--- CURRENT VALIDATION ISSUES ---\n{feedback}\n\n"
                         retry_user_msg += "Please provide a revised note that addresses all validation issues. Provide ONLY the note text, no commentary or attribution."
                         
+                        # Print full prompt to console for debugging
+                        print(f"\n{'='*80}")
+                        print(f"FULL RETRY PROMPT TO {combining_model['name']}:")
+                        print(f"{'='*80}")
+                        print(f"SYSTEM: {retry_system_prompt['content']}")
+                        print(f"\nUSER MESSAGE:\n{retry_user_msg}")
+                        print(f"{'='*80}\n")
+                        
                         # Append this exchange to conversation history
                         retry_conversation_history.append({
                             "role": "user",
