@@ -345,12 +345,10 @@ def get_score_distribution(username):
     Calculate distribution of last 50 scores.
     Returns dict with 'high_pct', 'medium_pct', 'low_pct' based on predicted buckets.
     
-    Score to bucket mapping (empirically verified):
-    - >= 0.3: High bucket
-    - >= 0: High bucket  
-    - >= -0.5: High/Medium bucket (borderline)
-    - >= -2.0: Medium bucket (likely)
-    - < -2.0: Low bucket
+    Score to bucket mapping (empirically verified from actual submissions):
+    - >= 0.7: High bucket (verified: 0.748→High, 0.792→High, 0.882→High)
+    - >= -2.0: Medium bucket (verified: -0.266→Med, -0.279→Med, -0.601→Med, -1.271→Med, -1.562→Med, -1.774→Med)
+    - < -2.0: Low bucket (not yet observed)
     """
     scores = load_score_history(username)
     if not scores:
@@ -361,7 +359,7 @@ def get_score_distribution(username):
     low_count = 0
     
     for score in scores:
-        if score >= 0:
+        if score >= 0.7:
             high_count += 1
         elif score >= -2.0:
             medium_count += 1
@@ -392,7 +390,7 @@ def should_reject_score(username, score):
     dist = get_score_distribution(username)
     
     # Predict what bucket this score would be
-    if score >= 0:
+    if score >= 0.7:
         predicted_bucket = "High"
     elif score >= -2.0:
         predicted_bucket = "Medium"
