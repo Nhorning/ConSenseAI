@@ -4603,7 +4603,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 suggested_urls_text = f"\n- SUGGESTED SOURCE URLs (provided by Twitter Community Notes):\n  {chr(10).join(['  • ' + u for u in urls_formatted])}\n  These URLs were suggested by Community Notes contributors. Consider using them if they're relevant and reliable, but verify them first. If they link to only posts on x.com, attempt to find additional sources." 
                 log_to_file(f"Added {len(suggested_urls)} suggested URLs with counts to prompt")
             
-            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}\n\
+            # Get current ClaimOpinion score distribution
+            score_dist = get_score_distribution(username)
+            score_guidance = ""
+            if score_dist['count'] > 0:
+                score_guidance = f"\n- CRITICAL NEUTRALITY REQUIREMENT: Your recent notes scored {score_dist['high_pct']:.1f}% High, {score_dist['medium_pct']:.1f}% Medium, {score_dist['low_pct']:.1f}% Low on Twitter's ClaimOpinion scale (higher scores = more neutral/fact-based). Twitter REQUIRES at least 30% High scores and no more than 30% Low scores. "
+                if score_dist['high_pct'] < 32:
+                    score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally, focusing ONLY on verifiable facts with authoritative sources. Avoid ANY subjective language, opinions, or interpretations."
+                elif score_dist['low_pct'] >= 25:
+                    score_guidance += f"You are approaching the 30% Low limit. Write more neutrally - stick to facts and avoid subjective language."
+                else:
+                    score_guidance += f"You are within acceptable ranges. Continue writing neutral, fact-based notes."
+            
+            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
