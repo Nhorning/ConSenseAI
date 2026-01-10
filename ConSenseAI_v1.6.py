@@ -5090,6 +5090,15 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             if verify_response.status_code == 200:
                                 verify_data = verify_response.json()
                                 
+                                # DEBUG: Log what fields are actually present
+                                if 'data' in verify_data and len(verify_data['data']) > 0:
+                                    sample_note = verify_data['data'][0]
+                                    log_to_file(f"DEBUG: Individual verification - Available note fields: {list(sample_note.keys())}")
+                                    if 'test_result' in sample_note:
+                                        log_to_file(f"DEBUG: test_result present")
+                                    else:
+                                        log_to_file(f"DEBUG: test_result field NOT PRESENT - notes may need time to be evaluated or test_mode notes don't get evaluated")
+                                
                                 # Find our note by post_id
                                 if 'data' in verify_data:
                                     for note in verify_data['data']:
@@ -5225,6 +5234,15 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             if verify_response.status_code == 200:
                 verify_data = verify_response.json()
+                
+                # DEBUG: Log what fields are actually present
+                if 'data' in verify_data and len(verify_data['data']) > 0:
+                    sample_note = verify_data['data'][0]
+                    log_to_file(f"DEBUG: Available note fields: {list(sample_note.keys())}")
+                    if 'test_result' in sample_note:
+                        log_to_file(f"DEBUG: test_result structure: {json.dumps(sample_note['test_result'], indent=2)}")
+                    else:
+                        log_to_file(f"DEBUG: test_result field NOT PRESENT in API response")
                 
                 if 'data' in verify_data:
                     # Count score buckets by evaluator type and track individual notes
