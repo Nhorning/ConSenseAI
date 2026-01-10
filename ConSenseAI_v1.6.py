@@ -4766,17 +4766,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             # Medium/Low buckets correlate with NEGATIVE scores
                             # Example: +0.356 → High bucket, -1.17 → Medium bucket
                             # Therefore: HIGHER (more positive) scores = BETTER
-                            if twitter_claim_score >= -0.5:
+                            # Using lenient threshold (-2.0) to avoid rejecting Medium-bucket notes
+                            if twitter_claim_score >= -2.0:
                                 twitter_eval_valid = True
                                 if twitter_claim_score >= 0.3:
                                     twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
                                 elif twitter_claim_score >= 0:
                                     twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
+                                elif twitter_claim_score >= -0.5:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - likely High/Medium bucket)"
                                 else:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - borderline)"
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (borderline - may be Medium bucket)"
                             else:
                                 twitter_eval_valid = False
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Medium/Low bucket)"
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Low bucket)"
                         else:
                             # API returned no score - mark as invalid to trigger retry
                             twitter_eval_valid = False
@@ -4970,17 +4973,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                         twitter_claim_score = eval_data['data']['claim_opinion_score']
                                         # EMPIRICAL DATA: Higher (more positive) scores = better ClaimOpinion buckets
                                         # +0.356 → High bucket, -1.17 → Medium bucket
-                                        if twitter_claim_score >= -0.5:
+                                        # Using lenient threshold (-2.0) to avoid rejecting Medium-bucket notes
+                                        if twitter_claim_score >= -2.0:
                                             twitter_eval_valid = True
                                             if twitter_claim_score >= 0.3:
                                                 twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
                                             elif twitter_claim_score >= 0:
                                                 twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
+                                            elif twitter_claim_score >= -0.5:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - likely High/Medium bucket)"
                                             else:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - borderline)"
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (borderline - may be Medium bucket)"
                                         else:
                                             twitter_eval_valid = False
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Medium/Low bucket)"
+                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Low bucket)"
                                     else:
                                         twitter_eval_details = "API returned no score"
                                 else:
@@ -5017,6 +5023,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if failed_validations:
                 log_to_file(f"SUBMISSION: SKIPPED (validation failed: {', '.join(failed_validations)})")
                 log_to_file("")
+                posts_failed_generation += 1
                 continue
             
             # Prepare note submission using Twitter API v2
@@ -5082,14 +5089,12 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             
                             if verify_response.status_code == 200:
                                 verify_data = verify_response.json()
-                                log_to_file(f"VERIFICATION RESPONSE: {json.dumps(verify_data, indent=2)}")
                                 
                                 # Find our note by post_id
                                 if 'data' in verify_data:
                                     for note in verify_data['data']:
                                         note_info = note.get('info', {})
                                         if note_info.get('post_id') == post_id:
-                                            log_to_file(f"VERIFIED NOTE FOUND: {json.dumps(note, indent=2)}")
                                             
                                             # Extract and process test_result data
                                             if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
@@ -5220,8 +5225,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             if verify_response.status_code == 200:
                 verify_data = verify_response.json()
-                # Log raw response to file only (not printed)
-                log_to_file(f"FINAL VERIFICATION RAW RESPONSE: {json.dumps(verify_data, indent=2)}")
                 
                 if 'data' in verify_data:
                     # Count score buckets by evaluator type and track individual notes
