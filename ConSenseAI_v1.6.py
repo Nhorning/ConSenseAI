@@ -4950,7 +4950,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         validation_results.append(("UrlValidity", url_valid, url_details))
                         
                         # Re-run Twitter evaluation - only if length and URL checks pass
-                        twitter_eval_valid = True
+                        twitter_eval_valid = False  # Default to False - must get valid score to pass
                         twitter_eval_details = "Skipped (other validations failed)"
                         twitter_claim_score = None
                         
@@ -4988,11 +4988,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                             twitter_eval_valid = False
                                             twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Low bucket)"
                                     else:
-                                        twitter_eval_details = "API returned no score"
+                                        twitter_eval_valid = False
+                                        twitter_eval_details = "API returned no score - retry needed"
                                 else:
-                                    twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
+                                    twitter_eval_valid = False
+                                    twitter_eval_details = f"API error: HTTP {eval_response.status_code} - retry needed"
                             except Exception as eval_error:
-                                twitter_eval_details = f"API call failed: {str(eval_error)}"
+                                twitter_eval_valid = False
+                                twitter_eval_details = f"API call failed: {str(eval_error)} - retry needed"
                         
                         validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
                         
@@ -5090,14 +5093,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             if verify_response.status_code == 200:
                                 verify_data = verify_response.json()
                                 
-                                # DEBUG: Log what fields are actually present
-                                if 'data' in verify_data and len(verify_data['data']) > 0:
-                                    sample_note = verify_data['data'][0]
-                                    log_to_file(f"DEBUG: Individual verification - Available note fields: {list(sample_note.keys())}")
-                                    if 'test_result' in sample_note:
-                                        log_to_file(f"DEBUG: test_result present")
-                                    else:
-                                        log_to_file(f"DEBUG: test_result field NOT PRESENT - notes may need time to be evaluated or test_mode notes don't get evaluated")
+                                # Note: test_result may not be present immediately after submission
+                                # Twitter needs time to evaluate notes - check end-of-run report for scores
                                 
                                 # Find our note by post_id
                                 if 'data' in verify_data:
@@ -5234,15 +5231,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             if verify_response.status_code == 200:
                 verify_data = verify_response.json()
-                
-                # DEBUG: Log what fields are actually present
-                if 'data' in verify_data and len(verify_data['data']) > 0:
-                    sample_note = verify_data['data'][0]
-                    log_to_file(f"DEBUG: Available note fields: {list(sample_note.keys())}")
-                    if 'test_result' in sample_note:
-                        log_to_file(f"DEBUG: test_result structure: {json.dumps(sample_note['test_result'], indent=2)}")
-                    else:
-                        log_to_file(f"DEBUG: test_result field NOT PRESENT in API response")
                 
                 if 'data' in verify_data:
                     # Count score buckets by evaluator type and track individual notes
