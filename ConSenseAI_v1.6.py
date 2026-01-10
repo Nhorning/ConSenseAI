@@ -5341,6 +5341,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     # Generate end-of-run verification report
     if notes_written > 0 and not args.dryrun:
         try:
+            # Pause to allow Twitter to process recent submissions
+            print(f"[Community Notes] Pausing 10 seconds before verification report...")
+            time.sleep(10)
+            
             log_to_file("\n" + "=" * 80)
             log_to_file("END-OF-RUN VERIFICATION REPORT")
             log_to_file("=" * 80)
