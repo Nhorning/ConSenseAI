@@ -391,10 +391,6 @@ def should_reject_score(username, score):
     """
     dist = get_score_distribution(username)
     
-    # Not enough data yet - be lenient
-    if dist['count'] < 10:
-        return score < -2.0, f"Score: {score:.3f} (insufficient history, using lenient threshold)"
-    
     # Predict what bucket this score would be
     if score >= 0:
         predicted_bucket = "High"
