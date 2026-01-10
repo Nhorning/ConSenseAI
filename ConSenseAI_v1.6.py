@@ -4761,28 +4761,37 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                             twitter_claim_score = eval_data['data']['claim_opinion_score']
-                            # Empirical analysis: Negative scores = fact-based (good), Positive scores = opinion-based (bad)
-                            # Observed range for successful notes: -5.08 to +0.95
-                            # Notes with opinion words score higher; pure factual corrections score lower (more negative)
-                            if twitter_claim_score <= 0.5:
+                            # EMPIRICAL DATA ANALYSIS: Score meanings are REVERSED from initial assumption!
+                            # High ClaimOpinion bucket (GOOD/fact-based) correlates with POSITIVE scores
+                            # Medium/Low buckets correlate with NEGATIVE scores
+                            # Example: +0.356 → High bucket, -1.17 → Medium bucket
+                            # Therefore: HIGHER (more positive) scores = BETTER
+                            if twitter_claim_score >= -0.5:
                                 twitter_eval_valid = True
-                                if twitter_claim_score <= -2.0:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - highly fact-based)"
-                                elif twitter_claim_score <= 0:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - fact-based)"
+                                if twitter_claim_score >= 0.3:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
+                                elif twitter_claim_score >= 0:
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
                                 else:
-                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - slightly opinion-leaning)"
+                                    twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - borderline)"
                             else:
                                 twitter_eval_valid = False
-                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too opinionated - score above 0.5 threshold)"
+                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Medium/Low bucket)"
                         else:
-                            twitter_eval_details = "API returned no score"
-                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
+                            # API returned no score - mark as invalid to trigger retry
+                            twitter_eval_valid = False
+                            twitter_eval_details = "API returned no score - retry needed"
+                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response - marking as invalid to retry")
                     else:
-                        twitter_eval_details = f"API error: HTTP {eval_response.status_code}"
-                        log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text}")
+                        # API error - mark as invalid to trigger retry
+                        twitter_eval_valid = False
+                        twitter_eval_details = f"API error: HTTP {eval_response.status_code} - retry needed"
+                        log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text} - marking as invalid to retry")
                 except Exception as eval_error:
-                    twitter_eval_details = f"API call failed: {str(eval_error)}"
+                    # Exception during API call - mark as invalid to trigger retry
+                    twitter_eval_valid = False
+                    twitter_eval_details = f"API call failed: {str(eval_error)} - retry needed"
+                    log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - marking as invalid to retry")
             
             validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
             
@@ -4959,19 +4968,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                     eval_data = eval_response.json()
                                     if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
                                         twitter_claim_score = eval_data['data']['claim_opinion_score']
-                                        # Empirical analysis: Negative scores = fact-based (good), Positive scores = opinion-based (bad)
-                                        # Observed range for successful notes: -5.08 to +0.95
-                                        if twitter_claim_score <= 0.5:
+                                        # EMPIRICAL DATA: Higher (more positive) scores = better ClaimOpinion buckets
+                                        # +0.356 → High bucket, -1.17 → Medium bucket
+                                        if twitter_claim_score >= -0.5:
                                             twitter_eval_valid = True
-                                            if twitter_claim_score <= -2.0:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - highly fact-based)"
-                                            elif twitter_claim_score <= 0:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - fact-based)"
+                                            if twitter_claim_score >= 0.3:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (excellent - likely High bucket)"
+                                            elif twitter_claim_score >= 0:
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (good - likely High bucket)"
                                             else:
-                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - slightly opinion-leaning)"
+                                                twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (acceptable - borderline)"
                                         else:
                                             twitter_eval_valid = False
-                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too opinionated - score above 0.5 threshold)"
+                                            twitter_eval_details = f"Claim/Opinion Score: {twitter_claim_score} (too low - likely Medium/Low bucket)"
                                     else:
                                         twitter_eval_details = "API returned no score"
                                 else:
