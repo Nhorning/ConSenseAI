@@ -4973,7 +4973,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         if not url_valid:
                             feedback += "Use only direct, accessible URLs from authoritative sources which you found in your search results (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results. "
                         if not twitter_eval_valid and twitter_claim_score is not None:
-                            feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}/100 on claim vs opinion (lower is better). The note is too opinionated. Focus on stating verifiable facts with authoritative sources rather than making subjective judgments. "
+                            feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}. Closer to 1 is better. Over 0.7 is a good score. The note is too opinionated. Focus on using neutral language rather than making subjective judgments."
                         # if not harassment_valid:
                         #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
