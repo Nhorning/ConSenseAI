@@ -4696,8 +4696,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - Search for information on drafting successful community notes if needed.\n\
-                - If the post is not misleading, respond with 'NO NOTE NEEDED', 'NOT MISLEADING' or 'NO COMMUNITY NOTE. A parser will reject the note. Do *NOT* use any of these terms if a not is needed, even when discussing what other models say.\n\
-                - If a note is needed, provide *only* the text of the note - no labels, titles or thinking outloud.\n\
+                - IMPORTANT: You MUST provide a note for EVERY post, even if it's accurate:\n\
+                  * If the post IS misleading: Write a note explaining what's wrong with sources.\n\
+                  * If the post is NOT misleading: Write a note confirming its accuracy with authoritative sources that verify the claims. Start with 'This post is accurate.' or 'This information is correct.' and cite sources that confirm it.\n\
+                - Do NOT respond with 'NO NOTE NEEDED', 'NOT MISLEADING', or 'NO COMMUNITY NOTE' - always provide a note with sources.\n\
+                - Provide *only* the text of the note - no labels, titles or thinking outloud.\n\
                 - Only provide a note for the tweet in question. Do not fact check the thread."  
             
             post_text = post.text
@@ -4717,68 +4720,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             log_to_file(f"NOTE GENERATED ({len(note_text)} chars):")
             log_to_file(note_text)
             
-            # Check if the response indicates no note is needed
-            if any(phrase in note_text.upper() for phrase in ["NO NOTE NEEDED", "NOT MISLEADING", "NO COMMUNITY NOTE"]):
-                print(f"[Community Notes] Post {post_id} determined not to need a note - submitting 'not_misleading' decision")
-                log_to_file("DECISION: Post does not need a community note - submitting to API")
-                
-                # Submit "not misleading" decision to the API
-                # Note: API requires text, misleading_tags, and trustworthy_sources even for not_misleading
-                no_note_payload = {
-                    "test_mode": test_mode,
-                    "post_id": post_id,
-                    "info": {
-                        "text": "Post appears accurate and does not require additional context.",
-                        "classification": "not_misleading",
-                        "misleading_tags": [],  # Empty array for not_misleading
-                        "trustworthy_sources": True
-                    }
-                }
-                
-                if args.dryrun:
-                    print(f"[Community Notes DRY RUN] Would submit 'not_misleading' for {post_id}")
-                    log_to_file("SUBMISSION: DRY RUN (would submit not_misleading)")
-                else:
-                    try:
-                        # Submit using OAuth 1.0a (CN project keys)
-                        cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
-                        cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
-                        cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
-                        cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
-                        
-                        oauth_submit = OAuth1Session(
-                            client_key=cn_api_key,
-                            client_secret=cn_api_secret,
-                            resource_owner_key=cn_access_token,
-                            resource_owner_secret=cn_access_secret
-                        )
-                        
-                        submit_response = oauth_submit.post(
-                            "https://api.twitter.com/2/notes",
-                            json=no_note_payload
-                        )
-                        
-                        if submit_response.status_code in [200, 201]:
-                            print(f"[Community Notes] Successfully submitted 'not_misleading' for {post_id}")
-                            log_to_file(f"SUBMISSION: SUCCESS - not_misleading (HTTP {submit_response.status_code})")
-                            log_to_file(f"RESPONSE: {submit_response.text}")
-                        else:
-                            print(f"[Community Notes] Error submitting 'not_misleading' for {post_id}: HTTP {submit_response.status_code}")
-                            log_to_file(f"SUBMISSION: FAILED - not_misleading (HTTP {submit_response.status_code})")
-                            log_to_file(f"ERROR RESPONSE: {submit_response.text}")
-                    except Exception as e:
-                        print(f"[Community Notes] Exception submitting 'not_misleading' for {post_id}: {e}")
-                        log_to_file(f"SUBMISSION: EXCEPTION - not_misleading - {e}")
-                
-                # Track locally
-                written_notes[post_id] = {
-                    "note": None,
-                    "reason": "not_misleading",
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "score": None
-                }
-                posts_not_needing_notes += 1
-                continue
+            # Determine classification based on note content
+            # If note confirms accuracy, classify as not_misleading; otherwise misinformed_or_potentially_misleading
+            is_accurate = any(phrase in note_text.lower() for phrase in [
+                "this post is accurate",
+                "this information is correct",
+                "the post is accurate",
+                "accurately states",
+                "correctly states",
+                "information is accurate"
+            ])
+            
+            classification = "not_misleading" if is_accurate else "misinformed_or_potentially_misleading"
+            log_to_file(f"CLASSIFICATION: {classification}")
             
             # Strip model attribution tags from the note text before submission
             # Remove "Generated by: ..." and "Combined by: ..." lines
@@ -5325,13 +5279,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             # Prepare note submission using Twitter API v2
             # Community Notes API endpoint: POST /2/notes
+            # Use dynamic classification based on note content
             note_payload = {
                 "test_mode": test_mode,
                 "post_id": post_id,
                 "info": {
                     "text": clean_note_text,
-                    "classification": "misinformed_or_potentially_misleading",
-                    "misleading_tags": ["missing_important_context"],  # Required field
+                    "classification": classification,
+                    "misleading_tags": [] if classification == "not_misleading" else ["missing_important_context"],
                     "trustworthy_sources": True
                 }
             }
