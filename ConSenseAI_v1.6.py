@@ -409,10 +409,16 @@ def should_reject_score(username, score):
             return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: boosting High %, currently {dist['high_pct']:.1f}%)"
     
 
-def get_score_examples(username, num_high=3, num_low=3):
+def get_score_examples(username, num_high=3, num_low=3, offset=0):
     """
     Get examples of highest and lowest scoring notes for prompt guidance.
     Returns dict with 'high_examples' and 'low_examples' lists.
+    
+    Args:
+        username: Username for the cn_written file
+        num_high: Number of high-scoring examples to return
+        num_low: Number of low-scoring examples to return
+        offset: Number of examples to skip (for getting different examples on retries)
     """
     written_file = f'cn_written_{username}.json'
     if not os.path.exists(written_file):
@@ -438,9 +444,16 @@ def get_score_examples(username, num_high=3, num_low=3):
         # Sort by score (highest first)
         notes_with_scores.sort(key=lambda x: x['score'], reverse=True)
         
-        # Get top N highest and bottom N lowest
-        high_examples = notes_with_scores[:num_high]
-        low_examples = notes_with_scores[-num_low:]
+        # Get top N highest and bottom N lowest with offset
+        # For high scores: skip offset examples, then take num_high
+        high_start = offset
+        high_end = offset + num_high
+        high_examples = notes_with_scores[high_start:high_end]
+        
+        # For low scores: skip offset from the end, then take num_low
+        low_start = max(0, len(notes_with_scores) - num_low - offset)
+        low_end = len(notes_with_scores) - offset if offset > 0 else len(notes_with_scores)
+        low_examples = notes_with_scores[low_start:low_end]
         
         return {
             'high_examples': high_examples,
@@ -5106,10 +5119,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         retry_user_msg += f"\n--- CURRENT VALIDATION ISSUES ---\n{feedback}\n\n"
                         
                         # Add score examples if we need better scores
+                        # Use different examples on each retry by offsetting based on retry_count
                         if not twitter_eval_valid and twitter_claim_score is not None:
-                            examples = get_score_examples(username, num_high=3, num_low=2)
+                            # Calculate offset: 0 for first retry, 3 for second, 6 for third, etc.
+                            # This ensures different examples on each attempt
+                            example_offset = retry_count * 3
+                            examples = get_score_examples(username, num_high=3, num_low=2, offset=example_offset)
                             if examples['high_examples'] or examples['low_examples']:
-                                retry_user_msg += "\n--- SCORE EXAMPLES (learn from these to improve) ---\n"
+                                retry_user_msg += f"\n--- SCORE EXAMPLES (Retry {retry_count + 1} - new examples to learn from) ---\n"
                                 
                                 if examples['high_examples']:
                                     retry_user_msg += "HIGH-SCORING NOTES (emulate this neutral, fact-based style):\n"
