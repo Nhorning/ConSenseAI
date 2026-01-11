@@ -408,6 +408,48 @@ def should_reject_score(username, score):
         else:
             return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: boosting High %, currently {dist['high_pct']:.1f}%)"
     
+
+def get_score_examples(username, num_high=3, num_low=3):
+    """
+    Get examples of highest and lowest scoring notes for prompt guidance.
+    Returns dict with 'high_examples' and 'low_examples' lists.
+    """
+    written_file = f'cn_written_{username}.json'
+    if not os.path.exists(written_file):
+        return {'high_examples': [], 'low_examples': []}
+    
+    try:
+        with open(written_file, 'r') as f:
+            written_notes = json.load(f)
+        
+        # Extract notes with scores (skip None notes and None scores)
+        notes_with_scores = []
+        for post_id, data in written_notes.items():
+            if data.get('note') is not None and data.get('score') is not None:
+                notes_with_scores.append({
+                    'note': data['note'],
+                    'score': data['score'],
+                    'timestamp': data.get('timestamp', '')
+                })
+        
+        if not notes_with_scores:
+            return {'high_examples': [], 'low_examples': []}
+        
+        # Sort by score (highest first)
+        notes_with_scores.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Get top N highest and bottom N lowest
+        high_examples = notes_with_scores[:num_high]
+        low_examples = notes_with_scores[-num_low:]
+        
+        return {
+            'high_examples': high_examples,
+            'low_examples': low_examples
+        }
+    except Exception as e:
+        print(f"[Score Examples] Error loading examples: {e}")
+        return {'high_examples': [], 'low_examples': []}
+
     # Check if Low percentage is approaching 30% - if so, reject Low scores
     if dist['low_pct'] >= 25:  # Start rejecting at 25% to stay under 30%
         if predicted_bucket == "Low":
@@ -4610,16 +4652,33 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # Get current ClaimOpinion score distribution
             score_dist = get_score_distribution(username)
             score_guidance = ""
+            examples_text = ""
+            
             if score_dist['count'] > 0:
                 score_guidance = f"\n- CRITICAL NEUTRALITY REQUIREMENT: Your recent notes scored {score_dist['high_pct']:.1f}% High, {score_dist['medium_pct']:.1f}% Medium, {score_dist['low_pct']:.1f}% Low on Twitter's ClaimOpinion scale (higher scores = more neutral/fact-based). Twitter REQUIRES at least 30% High scores and no more than 30% Low scores. "
                 if score_dist['high_pct'] < 32:
                     score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally, focusing ONLY on verifiable facts with authoritative sources. Avoid ANY subjective language, opinions, or interpretations."
+                    
+                    # Add examples only when we need higher scores
+                    examples = get_score_examples(username, num_high=3, num_low=2)
+                    if examples['high_examples'] or examples['low_examples']:
+                        examples_text = "\n\n- SCORE EXAMPLES (learn from these):"
+                        
+                        if examples['high_examples']:
+                            examples_text += "\n  HIGH-SCORING NOTES (emulate this style):"
+                            for i, ex in enumerate(examples['high_examples'], 1):
+                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
+                        
+                        if examples['low_examples']:
+                            examples_text += "\n  LOW-SCORING NOTES (avoid this style):"
+                            for i, ex in enumerate(examples['low_examples'], 1):
+                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
                 elif score_dist['low_pct'] >= 25:
                     score_guidance += f"You are approaching the 30% Low limit. Write more neutrally - stick to facts and avoid subjective language."
                 else:
                     score_guidance += f"You are within acceptable ranges. Continue writing neutral, fact-based notes."
             
-            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}\n\
+            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}{examples_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
@@ -5045,6 +5104,25 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         # Add current validation feedback
                         retry_user_msg += f"\n--- CURRENT VALIDATION ISSUES ---\n{feedback}\n\n"
+                        
+                        # Add score examples if we need better scores
+                        if not twitter_eval_valid and twitter_claim_score is not None:
+                            examples = get_score_examples(username, num_high=3, num_low=2)
+                            if examples['high_examples'] or examples['low_examples']:
+                                retry_user_msg += "\n--- SCORE EXAMPLES (learn from these to improve) ---\n"
+                                
+                                if examples['high_examples']:
+                                    retry_user_msg += "HIGH-SCORING NOTES (emulate this neutral, fact-based style):\n"
+                                    for i, ex in enumerate(examples['high_examples'], 1):
+                                        retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
+                                
+                                if examples['low_examples']:
+                                    retry_user_msg += "\nLOW-SCORING NOTES (avoid this opinionated style):\n"
+                                    for i, ex in enumerate(examples['low_examples'], 1):
+                                        retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
+                                
+                                retry_user_msg += "\n"
+                        
                         retry_user_msg += "Please provide a revised note that addresses all validation issues. Provide ONLY the note text, no commentary or attribution."
                         
                         # Print full prompt to console for debugging
