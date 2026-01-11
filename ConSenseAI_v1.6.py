@@ -4719,8 +4719,54 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             # Check if the response indicates no note is needed
             if any(phrase in note_text.upper() for phrase in ["NO NOTE NEEDED", "NOT MISLEADING", "NO COMMUNITY NOTE"]):
-                print(f"[Community Notes] Post {post_id} determined not to need a note")
-                log_to_file("DECISION: Post does not need a community note")
+                print(f"[Community Notes] Post {post_id} determined not to need a note - submitting 'not_misleading' decision")
+                log_to_file("DECISION: Post does not need a community note - submitting to API")
+                
+                # Submit "not misleading" decision to the API
+                no_note_payload = {
+                    "test_mode": test_mode,
+                    "post_id": post_id,
+                    "info": {
+                        "classification": "not_misleading"
+                    }
+                }
+                
+                if args.dryrun:
+                    print(f"[Community Notes DRY RUN] Would submit 'not_misleading' for {post_id}")
+                    log_to_file("SUBMISSION: DRY RUN (would submit not_misleading)")
+                else:
+                    try:
+                        # Submit using OAuth 1.0a (CN project keys)
+                        cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+                        cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+                        cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+                        cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+                        
+                        oauth_submit = OAuth1Session(
+                            client_key=cn_api_key,
+                            client_secret=cn_api_secret,
+                            resource_owner_key=cn_access_token,
+                            resource_owner_secret=cn_access_secret
+                        )
+                        
+                        submit_response = oauth_submit.post(
+                            "https://api.twitter.com/2/notes",
+                            json=no_note_payload
+                        )
+                        
+                        if submit_response.status_code in [200, 201]:
+                            print(f"[Community Notes] Successfully submitted 'not_misleading' for {post_id}")
+                            log_to_file(f"SUBMISSION: SUCCESS - not_misleading (HTTP {submit_response.status_code})")
+                            log_to_file(f"RESPONSE: {submit_response.text}")
+                        else:
+                            print(f"[Community Notes] Error submitting 'not_misleading' for {post_id}: HTTP {submit_response.status_code}")
+                            log_to_file(f"SUBMISSION: FAILED - not_misleading (HTTP {submit_response.status_code})")
+                            log_to_file(f"ERROR RESPONSE: {submit_response.text}")
+                    except Exception as e:
+                        print(f"[Community Notes] Exception submitting 'not_misleading' for {post_id}: {e}")
+                        log_to_file(f"SUBMISSION: EXCEPTION - not_misleading - {e}")
+                
+                # Track locally
                 written_notes[post_id] = {
                     "note": None,
                     "reason": "not_misleading",
