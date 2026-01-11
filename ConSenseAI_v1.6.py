@@ -304,41 +304,45 @@ def get_current_search_cap(max_daily_cap, interval_hours, cap_increase_time='10:
     return cap
 
 def _get_cn_score_history_file(username):
-    """Get filename for Community Notes score history tracking."""
+    \"\"\"Deprecated - scores now stored in cn_written_{username}.json\"\"\"
     return f"cn_score_history_{username}.json"
 
 def load_score_history(username):
-    """Load the rolling history of last 50 ClaimOpinion scores."""
-    filename = _get_cn_score_history_file(username)
-    if os.path.exists(filename):
+    \"\"\"Load ClaimOpinion scores from cn_written file (most recent 50 with scores)\"\"\"
+    written_file = f'cn_written_{username}.json'
+    if os.path.exists(written_file):
         try:
-            with open(filename, 'r') as f:
-                data = json.load(f)
-                return data.get('scores', [])
+            with open(written_file, 'r') as f:
+                written_notes = json.load(f)
+            
+            # Extract scores with timestamps, filter out None values
+            scores_with_time = []
+            for post_id, data in written_notes.items():
+                if data.get('score') is not None:
+                    scores_with_time.append({
+                        'score': data['score'],
+                        'timestamp': data.get('timestamp', '')
+                    })
+            
+            # Sort by timestamp (most recent last) and take last 50
+            scores_with_time.sort(key=lambda x: x['timestamp'])
+            recent_scores = scores_with_time[-50:]
+            
+            return [item['score'] for item in recent_scores]
         except Exception as e:
-            print(f"Error loading score history: {e}")
+            print(f\"[Score History] Error loading {written_file}: {e}\")
+            return []
     return []
 
 def save_score_history(username, scores):
-    """Save rolling history of last 50 ClaimOpinion scores."""
-    filename = _get_cn_score_history_file(username)
-    # Keep only last 50
-    scores = scores[-50:] if len(scores) > 50 else scores
-    data = {
-        'scores': scores,
-        'last_updated': datetime.datetime.now().isoformat()
-    }
-    try:
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving score history: {e}")
+    """Deprecated - scores are now saved in cn_written_{username}.json"""
+    # This function is no longer used - scores are saved with each note in cn_written file
+    pass
 
 def add_score_to_history(username, score):
-    """Add a new score to the rolling history."""
-    scores = load_score_history(username)
-    scores.append(score)
-    save_score_history(username, scores)
+    """Deprecated - scores are now saved in cn_written_{username}.json"""
+    # This function is no longer used - scores are saved with each note in cn_written file
+    pass
 
 def get_score_distribution(username):
     """
@@ -5221,11 +5225,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         log_to_file(f"SUBMISSION: SUCCESS (HTTP {submit_response.status_code})")
                         log_to_file(f"RESPONSE: {submit_response.text}")
                         
-                        # Add score to rolling history for tracking distribution
+                        # Log score distribution (scores are saved in cn_written file)
                         if twitter_claim_score is not None:
-                            add_score_to_history(username, twitter_claim_score)
-                            log_to_file(f"SCORE TRACKING: Added score {twitter_claim_score} to history")
                             dist = get_score_distribution(username)
+                            log_to_file(f"SCORE TRACKING: Score {twitter_claim_score} will be saved with note")
                             log_to_file(f"CURRENT DISTRIBUTION: High={dist['high_pct']:.1f}%, Medium={dist['medium_pct']:.1f}%, Low={dist['low_pct']:.1f}% (n={dist['count']})")
                         
                         # Retrieve the submitted note to verify score bucket
