@@ -304,11 +304,11 @@ def get_current_search_cap(max_daily_cap, interval_hours, cap_increase_time='10:
     return cap
 
 def _get_cn_score_history_file(username):
-    \"\"\"Deprecated - scores now stored in cn_written_{username}.json\"\"\"
+    '''Deprecated - scores now stored in cn_written_{username}.json'''
     return f"cn_score_history_{username}.json"
 
 def load_score_history(username):
-    \"\"\"Load ClaimOpinion scores from cn_written file (most recent 50 with scores)\"\"\"
+    """Load ClaimOpinion scores from cn_written file (most recent 50 with scores)"""
     written_file = f'cn_written_{username}.json'
     if os.path.exists(written_file):
         try:
@@ -330,7 +330,7 @@ def load_score_history(username):
             
             return [item['score'] for item in recent_scores]
         except Exception as e:
-            print(f\"[Score History] Error loading {written_file}: {e}\")
+            print(f"[Score History] Error loading {written_file}: {e}")
             return []
     return []
 
