@@ -4723,11 +4723,15 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 log_to_file("DECISION: Post does not need a community note - submitting to API")
                 
                 # Submit "not misleading" decision to the API
+                # Note: API requires text, misleading_tags, and trustworthy_sources even for not_misleading
                 no_note_payload = {
                     "test_mode": test_mode,
                     "post_id": post_id,
                     "info": {
-                        "classification": "not_misleading"
+                        "text": "Post appears accurate and does not require additional context.",
+                        "classification": "not_misleading",
+                        "misleading_tags": [],  # Empty array for not_misleading
+                        "trustworthy_sources": True
                     }
                 }
                 
