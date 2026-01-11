@@ -4648,7 +4648,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 written_notes[post_id] = {
                     "note": None,
                     "reason": "not_misleading",
-                    "timestamp": datetime.datetime.now().isoformat()
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "score": None
                 }
                 posts_not_needing_notes += 1
                 continue
@@ -5289,7 +5290,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             "note": clean_note_text,
                             "test_mode": test_mode,
                             "timestamp": datetime.datetime.now().isoformat(),
-                            "status": "already_exists_on_twitter"
+                            "status": "already_exists_on_twitter",
+                            "score": twitter_claim_score if 'twitter_claim_score' in locals() else None
                         }
                         notes_written += 1
                         continue
@@ -5313,7 +5315,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     "note": clean_note_text,
                     "test_mode": test_mode,
                     "timestamp": datetime.datetime.now().isoformat(),
-                    "conversation_id": conv_id  # Track which conversation this belongs to
+                    "conversation_id": conv_id,  # Track which conversation this belongs to
+                    "score": twitter_claim_score if 'twitter_claim_score' in locals() else None
                 }
                 notes_written += 1
                 
