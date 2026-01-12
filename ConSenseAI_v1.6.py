@@ -4737,18 +4737,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 log_to_file(f"SKIPPING: Model determined post doesn't require a note")
                 continue
             
-            # Determine classification based on note content
-            # If note confirms accuracy, classify as not_misleading; otherwise misinformed_or_potentially_misleading
-            is_accurate = any(phrase in note_text.lower() for phrase in [
-                "this post is accurate",
-                "this information is correct",
-                "the post is accurate",
-                "accurately states",
-                "correctly states",
-                "information is accurate"
-            ])
-            
-            classification = "not_misleading" if is_accurate else "misinformed_or_potentially_misleading"
+            # All Community Notes are classified as misinformed_or_potentially_misleading
+            # The Twitter API does not accept "not_misleading" as a valid classification
+            # Even notes confirming accuracy are providing "important context" about the post
+            classification = "misinformed_or_potentially_misleading"
             log_to_file(f"CLASSIFICATION: {classification}")
             
             # Verify note contains at least one URL (required by API)
@@ -5305,14 +5297,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             
             # Prepare note submission using Twitter API v2
             # Community Notes API endpoint: POST /2/notes
-            # Submit with appropriate classification based on note content
+            # All notes use misinformed_or_potentially_misleading classification
             note_payload = {
                 "test_mode": test_mode,
                 "post_id": post_id,
                 "info": {
                     "text": clean_note_text,
-                    "classification": classification,
-                    "misleading_tags": [] if classification == "not_misleading" else ["missing_important_context"],
+                    "classification": "misinformed_or_potentially_misleading",
+                    "misleading_tags": ["missing_important_context"],
                     "trustworthy_sources": True
                 }
             }
