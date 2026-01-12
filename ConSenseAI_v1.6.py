@@ -408,6 +408,16 @@ def should_reject_score(username, score):
         else:
             return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: boosting High %, currently {dist['high_pct']:.1f}%)"
     
+    # Check if Low percentage is approaching 30% - if so, reject Low scores
+    if dist['low_pct'] >= 25:  # Start rejecting at 25% to stay under 30%
+        if predicted_bucket == "Low":
+            return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: Low at {dist['low_pct']:.1f}%, approaching 30% limit)"
+        else:
+            return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: Low % under control at {dist['low_pct']:.1f}%)"
+    
+    # Otherwise accept the score
+    return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: within acceptable ranges, High={dist['high_pct']:.1f}%, Low={dist['low_pct']:.1f}%)"
+    
 
 def get_score_examples(username, num_high=3, num_low=3, offset=0):
     """
