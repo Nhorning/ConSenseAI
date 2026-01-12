@@ -4960,6 +4960,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             twitter_claim_score = None
             
             # Retry API call up to 3 times on connection errors
+            import time  # Need explicit import for time.sleep in retry logic
             max_api_retries = 3
             for api_attempt in range(max_api_retries):
                 try:
@@ -5039,7 +5040,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             failed_validations = [name for name, passed, _ in validation_results if not passed]
             
             # Retry logic if note is too long or fails validation (total tries is retries + 1)
-            max_retries = 6
+            max_retries = 3
             retry_count = 0
             
             # Pre-shuffle model list once for all retries (draw without replacement)
