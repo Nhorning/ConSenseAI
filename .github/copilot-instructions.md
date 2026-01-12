@@ -590,11 +590,67 @@ Attempt 5: +80s (total: 150s)
 
 **Status**: Bot no longer tweets error messages from model failures; automatically tries alternative models.
 
+### 7. Community Notes Score Threshold Calibration (Jan 11-12, 2026)
+**Problem**: Initial score thresholds for predicting Twitter's ClaimOpinion buckets (High/Medium/Low) were set arbitrarily, then incorrectly recalibrated based on desired distribution percentages rather than Twitter's actual API bucket assignments.
+
+**Critical Learning**: Score thresholds must match Twitter's actual bucket assignments from end-of-run verification reports, NOT be chosen to achieve a desired distribution (e.g., 30/40/30).
+
+**Historical Context**: Early High scores (0.7+) were artificially inflated because the bot rejected submissions below 0.7. Once restrictions were removed, true bucket boundaries began revealing themselves.
+
+**Calibration Process**:
+1. Extract all post IDs with their Twitter-assigned buckets from verification reports in `cn_notes_log_consenseai.txt` and `cn_notes_log_consenseai.txt.01`
+2. Match post IDs to scores in `cn_written_consenseai.json`
+3. Find empirical boundaries: max score of each bucket and min score of next bucket
+4. Set thresholds at midpoint between boundaries
+
+**Current Thresholds** (as of Jan 12, 2026, based on 38 verified notes):
+- **High >= 0.081** (midpoint between max Medium -0.037 and min High 0.200)
+- **Medium >= -2.109** (midpoint between max Low -2.468 and min Medium -1.750)
+- Distribution: 17 High (44.7%), 13 Medium (34.2%), 8 Low (21.1%)
+
+**Implementation Locations**:
+- `get_score_distribution()` (lines ~347-378): Calculates current distribution of recent scores
+- `should_reject_score()` (lines ~381-419): Decides whether to reject a note based on predicted bucket
+
+**Data Sources**:
+- `cn_notes_log_consenseai.txt`: Current verification reports
+- `cn_notes_log_consenseai.txt.01`: Backup log with historical verifications
+- `cn_written_consenseai.json`: Stores note text, timestamps, conversation IDs, and **scores**
+- `cn_score_history_consenseai.json`: Rolling history of last 50 scores for distribution tracking
+
+**Expected Evolution**: As more notes are submitted without artificial score floors, the min High score threshold may continue to decrease. Thresholds should be recalibrated periodically using latest verification data.
+
+**Commands for Recalibration**:
+```bash
+# Extract verification data from logs
+grep -B 1 "ClaimOpinion:" cn_notes_log_consenseai.txt.01 | grep -E "Post ID:|ClaimOpinion:"
+
+# Match scores to buckets in Python
+python3 << 'EOF'
+import json
+with open('cn_written_consenseai.json') as f: notes = json.load(f)
+# ... map post_ids to buckets, extract scores, find boundaries
+EOF
+```
+
+**Status**: Thresholds calibrated based on empirical Twitter API data. Will self-adjust as more verification data accumulates.
+
+### 8. Community Notes Production Authorization (Jan 12, 2026)
+**Status**: Bot authorized to submit Community Notes in production (test_mode=False).
+
+**Implementation Notes**:
+- Verification reports show ClaimOpinion, UrlValidity, and HarassmentAbuse scores
+- **Critical**: ClaimOpinion bucket assignments are only reliable in test_mode; production buckets may differ
+- Score-based rejection (`should_reject_score()`) helps maintain distribution requirements
+- Production notes are publicly visible and contribute to Twitter's Community Notes ecosystem
+
 ## What NOT to Assume
 - `README.md` contains historical notes and older filenames; do not treat it as authoritative for current runtime behavior
 - The bot enforces character/format constraints via prompts — changing prompt wording can change runtime behavior
 - Search processing may be skipped frequently due to dynamic caps; check logs to confirm runs
 - twitterapi.io may fail intermittently; the bot will fall back to standard Tweepy text
+- **Community Notes score thresholds are dynamic**: Recalibrate periodically as new verification data arrives
+- **ClaimOpinion buckets may differ between test and production**: Use test mode for calibration data
 
 ## Future Improvements (Optional)
 - Add username extraction for quoted tweets (currently only works for main tweets in thread)

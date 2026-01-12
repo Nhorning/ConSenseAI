@@ -4434,6 +4434,51 @@ backoff_multiplier = 1
 COMMUNITY_NOTES_LAST_CHECK_FILE = f'cn_last_check_{username}.txt'
 COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
 
+def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename):
+    """
+    Tweet a summary of the Community Notes run completion.
+    
+    Args:
+        notes_written: Number of notes successfully written/submitted
+        posts_not_needing_notes: Number of posts that didn't need notes
+        posts_skipped: Number of posts skipped (already processed)
+        posts_failed: Number of failed note generations
+        log_filename: Name of the log file
+    """
+    try:
+        total_processed = notes_written + posts_not_needing_notes + posts_skipped + posts_failed
+        
+        summary_lines = [
+            "📋 Community Notes Run Complete",
+            "",
+            f"Processed: {total_processed} posts",
+            f"✅ Notes submitted: {notes_written}",
+            f"⏭️  No note needed: {posts_not_needing_notes}",
+        ]
+        
+        # Only include non-zero counts to keep tweet concise
+        if posts_skipped > 0:
+            summary_lines.append(f"🔄 Already processed: {posts_skipped}")
+        if posts_failed > 0:
+            summary_lines.append(f"❌ Failed: {posts_failed}")
+        
+        summary_tweet = "\n".join(summary_lines)
+        
+        print(f"[Community Notes] Posting summary tweet...")
+        log_to_file(f"SUMMARY TWEET: {summary_tweet}")
+        
+        post_client.create_tweet(text=summary_tweet)
+        
+        print(f"[Community Notes] Summary tweet posted successfully!")
+        log_to_file("Summary tweet posted successfully")
+        
+    except Exception as e:
+        print(f"[Community Notes] Error posting summary tweet: {e}")
+        log_to_file(f"ERROR in tweet_community_notes_summary: {e}")
+        import traceback
+        log_to_file(traceback.format_exc())
+        raise
+
 def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
     """
     Fetch posts eligible for Community Notes and propose notes using ConSenseAI's fact-checking pipeline.
@@ -4739,6 +4784,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if "no note needed" in note_text.lower():
                 log_to_file("NO NOTE NEEDED")
                 log_to_file(f"SKIPPING: Model determined post doesn't require a note")
+                posts_not_needing_notes += 1
                 continue
             
             # All Community Notes are classified as misinformed_or_potentially_misleading
@@ -4753,6 +4799,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if not url_pattern.search(note_text):
                 log_to_file("ERROR: Note missing required URL - skipping submission")
                 log_to_file(f"Note without URL: {note_text}")
+                posts_failed_generation += 1
                 continue
             
             # Strip model attribution tags from the note text before submission
@@ -5425,6 +5472,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         print(f"  Response: {submit_response.text}")
                         log_to_file(f"SUBMISSION: FAILED (HTTP {submit_response.status_code})")
                         log_to_file(f"ERROR RESPONSE: {submit_response.text}")
+                        posts_failed_generation += 1
                         continue
                     
                 except Exception as e:
@@ -5432,6 +5480,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     log_to_file(f"SUBMISSION: EXCEPTION - {e}")
                     import traceback
                     log_to_file(traceback.format_exc())
+                    posts_failed_generation += 1
                     continue
             
             # Only record notes that were actually submitted (not dry run)
@@ -5467,6 +5516,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             import traceback
             log_to_file(traceback.format_exc())
             traceback.print_exc()
+            posts_failed_generation += 1
             continue
     
     # Save written notes record
@@ -5618,6 +5668,21 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     print(f"  - Posts skipped (already processed): {posts_skipped_already_written}")
     print(f"  - Failed generations: {posts_failed_generation}")
     print(f"[Community Notes] Full log saved to {log_filename}")
+    
+    # Tweet summary when in production mode (test_mode=False)
+    if notes_written > 0 and not test_mode and not args.dryrun:
+        try:
+            tweet_community_notes_summary(
+                notes_written=notes_written,
+                posts_not_needing_notes=posts_not_needing_notes,
+                posts_skipped=posts_skipped_already_written,
+                posts_failed=posts_failed_generation,
+                log_filename=log_filename
+            )
+        except Exception as tweet_error:
+            print(f"[Community Notes] Warning: Could not post summary tweet: {tweet_error}")
+            log_to_file(f"ERROR POSTING SUMMARY TWEET: {tweet_error}")
+    
     return notes_written
 
 # The main loop
