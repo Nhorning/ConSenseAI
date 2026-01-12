@@ -4672,20 +4672,20 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 if score_dist['high_pct'] < 32:
                     score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally"
                     
-                    # Add one example of each type when we need higher scores
-                    examples = get_score_examples(username, num_high=1, num_low=1)
+                    # Add examples when we need higher scores
+                    examples = get_score_examples(username, num_high=3, num_low=2)
                     if examples['high_examples'] or examples['low_examples']:
                         examples_text = "\n\n- SCORE EXAMPLES (learn from these):"
                         
                         if examples['high_examples']:
-                            examples_text += "\n  HIGH-SCORING NOTE (emulate this style):"
-                            for ex in examples['high_examples']:
-                                examples_text += f"\n    Score {ex['score']:.2f}: \"{ex['note']}\""
+                            examples_text += "\n  HIGH-SCORING NOTES (emulate this style):"
+                            for i, ex in enumerate(examples['high_examples'], 1):
+                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
                         
                         if examples['low_examples']:
-                            examples_text += "\n  LOW-SCORING NOTE (avoid this style):"
-                            for ex in examples['low_examples']:
-                                examples_text += f"\n    Score {ex['score']:.2f}: \"{ex['note']}\""
+                            examples_text += "\n  LOW-SCORING NOTES (avoid this style):"
+                            for i, ex in enumerate(examples['low_examples'], 1):
+                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
                 elif score_dist['low_pct'] >= 25:
                     score_guidance += f"You are approaching the 30% Low limit. Write more neutrally - stick to facts and avoid subjective language."
                 else:
@@ -5138,22 +5138,23 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         retry_user_msg += f"\n--- CURRENT VALIDATION ISSUES ---\n{feedback}\n\n"
                         
                         # Add score examples if we need better scores
-                        # Show one high and one low example, cycling through different examples on each retry
+                        # Show 3 high and 2 low examples, cycling through different examples on each retry
                         if not twitter_eval_valid and twitter_claim_score is not None:
-                            # Use retry_count to cycle through examples
-                            examples = get_score_examples(username, num_high=1, num_low=1, offset=retry_count)
+                            # Use retry_count * 3 to skip previously shown high examples
+                            example_offset = retry_count * 3
+                            examples = get_score_examples(username, num_high=3, num_low=2, offset=example_offset)
                             if examples['high_examples'] or examples['low_examples']:
                                 retry_user_msg += f"\n--- SCORE EXAMPLES (Retry {retry_count + 1}) ---\n"
                                 
                                 if examples['high_examples']:
-                                    retry_user_msg += "HIGH-SCORING NOTE (emulate this neutral, fact-based style):\n"
-                                    for ex in examples['high_examples']:
-                                        retry_user_msg += f"  Score {ex['score']:.2f}: \"{ex['note']}\"\n"
+                                    retry_user_msg += "HIGH-SCORING NOTES (emulate this neutral, fact-based style):\n"
+                                    for i, ex in enumerate(examples['high_examples'], 1):
+                                        retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
                                 
                                 if examples['low_examples']:
-                                    retry_user_msg += "\nLOW-SCORING NOTE (avoid this opinionated style):\n"
-                                    for ex in examples['low_examples']:
-                                        retry_user_msg += f"  Score {ex['score']:.2f}: \"{ex['note']}\"\n"
+                                    retry_user_msg += "\nLOW-SCORING NOTES (avoid this opinionated style):\n"
+                                    for i, ex in enumerate(examples['low_examples'], 1):
+                                        retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
                                 
                                 retry_user_msg += "\n"
                         
