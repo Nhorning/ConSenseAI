@@ -350,11 +350,11 @@ def get_score_distribution(username):
     Returns dict with 'high_pct', 'medium_pct', 'low_pct' based on predicted buckets.
     
     Thresholds determined empirically from Twitter API verification reports:
-    - High: score >= -0.17 (just above max observed Medium=-0.178)
-    - Medium: score >= -2.46 (just above max observed Low=-2.468)
-    - Low: score < -2.46
+    - High: score >= 0.35 (between max Medium=-0.037 and min High=0.736)
+    - Medium: score >= -1.5 (between max Low=-2.468 and min Medium=-0.559)
+    - Low: score < -1.5
     
-    Based on analysis of 9 verified notes showing Twitter's actual bucket assignments.
+    Based on analysis of 13 verified notes (updated Jan 11, 2026 22:41).
     """
     scores = load_score_history(username)
     if not scores:
@@ -365,9 +365,9 @@ def get_score_distribution(username):
     low_count = 0
     
     for score in scores:
-        if score >= -0.17:
+        if score >= 0.145:
             high_count += 1
-        elif score >= -2.46:
+        elif score >= -2.468:
             medium_count += 1
         else:
             low_count += 1
@@ -398,9 +398,9 @@ def should_reject_score(username, score):
     dist = get_score_distribution(username)
     
     # Predict what bucket this score would be (empirically determined from Twitter verification)
-    if score >= 0.741:
+    if score >= 0.145:
         predicted_bucket = "High"
-    elif score >= -0.178:
+    elif score >= -2.109:
         predicted_bucket = "Medium"
     else:
         predicted_bucket = "Low"
