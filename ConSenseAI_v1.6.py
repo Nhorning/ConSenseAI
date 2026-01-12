@@ -350,11 +350,11 @@ def get_score_distribution(username):
     Returns dict with 'high_pct', 'medium_pct', 'low_pct' based on predicted buckets.
     
     Thresholds determined empirically from Twitter API verification reports:
-    - High: score >= 0.35 (between max Medium=-0.037 and min High=0.736)
-    - Medium: score >= -1.5 (between max Low=-2.468 and min Medium=-0.559)
-    - Low: score < -1.5
+    - High: score >= 0.145 (midpoint between max Medium=-0.037 and min High=0.327)
+    - Medium: score >= -2.109 (midpoint between max Low=-2.468 and min Medium=-1.750)
+    - Low: score < -2.109
     
-    Based on analysis of 13 verified notes (updated Jan 11, 2026 22:41).
+    Based on 36 verified notes: 16 High, 13 Medium, 7 Low (updated Jan 11, 2026 23:27).
     """
     scores = load_score_history(username)
     if not scores:
@@ -367,7 +367,7 @@ def get_score_distribution(username):
     for score in scores:
         if score >= 0.145:
             high_count += 1
-        elif score >= -2.468:
+        elif score >= -2.109:
             medium_count += 1
         else:
             low_count += 1
