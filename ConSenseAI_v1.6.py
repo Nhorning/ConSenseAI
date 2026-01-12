@@ -4670,7 +4670,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if score_dist['count'] > 0:
                 score_guidance = f"\n- CRITICAL NEUTRALITY REQUIREMENT: Your recent notes scored {score_dist['high_pct']:.1f}% High, {score_dist['medium_pct']:.1f}% Medium, {score_dist['low_pct']:.1f}% Low on Twitter's ClaimOpinion scale (higher scores = more neutral/fact-based). Twitter REQUIRES at least 30% High scores and no more than 30% Low scores. "
                 if score_dist['high_pct'] < 32:
-                    score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally, focusing ONLY on verifiable facts with authoritative sources. Avoid ANY subjective language, opinions, or interpretations."
+                    score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally"
                     
                     # Add one example of each type when we need higher scores
                     examples = get_score_examples(username, num_high=1, num_low=1)
@@ -5077,7 +5077,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         if not url_valid:
                             feedback += "Use only direct, accessible URLs from authoritative sources which you found in your search results (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results. "
                         if not twitter_eval_valid and twitter_claim_score is not None:
-                            feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}. Closer to 1 is better. Over 0.7 is a good score. The note is too opinionated. Focus on using neutral language rather than making subjective judgments."
+                            feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}. Higher is better. Over 0.7 is a good score. The note is too opinionated. Focus on using neutral language rather than making subjective judgments."
                         # if not harassment_valid:
                         #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
@@ -5168,9 +5168,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         print(f"{'='*80}\n")
                         
                         # Append this exchange to conversation history
+                        # Include the full message with feedback AND examples so they accumulate
                         retry_conversation_history.append({
                             "role": "user",
-                            "content": f"{feedback}\n\nPlease revise to fix these issues."
+                            "content": retry_user_msg
                         })
                         
                         # Run the model with full context
