@@ -4434,7 +4434,7 @@ backoff_multiplier = 1
 COMMUNITY_NOTES_LAST_CHECK_FILE = f'cn_last_check_{username}.txt'
 COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
 
-def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename):
+def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename, cn_on_reflection=False, post_interval=None, cn_max_results=None):
     """
     Tweet a summary of the Community Notes run completion.
     
@@ -4444,6 +4444,9 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         posts_skipped: Number of posts skipped (already processed)
         posts_failed: Number of failed note generations
         log_filename: Name of the log file
+        cn_on_reflection: Whether CN is triggered on reflection cycles
+        post_interval: Number of replies between reflections (if cn_on_reflection=True)
+        cn_max_results: Number of CN posts processed per cycle (if cn_on_reflection=True)
     """
     try:
         total_processed = notes_written + posts_not_needing_notes + posts_skipped + posts_failed
@@ -4461,6 +4464,11 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
             summary_lines.append(f"🔄 Already processed: {posts_skipped}")
         if posts_failed > 0:
             summary_lines.append(f"❌ Failed: {posts_failed}")
+        
+        # Add cn_on_reflection info if enabled
+        if cn_on_reflection and post_interval is not None and cn_max_results is not None:
+            summary_lines.append("")
+            summary_lines.append(f"🔄 Processing {cn_max_results} community notes for every {post_interval} replies")
         
         summary_tweet = "\n".join(summary_lines)
         
@@ -5677,7 +5685,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 posts_not_needing_notes=posts_not_needing_notes,
                 posts_skipped=posts_skipped_already_written,
                 posts_failed=posts_failed_generation,
-                log_filename=log_filename
+                log_filename=log_filename,
+                cn_on_reflection=args.cn_on_reflection,
+                post_interval=args.post_interval,
+                cn_max_results=args.cn_max_results
             )
         except Exception as tweet_error:
             print(f"[Community Notes] Warning: Could not post summary tweet: {tweet_error}")
