@@ -5502,6 +5502,13 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         }
                         notes_written += 1
                         continue
+                    elif submit_response.status_code == 403 and "daily limit" in submit_response.text.lower():
+                        # Daily limit reached - stop processing to avoid wasting tokens
+                        print(f"[Community Notes] DAILY LIMIT REACHED - stopping processing to save tokens")
+                        log_to_file(f"SUBMISSION: STOPPED (HTTP 403 - daily limit reached)")
+                        log_to_file(f"ERROR RESPONSE: {submit_response.text}")
+                        posts_failed_generation += 1
+                        break  # Exit the for loop
                     else:
                         print(f"[Community Notes] Error submitting note for {post_id}: HTTP {submit_response.status_code}")
                         print(f"  Response: {submit_response.text}")
