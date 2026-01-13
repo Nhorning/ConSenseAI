@@ -986,7 +986,7 @@ def fetch_and_process_followed_users():
         print("[Followed] No followed users found")
         return
     
-    print(f"[Followed] Total followed users: {followed_users}")
+    print(f"[Followed] Total followed users: {len(followed_users)}")
     
     # Check separate daily cap for followed users (uses same dynamic cap logic as search)
     today_count = _get_followed_today_count()
