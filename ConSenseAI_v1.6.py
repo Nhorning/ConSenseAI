@@ -4481,9 +4481,8 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         
     except Exception as e:
         print(f"[Community Notes] Error posting summary tweet: {e}")
-        log_to_file(f"ERROR in tweet_community_notes_summary: {e}")
         import traceback
-        log_to_file(traceback.format_exc())
+        print(f"[Community Notes] Traceback: {traceback.format_exc()}")
         raise
 
 def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
