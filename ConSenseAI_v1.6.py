@@ -452,13 +452,15 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             
             rating_status = data.get('twitter_rating_status', '')
             
-            if 'currently_rated_helpful' in rating_status:
+            # Check for helpful ratings (includes variations like "currently_rated_helpful")
+            if 'helpful' in rating_status and 'not_helpful' not in rating_status:
                 helpful_notes.append({
                     'note': data['note'],
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
-            elif 'currently_rated_not_helpful' in rating_status:
+            # Check for not helpful ratings
+            elif 'not_helpful' in rating_status:
                 not_helpful_notes.append({
                     'note': data['note'],
                     'status': rating_status,
@@ -4804,25 +4806,25 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             score_guidance = ""
             examples_text = ""
             
+            # Always add rating examples if available
+            examples = get_score_examples(username, num_high=3, num_low=2)
+            if examples['helpful_examples'] or examples['not_helpful_examples']:
+                examples_text = "\n\n- RATING EXAMPLES (learn from actual user feedback):"
+                
+                if examples['helpful_examples']:
+                    examples_text += "\n  HELPFUL NOTES (rated helpful by Twitter users - emulate this style):"
+                    for i, ex in enumerate(examples['helpful_examples'], 1):
+                        examples_text += f"\n    {i}. \"{ex['note']}\""
+                
+                if examples['not_helpful_examples']:
+                    examples_text += "\n  NOT HELPFUL NOTES (rated not helpful by Twitter users - avoid this style):"
+                    for i, ex in enumerate(examples['not_helpful_examples'], 1):
+                        examples_text += f"\n    {i}. \"{ex['note']}\""
+            
             if score_dist['count'] > 0:
                 score_guidance = f"\n- CRITICAL NEUTRALITY REQUIREMENT: Your recent notes scored {score_dist['high_pct']:.1f}% High, {score_dist['medium_pct']:.1f}% Medium, {score_dist['low_pct']:.1f}% Low on Twitter's ClaimOpinion scale (higher scores = more neutral/fact-based). Twitter REQUIRES at least 30% High scores and no more than 30% Low scores. "
                 if score_dist['high_pct'] < 32:
                     score_guidance += f"You are currently BELOW the 30% High threshold. You MUST write extremely neutrally"
-                    
-                    # Add examples when we need higher scores
-                    examples = get_score_examples(username, num_high=3, num_low=2)
-                    if examples['helpful_examples'] or examples['not_helpful_examples']:
-                        examples_text = "\n\n- RATING EXAMPLES (learn from actual user feedback):"
-                        
-                        if examples['helpful_examples']:
-                            examples_text += "\n  HELPFUL NOTES (rated helpful by Twitter users - emulate this style):"
-                            for i, ex in enumerate(examples['helpful_examples'], 1):
-                                examples_text += f"\n    {i}. \"{ex['note']}\""
-                        
-                        if examples['not_helpful_examples']:
-                            examples_text += "\n  NOT HELPFUL NOTES (rated not helpful by Twitter users - avoid this style):"
-                            for i, ex in enumerate(examples['not_helpful_examples'], 1):
-                                examples_text += f"\n    {i}. \"{ex['note']}\""
                 elif score_dist['low_pct'] >= 25:
                     score_guidance += f"You are approaching the 30% Low limit. Write more neutrally - stick to facts and avoid subjective language."
                 else:
