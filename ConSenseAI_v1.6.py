@@ -5578,115 +5578,115 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 
                 if verify_response.status_code == 200:
                     verify_data = verify_response.json()
-                
-                if 'data' in verify_data:
-                    # Count score buckets by evaluator type and track individual notes
-                    claim_opinion_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
-                    url_validity_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
-                    harassment_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
                     
-                    # Track individual note scores for detailed reporting
-                    note_details = []
-                    
-                    for note in verify_data['data']:
-                        note_info = note.get('info', {})
-                        post_id = note_info.get('post_id', 'unknown')
-                        note_text = note_info.get('text', '')[:100] + '...' if len(note_info.get('text', '')) > 100 else note_info.get('text', '')
+                    if 'data' in verify_data:
+                        # Count score buckets by evaluator type and track individual notes
+                        claim_opinion_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                        url_validity_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                        harassment_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
                         
-                        # Get rating status from status field (production mode)
-                        status = note.get('status', 'N/A')
+                        # Track individual note scores for detailed reporting
+                        note_details = []
                         
-                        # Get score buckets from test_result field (test mode)
-                        scores = {}
-                        if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
-                            for outcome in note['test_result']['evaluation_outcome']:
-                                evaluator_type = outcome.get('evaluator_type', '')
-                                score_bucket = outcome.get('evaluator_score_bucket', '')
-                                scores[evaluator_type] = score_bucket
-                                
-                                if evaluator_type == 'ClaimOpinion' and score_bucket in claim_opinion_buckets:
-                                    claim_opinion_buckets[score_bucket] += 1
-                                elif evaluator_type == 'UrlValidity' and score_bucket in url_validity_buckets:
-                                    url_validity_buckets[score_bucket] += 1
-                                elif evaluator_type == 'HarassmentAbuse' and score_bucket in harassment_buckets:
-                                    harassment_buckets[score_bucket] += 1
+                        for note in verify_data['data']:
+                            note_info = note.get('info', {})
+                            post_id = note_info.get('post_id', 'unknown')
+                            note_text = note_info.get('text', '')[:100] + '...' if len(note_info.get('text', '')) > 100 else note_info.get('text', '')
+                            
+                            # Get rating status from status field (production mode)
+                            status = note.get('status', 'N/A')
+                            
+                            # Get score buckets from test_result field (test mode)
+                            scores = {}
+                            if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
+                                for outcome in note['test_result']['evaluation_outcome']:
+                                    evaluator_type = outcome.get('evaluator_type', '')
+                                    score_bucket = outcome.get('evaluator_score_bucket', '')
+                                    scores[evaluator_type] = score_bucket
+                                    
+                                    if evaluator_type == 'ClaimOpinion' and score_bucket in claim_opinion_buckets:
+                                        claim_opinion_buckets[score_bucket] += 1
+                                    elif evaluator_type == 'UrlValidity' and score_bucket in url_validity_buckets:
+                                        url_validity_buckets[score_bucket] += 1
+                                    elif evaluator_type == 'HarassmentAbuse' and score_bucket in harassment_buckets:
+                                        harassment_buckets[score_bucket] += 1
+                            
+                            note_details.append({
+                                'post_id': post_id,
+                                'text': note_text,
+                                'status': status,
+                                'scores': scores
+                            })
                         
-                        note_details.append({
-                            'post_id': post_id,
-                            'text': note_text,
-                            'status': status,
-                            'scores': scores
-                        })
-                    
-                    # Update local cn_written file with Twitter-assigned status (production mode only)
-                    if not test_mode:
-                        updated_count = 0
+                        # Update local cn_written file with Twitter-assigned status (production mode only)
+                        if not test_mode:
+                            updated_count = 0
+                            for detail in note_details:
+                                post_id = detail['post_id']
+                                if post_id in written_notes:
+                                    # Save the rating status from production mode
+                                    written_notes[post_id]['twitter_rating_status'] = detail['status']
+                                    # Also save test_result buckets if available (for reference)
+                                    if detail['scores']:
+                                        written_notes[post_id]['twitter_test_result_buckets'] = detail['scores']
+                                    updated_count += 1
+                            
+                            if updated_count > 0:
+                                try:
+                                    with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                                        json.dump(written_notes, f, indent=2)
+                                    log_to_file(f"\nUPDATED LOCAL DATA: Saved Twitter-assigned rating status for {updated_count} notes")
+                                    print(f"[Community Notes] Updated {updated_count} notes with Twitter-assigned rating status")
+                                except Exception as save_error:
+                                    log_to_file(f"ERROR SAVING UPDATED STATUS: {save_error}")
+                        
+                        # Log detailed note-by-note results
+                        log_to_file(f"\nVERIFICATION DETAILS ({len(verify_data['data'])} notes retrieved):")
                         for detail in note_details:
-                            post_id = detail['post_id']
-                            if post_id in written_notes:
-                                # Save the rating status from production mode
-                                written_notes[post_id]['twitter_rating_status'] = detail['status']
-                                # Also save test_result buckets if available (for reference)
-                                if detail['scores']:
-                                    written_notes[post_id]['twitter_test_result_buckets'] = detail['scores']
-                                updated_count += 1
+                            log_to_file(f"\nPost ID: {detail['post_id']}")
+                            log_to_file(f"  Note: {detail['text']}")
+                            log_to_file(f"  Rating Status: {detail['status']}")
+                            if detail['scores']:
+                                log_to_file(f"  Test Result Buckets:")
+                                log_to_file(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                                log_to_file(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                                log_to_file(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
                         
-                        if updated_count > 0:
-                            try:
-                                with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
-                                    json.dump(written_notes, f, indent=2)
-                                log_to_file(f"\nUPDATED LOCAL DATA: Saved Twitter-assigned rating status for {updated_count} notes")
-                                print(f"[Community Notes] Updated {updated_count} notes with Twitter-assigned rating status")
-                            except Exception as save_error:
-                                log_to_file(f"ERROR SAVING UPDATED STATUS: {save_error}")
-                    
-                    # Log detailed note-by-note results
-                    log_to_file(f"\nVERIFICATION DETAILS ({len(verify_data['data'])} notes retrieved):")
-                    for detail in note_details:
-                        log_to_file(f"\nPost ID: {detail['post_id']}")
-                        log_to_file(f"  Note: {detail['text']}")
-                        log_to_file(f"  Rating Status: {detail['status']}")
-                        if detail['scores']:
-                            log_to_file(f"  Test Result Buckets:")
-                            log_to_file(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                            log_to_file(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                            log_to_file(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
-                    
-                    # Log aggregate summary
-                    log_to_file(f"\nAGGREGATE SUMMARY:")
-                    log_to_file(f"\nClaimOpinion Score Buckets:")
-                    log_to_file(f"  High (fact-based):   {claim_opinion_buckets['High']}")
-                    log_to_file(f"  Medium:              {claim_opinion_buckets['Medium']}")
-                    log_to_file(f"  Low (opinion-based): {claim_opinion_buckets['Low']}")
-                    log_to_file(f"\nUrlValidity Score Buckets:")
-                    log_to_file(f"  High:   {url_validity_buckets['High']}")
-                    log_to_file(f"  Medium: {url_validity_buckets['Medium']}")
-                    log_to_file(f"  Low:    {url_validity_buckets['Low']}")
-                    log_to_file(f"\nHarassmentAbuse Score Buckets:")
-                    log_to_file(f"  High:   {harassment_buckets['High']}")
-                    log_to_file(f"  Medium: {harassment_buckets['Medium']}")
-                    log_to_file(f"  Low:    {harassment_buckets['Low']}")
-                    
-                    # Print detailed summary to console (user-friendly, no raw JSON)
-                    print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
-                    print(f"\n  Individual Note Results:")
-                    for i, detail in enumerate(note_details, 1):
-                        print(f"\n  Note {i} (Post {detail['post_id']}):")
-                        print(f"    Text: {detail['text']}")
-                        print(f"    Rating Status: {detail['status']}")
-                        if detail['scores']:
-                            print(f"    Test Result Buckets:")
-                            print(f"      ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                            print(f"      UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                            print(f"      HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
-                    
-                    if claim_opinion_buckets['High'] + claim_opinion_buckets['Medium'] + claim_opinion_buckets['Low'] > 0:
-                        print(f"\n  Aggregate Test Result Summary:")
-                        print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
-                        print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
-                        print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
-                else:
-                    log_to_file("No notes data in verification response")
+                        # Log aggregate summary
+                        log_to_file(f"\nAGGREGATE SUMMARY:")
+                        log_to_file(f"\nClaimOpinion Score Buckets:")
+                        log_to_file(f"  High (fact-based):   {claim_opinion_buckets['High']}")
+                        log_to_file(f"  Medium:              {claim_opinion_buckets['Medium']}")
+                        log_to_file(f"  Low (opinion-based): {claim_opinion_buckets['Low']}")
+                        log_to_file(f"\nUrlValidity Score Buckets:")
+                        log_to_file(f"  High:   {url_validity_buckets['High']}")
+                        log_to_file(f"  Medium: {url_validity_buckets['Medium']}")
+                        log_to_file(f"  Low:    {url_validity_buckets['Low']}")
+                        log_to_file(f"\nHarassmentAbuse Score Buckets:")
+                        log_to_file(f"  High:   {harassment_buckets['High']}")
+                        log_to_file(f"  Medium: {harassment_buckets['Medium']}")
+                        log_to_file(f"  Low:    {harassment_buckets['Low']}")
+                        
+                        # Print detailed summary to console (user-friendly, no raw JSON)
+                        print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
+                        print(f"\n  Individual Note Results:")
+                        for i, detail in enumerate(note_details, 1):
+                            print(f"\n  Note {i} (Post {detail['post_id']}):")
+                            print(f"    Text: {detail['text']}")
+                            print(f"    Rating Status: {detail['status']}")
+                            if detail['scores']:
+                                print(f"    Test Result Buckets:")
+                                print(f"      ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                                print(f"      UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                                print(f"      HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
+                        
+                        if claim_opinion_buckets['High'] + claim_opinion_buckets['Medium'] + claim_opinion_buckets['Low'] > 0:
+                            print(f"\n  Aggregate Test Result Summary:")
+                            print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
+                            print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
+                            print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
+                    else:
+                        log_to_file("No notes data in verification response")
                 else:
                     log_to_file(f"FINAL VERIFICATION FAILED: HTTP {verify_response.status_code} - {verify_response.text}")
                 
