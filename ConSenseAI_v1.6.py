@@ -425,7 +425,66 @@ def should_reject_score(username, score):
 
 def get_score_examples(username, num_high=3, num_low=3, offset=0):
     """
-    Get examples of highest and lowest scoring notes for prompt guidance.
+    Get examples of notes rated helpful vs not helpful by Twitter.
+    Returns dict with 'helpful_examples' and 'not_helpful_examples' lists.
+    
+    Args:
+        username: Username for the cn_written file
+        num_high: Number of helpful examples to return
+        num_low: Number of not-helpful examples to return
+        offset: Number of examples to skip (for getting different examples on retries)
+    """
+    written_file = f'cn_written_{username}.json'
+    if not os.path.exists(written_file):
+        return {'helpful_examples': [], 'not_helpful_examples': []}
+    
+    try:
+        with open(written_file, 'r') as f:
+            written_notes = json.load(f)
+        
+        # Extract notes with Twitter rating status
+        helpful_notes = []
+        not_helpful_notes = []
+        
+        for post_id, data in written_notes.items():
+            if data.get('note') is None:
+                continue
+            
+            rating_status = data.get('twitter_rating_status', '')
+            
+            if 'currently_rated_helpful' in rating_status:
+                helpful_notes.append({
+                    'note': data['note'],
+                    'status': rating_status,
+                    'timestamp': data.get('timestamp', '')
+                })
+            elif 'currently_rated_not_helpful' in rating_status:
+                not_helpful_notes.append({
+                    'note': data['note'],
+                    'status': rating_status,
+                    'timestamp': data.get('timestamp', '')
+                })
+        
+        # Get examples with offset
+        helpful_start = offset
+        helpful_end = offset + num_high
+        helpful_examples = helpful_notes[helpful_start:helpful_end]
+        
+        not_helpful_start = offset
+        not_helpful_end = offset + num_low
+        not_helpful_examples = not_helpful_notes[not_helpful_start:not_helpful_end]
+        
+        return {
+            'helpful_examples': helpful_examples,
+            'not_helpful_examples': not_helpful_examples
+        }
+    except Exception as e:
+        print(f"[Score Examples] Error loading examples: {e}")
+        return {'helpful_examples': [], 'not_helpful_examples': []}
+
+def get_score_based_examples(username, num_high=3, num_low=3, offset=0):
+    """
+    Get examples of highest and lowest scoring notes for verification pass prompts.
     Returns dict with 'high_examples' and 'low_examples' lists.
     
     Args:
@@ -474,7 +533,7 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             'low_examples': low_examples
         }
     except Exception as e:
-        print(f"[Score Examples] Error loading examples: {e}")
+        print(f"[Score Examples] Error loading score-based examples: {e}")
         return {'high_examples': [], 'low_examples': []}
 
     # Check if Low percentage is approaching 30% - if so, reject Low scores
@@ -4752,18 +4811,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     
                     # Add examples when we need higher scores
                     examples = get_score_examples(username, num_high=3, num_low=2)
-                    if examples['high_examples'] or examples['low_examples']:
-                        examples_text = "\n\n- SCORE EXAMPLES (learn from these):"
+                    if examples['helpful_examples'] or examples['not_helpful_examples']:
+                        examples_text = "\n\n- RATING EXAMPLES (learn from actual user feedback):"
                         
-                        if examples['high_examples']:
-                            examples_text += "\n  HIGH-SCORING NOTES (emulate this style):"
-                            for i, ex in enumerate(examples['high_examples'], 1):
-                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
+                        if examples['helpful_examples']:
+                            examples_text += "\n  HELPFUL NOTES (rated helpful by Twitter users - emulate this style):"
+                            for i, ex in enumerate(examples['helpful_examples'], 1):
+                                examples_text += f"\n    {i}. \"{ex['note']}\""
                         
-                        if examples['low_examples']:
-                            examples_text += "\n  LOW-SCORING NOTES (avoid this style):"
-                            for i, ex in enumerate(examples['low_examples'], 1):
-                                examples_text += f"\n    {i}. Score {ex['score']:.2f}: \"{ex['note']}\""
+                        if examples['not_helpful_examples']:
+                            examples_text += "\n  NOT HELPFUL NOTES (rated not helpful by Twitter users - avoid this style):"
+                            for i, ex in enumerate(examples['not_helpful_examples'], 1):
+                                examples_text += f"\n    {i}. \"{ex['note']}\""
                 elif score_dist['low_pct'] >= 25:
                     score_guidance += f"You are approaching the 30% Low limit. Write more neutrally - stick to facts and avoid subjective language."
                 else:
@@ -5228,21 +5287,22 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         # Add score examples if we need better scores
                         # Show 3 high and 2 low examples, cycling through different examples on each retry
+                        # Use score-based examples for verification passes to focus on Twitter's scoring criteria
                         if not twitter_eval_valid and twitter_claim_score is not None:
-                            # Use retry_count * 3 to skip previously shown high examples
+                            # Use retry_count * 3 to skip previously shown examples
                             example_offset = retry_count * 3
-                            examples = get_score_examples(username, num_high=3, num_low=2, offset=example_offset)
-                            if examples['high_examples'] or examples['low_examples']:
+                            score_examples = get_score_based_examples(username, num_high=3, num_low=2, offset=example_offset)
+                            if score_examples['high_examples'] or score_examples['low_examples']:
                                 retry_user_msg += f"\n--- SCORE EXAMPLES (Retry {retry_count + 1}) ---\n"
                                 
-                                if examples['high_examples']:
+                                if score_examples['high_examples']:
                                     retry_user_msg += "HIGH-SCORING NOTES (emulate this neutral, fact-based style):\n"
-                                    for i, ex in enumerate(examples['high_examples'], 1):
+                                    for i, ex in enumerate(score_examples['high_examples'], 1):
                                         retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
                                 
-                                if examples['low_examples']:
+                                if score_examples['low_examples']:
                                     retry_user_msg += "\nLOW-SCORING NOTES (avoid this opinionated style):\n"
-                                    for i, ex in enumerate(examples['low_examples'], 1):
+                                    for i, ex in enumerate(score_examples['low_examples'], 1):
                                         retry_user_msg += f"  {i}. Score {ex['score']:.2f}: \"{ex['note']}\"\n"
                                 
                                 retry_user_msg += "\n"
