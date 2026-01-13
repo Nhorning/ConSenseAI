@@ -389,7 +389,7 @@ def should_reject_score(username, score):
     - No more than 30% can score Low on ClaimOpinion
     
     Strategy:
-    - If Low scores approaching 30%, reject Low scores
+    - If Low scores at or above 30%, reject Low scores
     - If High scores below 30%, reject both Medium and Low scores
     - Otherwise accept Medium and High scores
     
@@ -412,10 +412,10 @@ def should_reject_score(username, score):
         else:
             return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: boosting High %, currently {dist['high_pct']:.1f}%)"
     
-    # Check if Low percentage is approaching 30% - if so, reject Low scores
-    if dist['low_pct'] >= 25:  # Start rejecting at 25% to stay under 30%
+    # Check if Low percentage is at or above 30% - reject Low scores
+    if dist['low_pct'] >= 30:
         if predicted_bucket == "Low":
-            return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: Low at {dist['low_pct']:.1f}%, approaching 30% limit)"
+            return True, f"Score: {score:.3f} → {predicted_bucket} (REJECTED: Low at {dist['low_pct']:.1f}%, at/above 30% limit)"
         else:
             return False, f"Score: {score:.3f} → {predicted_bucket} (ACCEPTED: Low % under control at {dist['low_pct']:.1f}%)"
     
