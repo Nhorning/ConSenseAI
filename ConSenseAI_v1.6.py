@@ -4475,15 +4475,28 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         print(f"[Community Notes] Posting summary tweet...")
         print(f"  Tweet content: {summary_tweet}")
         
-        post_client.create_tweet(text=summary_tweet)
-        
-        print(f"[Community Notes] Summary tweet posted successfully!")
+        # Retry logic for network errors
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                post_client.create_tweet(text=summary_tweet)
+                print(f"[Community Notes] Summary tweet posted successfully!")
+                break
+            except Exception as tweet_error:
+                if attempt < max_retries - 1:
+                    import time
+                    retry_delay = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    print(f"[Community Notes] Error posting summary tweet (attempt {attempt + 1}/{max_retries}): {tweet_error}")
+                    print(f"[Community Notes] Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    # Final attempt failed
+                    raise
         
     except Exception as e:
         print(f"[Community Notes] Error posting summary tweet: {e}")
         import traceback
         print(f"[Community Notes] Traceback: {traceback.format_exc()}")
-        raise
 
 def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
     """
@@ -4793,11 +4806,27 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 posts_not_needing_notes += 1
                 continue
             
-            # All Community Notes are classified as misinformed_or_potentially_misleading
-            # The Twitter API does not accept "not_misleading" as a valid classification
-            # Even notes confirming accuracy are providing "important context" about the post
-            classification = "misinformed_or_potentially_misleading"
-            log_to_file(f"CLASSIFICATION: {classification}")
+            # Determine classification based on note content
+            # Check if note is confirming accuracy (starts with phrases indicating correctness)
+            note_lower = note_text.lower()
+            accuracy_phrases = [
+                'this post is accurate',
+                'this information is correct',
+                'this is accurate',
+                'the post is accurate',
+                'the information is correct',
+                'this claim is accurate',
+                'this statement is correct'
+            ]
+            
+            is_confirming_accuracy = any(note_lower.startswith(phrase) for phrase in accuracy_phrases)
+            
+            if is_confirming_accuracy:
+                classification = "not_misleading"
+                log_to_file(f"CLASSIFICATION: {classification} (note confirms accuracy)")
+            else:
+                classification = "misinformed_or_potentially_misleading"
+                log_to_file(f"CLASSIFICATION: {classification} (note corrects misinformation)")
             
             # Verify note contains at least one URL (required by API)
             import re
