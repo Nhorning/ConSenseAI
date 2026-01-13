@@ -4473,12 +4473,11 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         summary_tweet = "\n".join(summary_lines)
         
         print(f"[Community Notes] Posting summary tweet...")
-        log_to_file(f"SUMMARY TWEET: {summary_tweet}")
+        print(f"  Tweet content: {summary_tweet}")
         
         post_client.create_tweet(text=summary_tweet)
         
         print(f"[Community Notes] Summary tweet posted successfully!")
-        log_to_file("Summary tweet posted successfully")
         
     except Exception as e:
         print(f"[Community Notes] Error posting summary tweet: {e}")
@@ -5536,42 +5535,49 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     log_to_file(f"  - Failed generations: {posts_failed_generation}")
     log_to_file("=" * 80 + "\n")
     
-    # Generate end-of-run verification report
-    if notes_written > 0 and not args.dryrun:
+    # Generate end-of-run verification report (production mode only)
+    if not test_mode and not args.dryrun:
         try:
-            # Pause to allow Twitter to process recent submissions
-            print(f"[Community Notes] Pausing 10 seconds before verification report...")
-            time.sleep(10)
+            # Count how many production notes are stored locally
+            production_notes_count = sum(1 for note_data in written_notes.values() 
+                                        if isinstance(note_data, dict) and note_data.get('test_mode') == False)
             
-            log_to_file("\n" + "=" * 80)
-            log_to_file("END-OF-RUN VERIFICATION REPORT")
-            log_to_file("=" * 80)
-            print(f"[Community Notes] Generating verification report for {notes_written} submitted notes...")
+            if production_notes_count == 0:
+                print(f"[Community Notes] No production notes to verify (all notes are in test mode)")
+            else:
+                # Pause to allow Twitter to process recent submissions
+                print(f"[Community Notes] Pausing 10 seconds before verification report...")
+                time.sleep(10)
+                
+                log_to_file("\n" + "=" * 80)
+                log_to_file("END-OF-RUN VERIFICATION REPORT")
+                log_to_file("=" * 80)
+                print(f"[Community Notes] Generating verification report for up to {min(production_notes_count, 50)} production notes...")
             
-            # Re-establish OAuth session for verification
-            cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
-            cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
-            cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
-            cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
-            
-            oauth_verify = OAuth1Session(
-                client_key=cn_api_key,
-                client_secret=cn_api_secret,
-                resource_owner_key=cn_access_token,
-                resource_owner_secret=cn_access_secret
-            )
-            
-            verify_response = oauth_verify.get(
-                "https://api.x.com/2/notes/search/notes_written",
-                params={
-                    "test_mode": str(test_mode).lower(),
-                    "max_results": min(notes_written, 100),  # API max is 100
-                    "note.fields": "id,info,status,test_result"
-                }
-            )
-            
-            if verify_response.status_code == 200:
-                verify_data = verify_response.json()
+                # Re-establish OAuth session for verification
+                cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+                cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+                cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+                cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+                
+                oauth_verify = OAuth1Session(
+                    client_key=cn_api_key,
+                    client_secret=cn_api_secret,
+                    resource_owner_key=cn_access_token,
+                    resource_owner_secret=cn_access_secret
+                )
+                
+                verify_response = oauth_verify.get(
+                    "https://api.x.com/2/notes/search/notes_written",
+                    params={
+                        "test_mode": "false",  # Always fetch production notes
+                        "max_results": min(production_notes_count, 50),  # Fetch up to 50 production notes
+                        "note.fields": "id,info,status,test_result"
+                    }
+                )
+                
+                if verify_response.status_code == 200:
+                    verify_data = verify_response.json()
                 
                 if 'data' in verify_data:
                     # Count score buckets by evaluator type and track individual notes
@@ -5587,6 +5593,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         post_id = note_info.get('post_id', 'unknown')
                         note_text = note_info.get('text', '')[:100] + '...' if len(note_info.get('text', '')) > 100 else note_info.get('text', '')
                         
+                        # Get rating status from status field (production mode)
+                        status = note.get('status', 'N/A')
+                        
+                        # Get score buckets from test_result field (test mode)
                         scores = {}
                         if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
                             for outcome in note['test_result']['evaluation_outcome']:
@@ -5604,17 +5614,43 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         note_details.append({
                             'post_id': post_id,
                             'text': note_text,
+                            'status': status,
                             'scores': scores
                         })
+                    
+                    # Update local cn_written file with Twitter-assigned status (production mode only)
+                    if not test_mode:
+                        updated_count = 0
+                        for detail in note_details:
+                            post_id = detail['post_id']
+                            if post_id in written_notes:
+                                # Save the rating status from production mode
+                                written_notes[post_id]['twitter_rating_status'] = detail['status']
+                                # Also save test_result buckets if available (for reference)
+                                if detail['scores']:
+                                    written_notes[post_id]['twitter_test_result_buckets'] = detail['scores']
+                                updated_count += 1
+                        
+                        if updated_count > 0:
+                            try:
+                                with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                                    json.dump(written_notes, f, indent=2)
+                                log_to_file(f"\nUPDATED LOCAL DATA: Saved Twitter-assigned rating status for {updated_count} notes")
+                                print(f"[Community Notes] Updated {updated_count} notes with Twitter-assigned rating status")
+                            except Exception as save_error:
+                                log_to_file(f"ERROR SAVING UPDATED STATUS: {save_error}")
                     
                     # Log detailed note-by-note results
                     log_to_file(f"\nVERIFICATION DETAILS ({len(verify_data['data'])} notes retrieved):")
                     for detail in note_details:
                         log_to_file(f"\nPost ID: {detail['post_id']}")
                         log_to_file(f"  Note: {detail['text']}")
-                        log_to_file(f"  ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                        log_to_file(f"  UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                        log_to_file(f"  HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
+                        log_to_file(f"  Rating Status: {detail['status']}")
+                        if detail['scores']:
+                            log_to_file(f"  Test Result Buckets:")
+                            log_to_file(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                            log_to_file(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                            log_to_file(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
                     
                     # Log aggregate summary
                     log_to_file(f"\nAGGREGATE SUMMARY:")
@@ -5633,24 +5669,28 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     
                     # Print detailed summary to console (user-friendly, no raw JSON)
                     print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
-                    print(f"\n  Individual Note Scores:")
+                    print(f"\n  Individual Note Results:")
                     for i, detail in enumerate(note_details, 1):
                         print(f"\n  Note {i} (Post {detail['post_id']}):")
                         print(f"    Text: {detail['text']}")
-                        print(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                        print(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                        print(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
+                        print(f"    Rating Status: {detail['status']}")
+                        if detail['scores']:
+                            print(f"    Test Result Buckets:")
+                            print(f"      ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
+                            print(f"      UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
+                            print(f"      HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
                     
-                    print(f"\n  Aggregate Summary:")
-                    print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
-                    print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
-                    print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
+                    if claim_opinion_buckets['High'] + claim_opinion_buckets['Medium'] + claim_opinion_buckets['Low'] > 0:
+                        print(f"\n  Aggregate Test Result Summary:")
+                        print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
+                        print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
+                        print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
                 else:
                     log_to_file("No notes data in verification response")
-            else:
-                log_to_file(f"FINAL VERIFICATION FAILED: HTTP {verify_response.status_code} - {verify_response.text}")
-            
-            log_to_file("=" * 80 + "\n")
+                else:
+                    log_to_file(f"FINAL VERIFICATION FAILED: HTTP {verify_response.status_code} - {verify_response.text}")
+                
+                log_to_file("=" * 80 + "\n")
         except Exception as verify_error:
             log_to_file(f"END-OF-RUN VERIFICATION ERROR: {verify_error}")
             import traceback
