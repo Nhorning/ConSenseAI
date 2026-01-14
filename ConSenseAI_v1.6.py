@@ -5690,12 +5690,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     verify_data = verify_response.json()
                     
                     if 'data' in verify_data:
-                        # Count score buckets by evaluator type and track individual notes
-                        claim_opinion_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
-                        url_validity_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
-                        harassment_buckets = {'High': 0, 'Medium': 0, 'Low': 0}
+                        # Count rating statuses
+                        rating_status_counts = {}
                         
-                        # Track individual note scores for detailed reporting
+                        # Track individual note details for saving to local data
                         note_details = []
                         
                         for note in verify_data['data']:
@@ -5706,20 +5704,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             # Get rating status from status field (production mode)
                             status = note.get('status', 'N/A')
                             
-                            # Get score buckets from test_result field (test mode)
+                            # Count rating statuses
+                            if status not in rating_status_counts:
+                                rating_status_counts[status] = 0
+                            rating_status_counts[status] += 1
+                            
+                            # Get score buckets from test_result field (for detailed logging)
                             scores = {}
                             if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
                                 for outcome in note['test_result']['evaluation_outcome']:
                                     evaluator_type = outcome.get('evaluator_type', '')
                                     score_bucket = outcome.get('evaluator_score_bucket', '')
                                     scores[evaluator_type] = score_bucket
-                                    
-                                    if evaluator_type == 'ClaimOpinion' and score_bucket in claim_opinion_buckets:
-                                        claim_opinion_buckets[score_bucket] += 1
-                                    elif evaluator_type == 'UrlValidity' and score_bucket in url_validity_buckets:
-                                        url_validity_buckets[score_bucket] += 1
-                                    elif evaluator_type == 'HarassmentAbuse' and score_bucket in harassment_buckets:
-                                        harassment_buckets[score_bucket] += 1
                             
                             note_details.append({
                                 'post_id': post_id,
@@ -5762,39 +5758,15 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 log_to_file(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
                                 log_to_file(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
                         
-                        # Log aggregate summary
-                        log_to_file(f"\nAGGREGATE SUMMARY:")
-                        log_to_file(f"\nClaimOpinion Score Buckets:")
-                        log_to_file(f"  High (fact-based):   {claim_opinion_buckets['High']}")
-                        log_to_file(f"  Medium:              {claim_opinion_buckets['Medium']}")
-                        log_to_file(f"  Low (opinion-based): {claim_opinion_buckets['Low']}")
-                        log_to_file(f"\nUrlValidity Score Buckets:")
-                        log_to_file(f"  High:   {url_validity_buckets['High']}")
-                        log_to_file(f"  Medium: {url_validity_buckets['Medium']}")
-                        log_to_file(f"  Low:    {url_validity_buckets['Low']}")
-                        log_to_file(f"\nHarassmentAbuse Score Buckets:")
-                        log_to_file(f"  High:   {harassment_buckets['High']}")
-                        log_to_file(f"  Medium: {harassment_buckets['Medium']}")
-                        log_to_file(f"  Low:    {harassment_buckets['Low']}")
+                        # Log aggregate rating status summary
+                        log_to_file(f"\nRATING STATUS SUMMARY:")
+                        for status, count in sorted(rating_status_counts.items()):
+                            log_to_file(f"  {status}: {count}")
                         
-                        # Print detailed summary to console (user-friendly, no raw JSON)
+                        # Print simplified summary to console (matching run complete report style)
                         print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
-                        print(f"\n  Individual Note Results:")
-                        for i, detail in enumerate(note_details, 1):
-                            print(f"\n  Note {i} (Post {detail['post_id']}):")
-                            print(f"    Text: {detail['text']}")
-                            print(f"    Rating Status: {detail['status']}")
-                            if detail['scores']:
-                                print(f"    Test Result Buckets:")
-                                print(f"      ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                                print(f"      UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                                print(f"      HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
-                        
-                        if claim_opinion_buckets['High'] + claim_opinion_buckets['Medium'] + claim_opinion_buckets['Low'] > 0:
-                            print(f"\n  Aggregate Test Result Summary:")
-                            print(f"    ClaimOpinion - High: {claim_opinion_buckets['High']}, Medium: {claim_opinion_buckets['Medium']}, Low: {claim_opinion_buckets['Low']}")
-                            print(f"    UrlValidity - High: {url_validity_buckets['High']}, Medium: {url_validity_buckets['Medium']}, Low: {url_validity_buckets['Low']}")
-                            print(f"    HarassmentAbuse - High: {harassment_buckets['High']}, Medium: {harassment_buckets['Medium']}, Low: {harassment_buckets['Low']}")
+                        for status, count in sorted(rating_status_counts.items()):
+                            print(f"  - {status}: {count}")
                     else:
                         log_to_file("No notes data in verification response")
                 else:
