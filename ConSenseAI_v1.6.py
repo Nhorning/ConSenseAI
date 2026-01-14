@@ -5746,20 +5746,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 except Exception as save_error:
                                     log_to_file(f"ERROR SAVING UPDATED STATUS: {save_error}")
                         
-                        # Log detailed note-by-note results
-                        log_to_file(f"\nVERIFICATION DETAILS ({len(verify_data['data'])} notes retrieved):")
-                        for detail in note_details:
-                            log_to_file(f"\nPost ID: {detail['post_id']}")
-                            log_to_file(f"  Note: {detail['text']}")
-                            log_to_file(f"  Rating Status: {detail['status']}")
-                            if detail['scores']:
-                                log_to_file(f"  Test Result Buckets:")
-                                log_to_file(f"    ClaimOpinion: {detail['scores'].get('ClaimOpinion', 'N/A')}")
-                                log_to_file(f"    UrlValidity: {detail['scores'].get('UrlValidity', 'N/A')}")
-                                log_to_file(f"    HarassmentAbuse: {detail['scores'].get('HarassmentAbuse', 'N/A')}")
-                        
                         # Log aggregate rating status summary
-                        log_to_file(f"\nRATING STATUS SUMMARY:")
+                        log_to_file(f"\nRATING STATUS SUMMARY ({len(verify_data['data'])} notes retrieved):")
                         for status, count in sorted(rating_status_counts.items()):
                             log_to_file(f"  {status}: {count}")
                         
