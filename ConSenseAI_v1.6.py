@@ -456,6 +456,7 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             if 'helpful' in rating_status and 'not_helpful' not in rating_status:
                 helpful_notes.append({
                     'note': data['note'],
+                    'post_text': data.get('post_text'),  # Include post text, may be None
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
@@ -463,6 +464,7 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             elif 'not_helpful' in rating_status:
                 not_helpful_notes.append({
                     'note': data['note'],
+                    'post_text': data.get('post_text'),  # Include post text, may be None
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
@@ -4817,12 +4819,24 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 if examples['helpful_examples']:
                     examples_text += "\n  HELPFUL NOTES (rated helpful by Twitter users - emulate this style):"
                     for i, ex in enumerate(examples['helpful_examples'], 1):
-                        examples_text += f"\n    {i}. \"{ex['note']}\""
+                        # Include post text if available (fail gracefully if missing)
+                        post_text_snippet = ""
+                        if ex.get('post_text'):
+                            # Truncate long posts to 280 chars for readability
+                            truncated_post = ex['post_text'][:280] + "..." if len(ex['post_text']) > 280 else ex['post_text']
+                            post_text_snippet = f"\n       Original post: \"{truncated_post}\""
+                        examples_text += f"\n    {i}. Note: \"{ex['note']}\"{post_text_snippet}"
                 
                 if examples['not_helpful_examples']:
                     examples_text += "\n  NOT HELPFUL NOTES (rated not helpful by Twitter users - avoid this style):"
                     for i, ex in enumerate(examples['not_helpful_examples'], 1):
-                        examples_text += f"\n    {i}. \"{ex['note']}\""
+                        # Include post text if available (fail gracefully if missing)
+                        post_text_snippet = ""
+                        if ex.get('post_text'):
+                            # Truncate long posts to 100 chars for readability
+                            truncated_post = ex['post_text'][:280] + "..." if len(ex['post_text']) > 100 else ex['post_text']
+                            post_text_snippet = f"\n       Original post: \"{truncated_post}\""
+                        examples_text += f"\n    {i}. Note: \"{ex['note']}\"{post_text_snippet}"
             
             if score_dist['count'] > 0:
                 score_guidance = f"\n- CRITICAL NEUTRALITY REQUIREMENT: Your recent notes scored {score_dist['high_pct']:.1f}% High, {score_dist['medium_pct']:.1f}% Medium, {score_dist['low_pct']:.1f}% Low on Twitter's ClaimOpinion scale (higher scores = more neutral/fact-based). Twitter REQUIRES at least 30% High scores and no more than 30% Low scores. "
