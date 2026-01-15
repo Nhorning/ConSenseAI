@@ -2141,19 +2141,9 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             if verbose:
                                 print(f"[Claude Text Block] {block.text[:150]}..." if len(block.text) > 150 else f"[Claude Text Block] {block.text}")
                 
-                # Join valid text blocks intelligently to avoid hanging punctuation
+                # Join valid text blocks with spaces between them
                 if text_responses:
-                    # If blocks end/start with punctuation, join directly; otherwise use space
-                    combined = text_responses[0]
-                    for i in range(1, len(text_responses)):
-                        prev_block = combined
-                        next_block = text_responses[i]
-                        # Check if previous ends with sentence punctuation or next starts with punctuation
-                        if prev_block and next_block:
-                            if prev_block[-1] in '.!?,;:' or next_block[0] in '.!?,;:':
-                                combined += next_block  # Join directly
-                            else:
-                                combined += ' ' + next_block  # Add space
+                    combined = ' '.join(text_responses)
                     verdict[model['name']] = combined
         
                 # Handle minimal or unhelpful responses
