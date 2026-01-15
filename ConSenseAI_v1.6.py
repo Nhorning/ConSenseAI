@@ -5560,6 +5560,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         # Record this so we don't try again
                         written_notes[post_id] = {
                             "note": clean_note_text,
+                            "post_text": post_text,
                             "test_mode": test_mode,
                             "timestamp": datetime.datetime.now().isoformat(),
                             "status": "already_exists_on_twitter",
@@ -5594,6 +5595,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             if not args.dryrun:
                 written_notes[post_id] = {
                     "note": clean_note_text,
+                    "post_text": post_text,
                     "test_mode": test_mode,
                     "timestamp": datetime.datetime.now().isoformat(),
                     "conversation_id": conv_id,  # Track which conversation this belongs to
