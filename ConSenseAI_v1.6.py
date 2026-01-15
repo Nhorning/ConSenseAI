@@ -442,6 +442,9 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
         with open(written_file, 'r') as f:
             written_notes = json.load(f)
         
+        # Track if we need to save updates
+        needs_save = False
+        
         # Extract notes with Twitter rating status
         helpful_notes = []
         not_helpful_notes = []
@@ -452,11 +455,30 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             
             rating_status = data.get('twitter_rating_status', '')
             
+            # Fetch missing post_text if needed
+            post_text = data.get('post_text')
+            if not post_text and post_id:
+                try:
+                    # Try to fetch from twitterapi.io
+                    api_key = keys.get('TWITTERAPIIO_KEY')
+                    if api_key:
+                        print(f"[Score Examples] Fetching missing post text for {post_id}")
+                        fetched_text = get_full_text_twitterapiio(post_id, api_key)
+                        if fetched_text:
+                            post_text = fetched_text
+                            # Update the stored data
+                            data['post_text'] = post_text
+                            written_notes[post_id] = data
+                            needs_save = True
+                            print(f"[Score Examples] Successfully fetched post text for {post_id}")
+                except Exception as fetch_error:
+                    print(f"[Score Examples] Error fetching post text for {post_id}: {fetch_error}")
+            
             # Check for helpful ratings (includes variations like "currently_rated_helpful")
             if 'helpful' in rating_status and 'not_helpful' not in rating_status:
                 helpful_notes.append({
                     'note': data['note'],
-                    'post_text': data.get('post_text'),  # Include post text, may be None
+                    'post_text': post_text,  # May be None if fetch failed
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
@@ -464,10 +486,19 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             elif 'not_helpful' in rating_status:
                 not_helpful_notes.append({
                     'note': data['note'],
-                    'post_text': data.get('post_text'),  # Include post text, may be None
+                    'post_text': post_text,  # May be None if fetch failed
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
+        
+        # Save updates if we fetched any missing post texts
+        if needs_save:
+            try:
+                with open(written_file, 'w') as f:
+                    json.dump(written_notes, f, indent=2)
+                print(f"[Score Examples] Updated {written_file} with fetched post texts")
+            except Exception as save_error:
+                print(f"[Score Examples] Error saving updates: {save_error}")
         
         # Get examples with offset
         helpful_start = offset
