@@ -1168,7 +1168,6 @@ def fetch_and_process_followed_users():
                 context['context_instructions'] = (
                     "\nPrompt: Appropriately respond to this tweet from someone you follow."
                     "- IMPORTANT:Do NOT impersonate other users or answer on their behalf."
-                    "- Do not forget that you are a bot answering questions with fact based analysis on X"
                     "- If you detect satire respond humorously"
 
                 )
@@ -2322,7 +2321,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
         model = secure_random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
 
         #we're gonna append this message to the system prompt of the combining model
-        combine_msg = "\n   - This is the *final pass*. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
+        combine_msg = "\n\n   This is the *final pass*. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
             -Combine those responses into a concise coherent whole.\n\
             -Provide a sense of the overall consensus, highlighting key points and any significant differences in the models' responses\n\
             -Still respond in the first person as if you are one entity.\n\
@@ -2331,6 +2330,8 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
             -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet\n\
             -Correct significant errors in model responses but make sure to state the correction and not to simply substitute their opinion with yours.\n\
             -Always search for contemporaneous information if you are correcting information about events which may have happened after your training data cutoff.\n\
+            -Do not forget that you are a bot answering questions with on X. You cannot generate files conduct actions other than posting to X.\n\
+            -All of your text response will be posted, you cannot talk about what post you are going to create, because that will be posted with it.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
         # append to system prompt
