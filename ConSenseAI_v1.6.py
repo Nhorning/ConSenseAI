@@ -90,6 +90,7 @@ import re
 import webbrowser as web_open
 import ast
 import socket
+import signal
 
 
 def parse_bot_reply_entry(br):
@@ -3087,25 +3088,48 @@ def authenticate():
             print(f"Existing tokens invalid or expired: {e}. Proceeding with new authentication.")
     
     # If no valid tokens or authentication failed, perform three-legged OAuth flow for @ConSenseAI
-    print("\n" + "="*70)
-    print("THREE-LEGGED OAUTH REQUIRED - MANUAL FLOW")
-    print("="*70)
-    print("\nYour access tokens are expired/invalid. Follow these steps:\n")
+    # Set up timeout handler for 3-legged OAuth (5 minutes = 300 seconds)
+    def oauth_timeout_handler(signum, frame):
+        print("\n" + "="*70)
+        print("⏱️  OAUTH TIMEOUT - 5 minutes elapsed without completion")
+        print("="*70)
+        print("\nThe authentication flow timed out. The bot will restart.")
+        print("This usually means the bot can re-authenticate automatically on restart.")
+        print("\nRestarting in 10 seconds...")
+        print("="*70 + "\n")
+        time.sleep(10)
+        raise TimeoutError("3-legged OAuth flow timed out after 5 minutes")
     
-    print("STEP 1: Get Request Token")
-    print("-" * 70)
-    print("Open this URL in your browser to bypass Cloudflare:")
-    print(f"\n  https://api.twitter.com/oauth/request_token?oauth_callback=oob")
-    print("\nIf Cloudflare blocks you:")
-    print("  a) Visit https://api.twitter.com first to pass the challenge")
-    print("  b) Then try the request_token URL above")
-    print("\nYou should see something like:")
-    print("  oauth_token=XXXXX&oauth_token_secret=YYYYY&oauth_callback_confirmed=true")
-    print("")
+    # Set 5-minute timeout for entire OAuth flow
+    signal.signal(signal.SIGALRM, oauth_timeout_handler)
+    signal.alarm(300)  # 5 minutes
     
-    oauth_token = input("Enter the oauth_token value: ").strip()
+    try:
+        print("\n" + "="*70)
+        print("THREE-LEGGED OAUTH REQUIRED - MANUAL FLOW")
+        print("="*70)
+        print("\n⏱️  You have 5 minutes to complete this flow")
+        print("   (If you don't respond, the bot will restart automatically)\n")
+        print("Your access tokens are expired/invalid. Follow these steps:\n")
+        
+        print("STEP 1: Get Request Token")
+        print("-" * 70)
+        print("Open this URL in your browser to bypass Cloudflare:")
+        print(f"\n  https://api.twitter.com/oauth/request_token?oauth_callback=oob")
+        print("\nIf Cloudflare blocks you:")
+        print("  a) Visit https://api.twitter.com first to pass the challenge")
+        print("  b) Then try the request_token URL above")
+        print("\nYou should see something like:")
+        print("  oauth_token=XXXXX&oauth_token_secret=YYYYY&oauth_callback_confirmed=true")
+        print("")
+        
+        oauth_token = input("Enter the oauth_token value: ").strip()
+    except TimeoutError:
+        # Re-raise to be caught by outer exception handler in main()
+        raise
     
     if not oauth_token:
+        signal.alarm(0)  # Cancel timeout
         print("\n✗ No token entered. Cannot proceed.")
         print("\nALTERNATIVE: Use Twitter Developer Portal (easier):")
         print("  1. Go to https://developer.twitter.com/en/portal/dashboard")
@@ -3133,6 +3157,7 @@ def authenticate():
     verifier = input("\nEnter the PIN code: ").strip()
     
     if not verifier:
+        signal.alarm(0)  # Cancel timeout
         print("✗ No PIN entered. Cannot proceed.")
         exit(1)
     
@@ -3170,8 +3195,12 @@ def authenticate():
         access_token_secret = input("Enter the oauth_token_secret value: ").strip()
         
         if not access_token or not access_token_secret:
+            signal.alarm(0)  # Cancel timeout
             print("\n✗ No tokens entered. Cannot proceed.")
             exit(1)
+    
+    # Cancel timeout - OAuth flow completed successfully
+    signal.alarm(0)
     
     # Update keys.txt with new tokens
     print("\nUpdating keys.txt...")
@@ -6014,6 +6043,11 @@ def main():
 
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
+        except TimeoutError as e:
+            # OAuth timeout - restart immediately
+            print(f"OAuth timeout detected: {e}")
+            print(f"Restarting script immediately to retry authentication...")
+            continue  # Restart immediately, no sleep needed
         except (socket.gaierror, ConnectionError, OSError) as e:
             # Network-related errors - use longer backoff
             print(f"Network error detected: {e}")
