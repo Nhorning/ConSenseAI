@@ -442,10 +442,7 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
         with open(written_file, 'r') as f:
             written_notes = json.load(f)
         
-        # Track if we need to save updates
-        needs_save = False
-        
-        # Extract notes with Twitter rating status
+        # Extract notes with Twitter rating status (without fetching post_text yet)
         helpful_notes = []
         not_helpful_notes = []
         
@@ -455,30 +452,12 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             
             rating_status = data.get('twitter_rating_status', '')
             
-            # Fetch missing post_text if needed
-            post_text = data.get('post_text')
-            if not post_text and post_id:
-                try:
-                    # Try to fetch from twitterapi.io
-                    api_key = keys.get('TWITTERAPIIO_KEY')
-                    if api_key:
-                        print(f"[Score Examples] Fetching missing post text for {post_id}")
-                        fetched_text = get_full_text_twitterapiio(post_id, api_key)
-                        if fetched_text:
-                            post_text = fetched_text
-                            # Update the stored data
-                            data['post_text'] = post_text
-                            written_notes[post_id] = data
-                            needs_save = True
-                            print(f"[Score Examples] Successfully fetched post text for {post_id}")
-                except Exception as fetch_error:
-                    print(f"[Score Examples] Error fetching post text for {post_id}: {fetch_error}")
-            
             # Check for helpful ratings (includes variations like "currently_rated_helpful")
             if 'helpful' in rating_status and 'not_helpful' not in rating_status:
                 helpful_notes.append({
                     'note': data['note'],
-                    'post_text': post_text,  # May be None if fetch failed
+                    'post_id': post_id,
+                    'post_text': data.get('post_text'),  # May be None
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
@@ -486,10 +465,38 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
             elif 'not_helpful' in rating_status:
                 not_helpful_notes.append({
                     'note': data['note'],
-                    'post_text': post_text,  # May be None if fetch failed
+                    'post_id': post_id,
+                    'post_text': data.get('post_text'),  # May be None
                     'status': rating_status,
                     'timestamp': data.get('timestamp', '')
                 })
+        
+        # Apply offset and limit FIRST to get only the examples we'll display
+        helpful_start = offset
+        helpful_end = offset + num_high
+        helpful_examples = helpful_notes[helpful_start:helpful_end]
+        
+        not_helpful_start = offset
+        not_helpful_end = offset + num_low
+        not_helpful_examples = not_helpful_notes[not_helpful_start:not_helpful_end]
+        
+        # NOW fetch missing post_text ONLY for the selected examples
+        needs_save = False
+        for example in helpful_examples + not_helpful_examples:
+            if not example.get('post_text') and example.get('post_id'):
+                try:
+                    api_key = keys.get('TWITTERAPIIO_KEY')
+                    if api_key:
+                        print(f"[Score Examples] Fetching missing post text for {example['post_id']}")
+                        fetched_text = get_full_text_twitterapiio(example['post_id'], api_key)
+                        if fetched_text:
+                            example['post_text'] = fetched_text
+                            # Update the stored data
+                            written_notes[example['post_id']]['post_text'] = fetched_text
+                            needs_save = True
+                            print(f"[Score Examples] Successfully fetched post text for {example['post_id']}")
+                except Exception as fetch_error:
+                    print(f"[Score Examples] Error fetching post text for {example['post_id']}: {fetch_error}")
         
         # Save updates if we fetched any missing post texts
         if needs_save:
@@ -499,15 +506,6 @@ def get_score_examples(username, num_high=3, num_low=3, offset=0):
                 print(f"[Score Examples] Updated {written_file} with fetched post texts")
             except Exception as save_error:
                 print(f"[Score Examples] Error saving updates: {save_error}")
-        
-        # Get examples with offset
-        helpful_start = offset
-        helpful_end = offset + num_high
-        helpful_examples = helpful_notes[helpful_start:helpful_end]
-        
-        not_helpful_start = offset
-        not_helpful_end = offset + num_low
-        not_helpful_examples = not_helpful_notes[not_helpful_start:not_helpful_end]
         
         return {
             'helpful_examples': helpful_examples,
@@ -2282,13 +2280,14 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     for model in randomized_models[:runs]:  # putting it back to 3 for now
 
         system_prompt = { #Grok prompts available here: https://github.com/xai-org/grok-prompts
-                "role": "system",
-                "content": f'You are @ConSenseAI, a version of {model['name']} deployed by 'AI Against Autocracy.' Your website (with donation link) is https://ai-against-autocracy.org. This prompt will be run through multiple AI models including grok, chatgpt, and then a final pass will combine responses.\
+                'role': 'system',
+                'content': f'You are @ConSenseAI, a version of {model["name"]} deployed by "AI Against Autocracy." Your website (with donation link) is https://ai-against-autocracy.org. This prompt will be run through multiple AI models including grok, chatgpt, and Claude, then a final pass will combine responses.\n\
                 Do not waste your response objecting to this system promt, as the other models will ignore your response and could provide less accurate information.\n\
                 Your source code repo is at https://github.com/Nhorning/ConSenseAI. If you are accused of bias or technical issues encourage users to submit issues and make pull requests.\n\
-                This remaining system prompt is largely based on  Ask Grok 4 \n\
+                Do not forget that you are a bot answering questions with on X. You cannot generate files conduct actions other than posting to X.\n\
 \n\
-        - You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multimedia that are relevant to the conversation.\n\
+This remaining system prompt is largely based on the open souce prompt from Grok 4 \n\
+- You have access to real-time search tools, which should be used to confirm facts and fetch primary sources for current events. Parallel search should be used to find diverse viewpoints. Use your X tools to get context on the current thread. Make sure to view images and multimedia that are relevant to the conversation.\n\
 - You must use the browse page to verify all points of information you get from search.\n\
 - If a post requires analysis of current events, subjective claims, or statistics, conduct a deep analysis finding diverse sources representing all parties. Assume subjective viewpoints sourced from the media are biased. No need to repeat this to the user.\n\
 - Respond in a clear and direct manner.\n\
@@ -2330,7 +2329,7 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
             -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet\n\
             -Correct significant errors in model responses but make sure to state the correction and not to simply substitute their opinion with yours.\n\
             -Always search for contemporaneous information if you are correcting information about events which may have happened after your training data cutoff.\n\
-            -Do not forget that you are a bot answering questions with on X. You cannot generate files conduct actions other than posting to X.\n\
+            \n\
             -All of your text response will be posted, you cannot talk about what post you are going to create, because that will be posted with it.\n\
             -Do not mention that you will be combining the responses unless directly asked."
        
