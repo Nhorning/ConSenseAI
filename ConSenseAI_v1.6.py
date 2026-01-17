@@ -4520,6 +4520,7 @@ parser.add_argument('--check_community_notes', type=lambda x: x.lower() in ['tru
 parser.add_argument('--cn_max_results', type=int, help='Max Community Notes eligible posts to process per cycle (default 5)', default=5)
 parser.add_argument('--cn_test_mode', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, submit Community Notes in test mode (recommended for development, default True)', default=True)
 parser.add_argument('--cn_on_reflection', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, run Community Notes check only on reflection cycle instead of main loop (default True)', default=True)
+parser.add_argument('--cn_skip_score_check', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, auto-pass ClaimOpinion validation (still calls API for logging but ignores rejection, default True)', default=True)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
@@ -5192,66 +5193,74 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             twitter_eval_details = "Not evaluated"
             twitter_claim_score = None
             
+            # Check if score validation is disabled via command line flag
+            skip_score_check = getattr(args, 'cn_skip_score_check', False)
+            
             # Retry API call up to 3 times on connection errors
-            import time  # Need explicit import for time.sleep in retry logic
-            max_api_retries = 3
-            for api_attempt in range(max_api_retries):
-                try:
-                    # Call Twitter's evaluate_note API for official scoring
-                    eval_payload = {
-                        "note_text": clean_note_text,
-                        "post_id": post_id
-                    }
-                    
-                    eval_response = oauth.post(
-                        "https://api.x.com/2/evaluate_note",
-                        json=eval_payload
-                    )
-                    
-                    if eval_response.status_code == 200:
-                        eval_data = eval_response.json()
+            if True:  # Always call API for logging
+                import time  # Need explicit import for time.sleep in retry logic
+                max_api_retries = 3
+                for api_attempt in range(max_api_retries):
+                    try:
+                        # Call Twitter's evaluate_note API for official scoring
+                        eval_payload = {
+                            "note_text": clean_note_text,
+                            "post_id": post_id
+                        }
                         
-                        if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
-                            twitter_claim_score = eval_data['data']['claim_opinion_score']
+                        eval_response = oauth.post(
+                            "https://api.x.com/2/evaluate_note",
+                            json=eval_payload
+                        )
+                        
+                        if eval_response.status_code == 200:
+                            eval_data = eval_response.json()
                             
-                            # Use dynamic threshold based on rolling score distribution
-                            # Rules: At least 30% must be High, no more than 30% can be Low
-                            should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
-                            
-                            if should_reject:
-                                twitter_eval_valid = False
-                                twitter_eval_details = rejection_reason
+                            if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                                twitter_claim_score = eval_data['data']['claim_opinion_score']
+                                
+                                # Use dynamic threshold based on rolling score distribution
+                                # Rules: At least 30% must be High, no more than 30% can be Low
+                                should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
+                                
+                                if skip_score_check:
+                                    # Auto-pass validation but log the score prediction
+                                    twitter_eval_valid = True
+                                    twitter_eval_details = f"{rejection_reason} (auto-passed via --cn_skip_score_check)"
+                                elif should_reject:
+                                    twitter_eval_valid = False
+                                    twitter_eval_details = rejection_reason
+                                else:
+                                    twitter_eval_valid = True
+                                    twitter_eval_details = rejection_reason
+                                break  # Success - exit retry loop
                             else:
-                                twitter_eval_valid = True
-                                twitter_eval_details = rejection_reason
-                            break  # Success - exit retry loop
+                                # API returned no score - this is a real failure, not a connection issue
+                                twitter_eval_valid = False
+                                twitter_eval_details = "API returned no score - note may not be scoreable"
+                                log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
+                                break  # Don't retry - this is a real response
                         else:
-                            # API returned no score - this is a real failure, not a connection issue
-                            twitter_eval_valid = False
-                            twitter_eval_details = "API returned no score - note may not be scoreable"
-                            log_to_file(f"TWITTER EVALUATE API: No claim_opinion_score in response")
-                            break  # Don't retry - this is a real response
-                    else:
-                        # API error - could be temporary, retry
+                            # API error - could be temporary, retry
+                            if api_attempt < max_api_retries - 1:
+                                log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                time.sleep(2)  # Brief delay before retry
+                                continue
+                            else:
+                                twitter_eval_valid = False
+                                twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
+                                log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text} - all retries exhausted")
+                    except Exception as eval_error:
+                        # Connection error - retry if we have attempts left
                         if api_attempt < max_api_retries - 1:
-                            log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                            log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
                             time.sleep(2)  # Brief delay before retry
                             continue
                         else:
+                            # All retries exhausted
                             twitter_eval_valid = False
-                            twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
-                            log_to_file(f"TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - {eval_response.text} - all retries exhausted")
-                except Exception as eval_error:
-                    # Connection error - retry if we have attempts left
-                    if api_attempt < max_api_retries - 1:
-                        log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
-                        time.sleep(2)  # Brief delay before retry
-                        continue
-                    else:
-                        # All retries exhausted
-                        twitter_eval_valid = False
-                        twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
-                        log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - all retries exhausted")
+                            twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
+                            log_to_file(f"TWITTER EVALUATE API EXCEPTION: {eval_error} - all retries exhausted")
             
             validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
             
@@ -5443,57 +5452,65 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         twitter_eval_details = "Not yet evaluated"
                         twitter_claim_score = None
                         
+                        # Check if score validation is disabled via command line flag
+                        skip_score_check = getattr(args, 'cn_skip_score_check', False)
+                        
                         # Retry API call up to 3 times on connection errors
-                        max_api_retries = 3
-                        for api_attempt in range(max_api_retries):
-                            try:
-                                eval_payload = {
-                                    "note_text": clean_note_text,
-                                    "post_id": post_id
-                                }
-                                
-                                eval_response = oauth.post(
-                                    "https://api.x.com/2/evaluate_note",
-                                    json=eval_payload
-                                )
-                                
-                                if eval_response.status_code == 200:
-                                    eval_data = eval_response.json()
-                                    if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
-                                        twitter_claim_score = eval_data['data']['claim_opinion_score']
-                                        
-                                        # Use dynamic threshold based on rolling score distribution
-                                        should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
-                                        
-                                        if should_reject:
-                                            twitter_eval_valid = False
-                                            twitter_eval_details = rejection_reason
+                        if True:  # Always call API for logging
+                            max_api_retries = 3
+                            for api_attempt in range(max_api_retries):
+                                try:
+                                    eval_payload = {
+                                        "note_text": clean_note_text,
+                                        "post_id": post_id
+                                    }
+                                    
+                                    eval_response = oauth.post(
+                                        "https://api.x.com/2/evaluate_note",
+                                        json=eval_payload
+                                    )
+                                    
+                                    if eval_response.status_code == 200:
+                                        eval_data = eval_response.json()
+                                        if 'data' in eval_data and 'claim_opinion_score' in eval_data['data']:
+                                            twitter_claim_score = eval_data['data']['claim_opinion_score']
+                                            
+                                            # Use dynamic threshold based on rolling score distribution
+                                            should_reject, rejection_reason = should_reject_score(username, twitter_claim_score)
+                                            
+                                            if skip_score_check:
+                                                # Auto-pass validation but log the score prediction
+                                                twitter_eval_valid = True
+                                                twitter_eval_details = f"{rejection_reason} (auto-passed via --cn_skip_score_check)"
+                                            elif should_reject:
+                                                twitter_eval_valid = False
+                                                twitter_eval_details = rejection_reason
+                                            else:
+                                                twitter_eval_valid = True
+                                                twitter_eval_details = rejection_reason
+                                            break  # Success - exit retry loop
                                         else:
-                                            twitter_eval_valid = True
-                                            twitter_eval_details = rejection_reason
-                                        break  # Success - exit retry loop
+                                            twitter_eval_valid = False
+                                            twitter_eval_details = "API returned no score - note may not be scoreable"
+                                            break  # Don't retry - this is a real response
                                     else:
-                                        twitter_eval_valid = False
-                                        twitter_eval_details = "API returned no score - note may not be scoreable"
-                                        break  # Don't retry - this is a real response
-                                else:
-                                    # API error - could be temporary, retry
+                                        # API error - could be temporary, retry
+                                        if api_attempt < max_api_retries - 1:
+                                            log_to_file(f"RETRY: TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                            time.sleep(2)
+                                            continue
+                                        else:
+                                            twitter_eval_valid = False
+                                            twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
+                                except Exception as eval_error:
+                                    # Connection error - retry if we have attempts left
                                     if api_attempt < max_api_retries - 1:
-                                        log_to_file(f"RETRY: TWITTER EVALUATE API ERROR: HTTP {eval_response.status_code} - retrying API call ({api_attempt + 1}/{max_api_retries})")
+                                        log_to_file(f"RETRY: TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
                                         time.sleep(2)
                                         continue
                                     else:
                                         twitter_eval_valid = False
-                                        twitter_eval_details = f"API error: HTTP {eval_response.status_code} after {max_api_retries} attempts"
-                            except Exception as eval_error:
-                                # Connection error - retry if we have attempts left
-                                if api_attempt < max_api_retries - 1:
-                                    log_to_file(f"RETRY: TWITTER EVALUATE API EXCEPTION: {eval_error} - retrying API call ({api_attempt + 1}/{max_api_retries})")
-                                    time.sleep(2)
-                                    continue
-                                else:
-                                    twitter_eval_valid = False
-                                    twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
+                                        twitter_eval_details = f"API connection failed after {max_api_retries} attempts: {str(eval_error)}"
                         
                         validation_results.append(("TwitterEvaluate", twitter_eval_valid, twitter_eval_details))
                         
