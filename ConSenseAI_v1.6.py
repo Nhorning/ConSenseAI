@@ -90,7 +90,6 @@ import re
 import webbrowser as web_open
 import ast
 import socket
-import signal
 
 
 def parse_bot_reply_entry(br):
@@ -2329,7 +2328,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
             -Do not mention model differences for community notes.\n\
             -Please stick to the subject at hand. Only use images for context unless you are specifically asked about them in the most recent tweet\n\
             -Correct significant errors in model responses but make sure to state the correction and not to simply substitute their opinion with yours.\n\
-            -Always search for contemporaneous information if you are correcting information about events which may have happened after your training data cutoff.\n\
+            -Always search for contemporaneous information if you are correcting information about events which may have happened after your training data cutoff. This applies particularly to the status of public figures (whether their living or dead, and their current positions)\n\
             \n\
             -All of your text response will be posted, you cannot talk about what post you are going to create, because that will be posted with it.\n\
             -Do not mention that you will be combining the responses unless directly asked."
@@ -4917,7 +4916,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}{examples_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
-                - Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
+                - CRITICAL: Double check time sensitve information with a web search (current status of public figures, laws etc.)\n\
+                - CRITICAL: Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
                 - Search for information on drafting successful community notes if needed.\n\
                 - If the post does not need a Community Note (either because it's accurate or because it's opinion/subjective content that doesn't make factual claims), respond with 'NO NOTE NEEDED'.\n\
                 - If you DO provide a note:\n\
@@ -6043,11 +6043,6 @@ def main():
 
                 print(f'Waiting for {delay*backoff_multiplier} min before fetching more mentions')
                 time.sleep(delay*60*backoff_multiplier)  # Wait before the next check
-        except TimeoutError as e:
-            # OAuth timeout - restart immediately
-            print(f"OAuth timeout detected: {e}")
-            print(f"Restarting script immediately to retry authentication...")
-            continue  # Restart immediately, no sleep needed
         except (socket.gaierror, ConnectionError, OSError) as e:
             # Network-related errors - use longer backoff
             print(f"Network error detected: {e}")
