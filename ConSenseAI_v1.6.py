@@ -4915,7 +4915,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     score_guidance += f"You are within acceptable ranges. Continue writing neutral, fact-based notes."
             
             context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}{examples_text}\n\
-                - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to specific source material.\n\
+                - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to a source that ***supports the content of your note***.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - CRITICAL: Double check time sensitve information with a web search (current status of public figures, laws etc.)\n\
                 - CRITICAL: Remain anonymous: Do not say who you are. Do not mention the models. Do not talk about consensus of the models \n\
@@ -4925,6 +4925,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                   * For misleading posts: Write a note explaining what's wrong and include source URLs.\n\
                   * For posts that are accurate but could benefit from additional context: Write a note confirming accuracy and providing context. Start with 'This post is accurate.' or 'This information is correct.' and cite authoritative source URLs.\n\
                   * Every note MUST include at least one URL - the API will reject notes without URLs.\n\
+                  * The final pass should browse the URLs to ensure they support the note.\n\
                 - Provide *only* the text of the note - no labels, titles or thinking outloud.\n\
                 - Only provide a note for the tweet in question. Do not fact check the thread."  
             
