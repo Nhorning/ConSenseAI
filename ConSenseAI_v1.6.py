@@ -4567,7 +4567,7 @@ backoff_multiplier = 1
 COMMUNITY_NOTES_LAST_CHECK_FILE = f'cn_last_check_{username}.txt'
 COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
 
-def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename, cn_on_reflection=False, post_interval=None, cn_max_results=None):
+def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename, cn_on_reflection=False, post_interval=None, cn_max_results=None, rating_status_counts=None):
     """
     Tweet a summary of the Community Notes run completion.
     
@@ -4580,6 +4580,7 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         cn_on_reflection: Whether CN is triggered on reflection cycles
         post_interval: Number of replies between reflections (if cn_on_reflection=True)
         cn_max_results: Number of CN posts processed per cycle (if cn_on_reflection=True)
+        rating_status_counts: Dict of Twitter's rating status counts from verification (production mode)
     """
     try:
         total_processed = notes_written + posts_not_needing_notes + posts_skipped + posts_failed
@@ -4602,6 +4603,13 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         if cn_on_reflection and post_interval is not None and cn_max_results is not None:
             summary_lines.append("")
             summary_lines.append(f"🔄 Processing {cn_max_results} community notes for every {post_interval} replies")
+        
+        # Add verification report if available (production mode)
+        if rating_status_counts:
+            summary_lines.append("")
+            summary_lines.append("📊 Twitter Verification:")
+            for status, count in sorted(rating_status_counts.items()):
+                summary_lines.append(f"  {status}: {count}")
         
         summary_tweet = "\n".join(summary_lines)
         
@@ -5737,6 +5745,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     log_to_file("=" * 80 + "\n")
     
     # Generate end-of-run verification report (production mode only)
+    rating_status_counts = None  # Will be populated if verification succeeds
     if not test_mode and not args.dryrun:
         try:
             # Count how many production notes are stored locally
@@ -5889,7 +5898,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 log_filename=log_filename,
                 cn_on_reflection=args.cn_on_reflection,
                 post_interval=args.post_interval,
-                cn_max_results=args.cn_max_results
+                cn_max_results=args.cn_max_results,
+                rating_status_counts=rating_status_counts
             )
         except Exception as tweet_error:
             print(f"[Community Notes] Warning: Could not post summary tweet: {tweet_error}")
