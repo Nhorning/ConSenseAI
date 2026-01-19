@@ -4802,18 +4802,33 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "
     # Set generate_only=True to get text response without posting
     try:
         # Call fact_check with custom verification prompt
+        log_to_file("Calling fact_check() for adversarial verification...")
         verdict = fact_check(
             tweet_text=verification_prompt,
             tweet_id=f"cn_verify_{int(time.time())}",
             context=verification_context,
             generate_only=True,
-            verbose=False
+            verbose=True  # Enable logging to see what's happening
         )
+        
+        # Check if verdict is None or empty
+        if not verdict or not isinstance(verdict, str):
+            log_to_file(f"ERROR: fact_check returned invalid verdict: {type(verdict)} = {repr(verdict)}")
+            return {
+                'is_helpful': None,
+                'rating_category': 'unknown',
+                'reasoning': f'fact_check returned {type(verdict).__name__} instead of string',
+                'improvement_suggestions': None
+            }
         
         # Parse the verdict
         rating_category = None
         reasoning = ""
         improvements = ""
+        
+        # Log the raw verdict for debugging
+        log_to_file(f"Raw verification verdict ({len(verdict)} chars):")
+        log_to_file(verdict[:500] + ('...' if len(verdict) > 500 else ''))
         
         # Extract RATING, REASONING, and IMPROVEMENTS from verdict
         lines = verdict.split('\n')
@@ -4839,7 +4854,19 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "
             elif current_section == 'improvements' and line:
                 improvements += " " + line
         
-        # Determine helpfulness
+        # Check if rating was successfully extracted
+        if rating_category is None:
+            log_to_file("WARNING: Could not extract RATING from verdict - models did not follow required format")
+            log_to_file(f"Full verdict for debugging: {verdict}")
+            # Return inconclusive result
+            return {
+                'is_helpful': None,
+                'rating_category': 'unknown',
+                'reasoning': 'LLM did not provide rating in required format',
+                'improvement_suggestions': None
+            }
+        
+        # Determine helpfulness (only if we have a valid rating)
         is_helpful = rating_category == 'currently_rated_helpful'
         
         log_to_file(f"Verification Result: {rating_category}")
