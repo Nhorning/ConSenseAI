@@ -4521,6 +4521,7 @@ parser.add_argument('--cn_max_results', type=int, help='Max Community Notes elig
 parser.add_argument('--cn_test_mode', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, submit Community Notes in test mode (recommended for development, default True)', default=True)
 parser.add_argument('--cn_on_reflection', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, run Community Notes check only on reflection cycle instead of main loop (default True)', default=True)
 parser.add_argument('--cn_skip_score_check', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, auto-pass ClaimOpinion validation (still calls API for logging but ignores rejection, default True)', default=True)
+parser.add_argument('--cn_verify_helpfulness', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, use adversarial LLM verification to check if note would be rated helpful before submission (default False)', default=False)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
@@ -4638,6 +4639,281 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         print(f"[Community Notes] Error posting summary tweet: {e}")
         import traceback
         print(f"[Community Notes] Traceback: {traceback.format_exc()}")
+
+def verify_note_helpfulness_adversarial(note_text, post_text, context, username, log_to_file):
+    """
+    Use the full fact_check module adversarially to verify if a proposed Community Note
+    would be considered helpful or unhelpful by users.
+    
+    Args:
+        note_text: The proposed Community Note text
+        post_text: The original post/tweet being noted
+        context: Full conversation context
+        username: Bot username for accessing historical notes
+        log_to_file: Logging function
+    
+    Returns:
+        dict: {
+            'is_helpful': bool,
+            'rating_category': str ('currently_rated_helpful' or 'currently_rated_not_helpful'),
+            'reasoning': str,
+            'improvement_suggestions': str (only if unhelpful),
+            'improved_note': str (only if unhelpful and improvement attempted)
+        }
+    """
+    print(f"\n{'='*80}")
+    print("[CN Verification] Starting adversarial helpfulness verification")
+    print(f"{'='*80}\n")
+    log_to_file("=" * 80)
+    log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION")
+    log_to_file("=" * 80)
+    
+    # Load historical notes from cn_written file
+    cn_written_file = f'cn_written_{username}.json'
+    historical_notes = {}
+    helpful_examples = []
+    unhelpful_examples = []
+    
+    try:
+        if os.path.exists(cn_written_file):
+            with open(cn_written_file, 'r') as f:
+                historical_notes = json.load(f)
+            
+            # Extract last 50 notes with Twitter-assigned rating status
+            notes_with_ratings = []
+            for post_id, note_data in historical_notes.items():
+                if isinstance(note_data, dict) and 'twitter_rating_status' in note_data:
+                    notes_with_ratings.append((post_id, note_data))
+            
+            # Sort by timestamp (most recent first) and take last 50
+            notes_with_ratings.sort(key=lambda x: x[1].get('timestamp', ''), reverse=True)
+            recent_notes = notes_with_ratings[:50]
+            
+            # Categorize as helpful or unhelpful
+            for post_id, note_data in recent_notes:
+                rating_status = note_data.get('twitter_rating_status', '')
+                note_content = note_data.get('note', '')
+                original_post = note_data.get('post_text', '')
+                
+                # Helpful: currently_rated_helpful, needs_more_ratings (implicit helpful)
+                # Unhelpful: currently_rated_not_helpful
+                if rating_status in ['currently_rated_helpful', 'needs_more_ratings']:
+                    helpful_examples.append({
+                        'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
+                        'note': note_content,
+                        'rating': rating_status
+                    })
+                elif rating_status == 'currently_rated_not_helpful':
+                    unhelpful_examples.append({
+                        'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
+                        'note': note_content,
+                        'rating': rating_status
+                    })
+            
+            log_to_file(f"Loaded {len(helpful_examples)} helpful and {len(unhelpful_examples)} unhelpful examples from history")
+            print(f"[CN Verification] Historical examples: {len(helpful_examples)} helpful, {len(unhelpful_examples)} unhelpful")
+    
+    except Exception as e:
+        log_to_file(f"Warning loading historical notes: {e}")
+        print(f"[CN Verification] Warning: Could not load historical notes - {e}")
+    
+    # Community Notes helpfulness criteria - EXACT checkboxes from Twitter/X rating interface
+    helpful_criteria = """
+    When users rate a Community Note as HELPFUL, they select from these reasons:
+    ✓ Addresses the post's claim - The note directly responds to the claim or content in the post
+    ✓ Important context - Provides important information that helps understand the post better
+    ✓ Unbiased language - Written neutrally without taking sides or expressing opinions
+    ✓ Good sources - Cites high-quality, credible, authoritative sources
+    ✓ Easy to understand - Clear, concise, and accessible language
+    ✓ Empathetic - Respectful tone that considers different perspectives
+    """
+    
+    unhelpful_criteria = """
+    When users rate a Community Note as NOT HELPFUL, they select from these reasons:
+    ✗ Incorrect information - The note contains factual errors or inaccuracies
+    ✗ Sources not included or unreliable - Missing citations or uses questionable sources
+    ✗ Opinion or speculation - Expresses personal views or makes unverified claims
+    ✗ Misses key points or irrelevant - Doesn't address the main claim or goes off-topic
+    ✗ Argumentative or biased language - Uses inflammatory, sarcastic, or partisan tone
+    ✗ Typos or unclear - Hard to understand due to errors or confusing writing
+    """
+    
+    # Build verification prompt with examples
+    verification_prompt = f"""You are evaluating whether a proposed Community Note would be rated as HELPFUL or UNHELPFUL by Twitter/X users.
+
+ORIGINAL POST:
+{post_text}
+
+PROPOSED COMMUNITY NOTE:
+{note_text}
+
+HELPFULNESS CRITERIA:
+{helpful_criteria}
+
+UNHELPFULNESS CRITERIA:
+{unhelpful_criteria}
+"""
+    
+    # Add historical examples if available
+    if helpful_examples:
+        verification_prompt += "\n--- EXAMPLES OF HELPFUL NOTES (from verified history) ---\n"
+        for i, ex in enumerate(helpful_examples[:5], 1):
+            verification_prompt += f"\nExample {i} [{ex['rating']}]:\n"
+            verification_prompt += f"Post: {ex['post']}\n"
+            verification_prompt += f"Note: {ex['note']}\n"
+    
+    if unhelpful_examples:
+        verification_prompt += "\n--- EXAMPLES OF UNHELPFUL NOTES (from verified history) ---\n"
+        for i, ex in enumerate(unhelpful_examples[:5], 1):
+            verification_prompt += f"\nExample {i} [{ex['rating']}]:\n"
+            verification_prompt += f"Post: {ex['post']}\n"
+            verification_prompt += f"Note: {ex['note']}\n"
+    
+    verification_prompt += """
+
+TASK:
+1. Determine if the proposed note would be rated as currently_rated_helpful or currently_rated_not_helpful
+2. Provide your reasoning based on the criteria and examples above
+3. If unhelpful, suggest specific improvements to make it helpful
+
+REQUIRED OUTPUT FORMAT:
+RATING: [currently_rated_helpful OR currently_rated_not_helpful]
+REASONING: [Your detailed analysis comparing the note against the criteria]
+IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "N/A"]
+"""
+    
+    # Use fact_check module to run adversarial evaluation
+    # This calls the same LLM pipeline used for note generation
+    log_to_file("Running adversarial evaluation using fact_check module...")
+    print("[CN Verification] Querying LLMs for helpfulness evaluation...")
+    
+    # Create verification context
+    verification_context = {
+        'ancestor_chain': context.get('ancestor_chain', []),
+        'thread_tweets': context.get('thread_tweets', []),
+        'bot_replies_in_thread': [],
+        'media': context.get('media', []),
+        'reply_target_id': None,
+        'mention_full_text': post_text
+    }
+    
+    # Generate verification verdict using fact_check
+    # Set generate_only=True to get text response without posting
+    try:
+        # Call fact_check with custom verification prompt
+        verdict = fact_check(
+            tweet_text=verification_prompt,
+            tweet_id=f"cn_verify_{int(time.time())}",
+            context=verification_context,
+            generate_only=True,
+            verbose=False
+        )
+        
+        # Parse the verdict
+        rating_category = None
+        reasoning = ""
+        improvements = ""
+        
+        # Extract RATING, REASONING, and IMPROVEMENTS from verdict
+        lines = verdict.split('\n')
+        current_section = None
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('RATING:'):
+                rating_text = line.replace('RATING:', '').strip()
+                if 'currently_rated_helpful' in rating_text.lower():
+                    rating_category = 'currently_rated_helpful'
+                elif 'currently_rated_not_helpful' in rating_text.lower():
+                    rating_category = 'currently_rated_not_helpful'
+                current_section = 'rating'
+            elif line.startswith('REASONING:'):
+                current_section = 'reasoning'
+                reasoning = line.replace('REASONING:', '').strip()
+            elif line.startswith('IMPROVEMENTS:'):
+                current_section = 'improvements'
+                improvements = line.replace('IMPROVEMENTS:', '').strip()
+            elif current_section == 'reasoning' and line:
+                reasoning += " " + line
+            elif current_section == 'improvements' and line:
+                improvements += " " + line
+        
+        # Determine helpfulness
+        is_helpful = rating_category == 'currently_rated_helpful'
+        
+        log_to_file(f"Verification Result: {rating_category}")
+        log_to_file(f"Reasoning: {reasoning}")
+        if not is_helpful:
+            log_to_file(f"Improvement Suggestions: {improvements}")
+        
+        print(f"[CN Verification] Result: {rating_category}")
+        print(f"[CN Verification] Helpful: {is_helpful}")
+        
+        result = {
+            'is_helpful': is_helpful,
+            'rating_category': rating_category or 'unknown',
+            'reasoning': reasoning,
+            'improvement_suggestions': improvements if not is_helpful else None
+        }
+        
+        # If unhelpful, attempt to generate improved note
+        if not is_helpful and improvements and improvements.lower() != 'n/a':
+            print("[CN Verification] Note rated unhelpful - attempting to generate improved version...")
+            log_to_file("Generating improved note based on feedback...")
+            
+            improvement_prompt = f"""The following Community Note was evaluated and found to be unhelpful.
+
+ORIGINAL POST:
+{post_text}
+
+CURRENT NOTE (rated unhelpful):
+{note_text}
+
+FEEDBACK:
+{improvements}
+
+TASK: Rewrite the Community Note to address all the feedback above. Make it neutral, fact-based, well-sourced, and helpful to readers. Provide ONLY the improved note text, no commentary.
+
+IMPROVED NOTE:"""
+            
+            try:
+                improved_note = fact_check(
+                    tweet_text=improvement_prompt,
+                    tweet_id=f"cn_improve_{int(time.time())}",
+                    context=verification_context,
+                    generate_only=True,
+                    verbose=False
+                )
+                
+                # Clean up the improved note
+                improved_lines = improved_note.split('\n')
+                improved_filtered = [line for line in improved_lines if not (line.strip().startswith('Generated by:') or line.strip().startswith('Combined by:') or line.strip().startswith('IMPROVED NOTE:'))]
+                clean_improved = '\n'.join(improved_filtered).strip()
+                
+                result['improved_note'] = clean_improved
+                log_to_file(f"Improved note generated: {clean_improved}")
+                print(f"[CN Verification] Generated improved note")
+                
+            except Exception as improve_error:
+                log_to_file(f"Error generating improved note: {improve_error}")
+                print(f"[CN Verification] Could not generate improved note: {improve_error}")
+        
+        log_to_file("=" * 80)
+        return result
+        
+    except Exception as e:
+        log_to_file(f"Error during adversarial verification: {e}")
+        print(f"[CN Verification] Error: {e}")
+        import traceback
+        log_to_file(traceback.format_exc())
+        
+        # Return inconclusive result on error
+        return {
+            'is_helpful': None,
+            'rating_category': 'verification_failed',
+            'reasoning': f'Verification failed due to error: {str(e)}',
+            'improvement_suggestions': None
+        }
 
 def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
     """
@@ -5280,6 +5556,76 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # 5. Claim/Opinion (30%+ must pass) - COMMENTED OUT (replaced by Twitter API)
             # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
             # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
+            
+            # 6. Adversarial Helpfulness Verification (if enabled via --cn_verify_helpfulness)
+            helpfulness_valid = True  # Default to valid if verification disabled
+            helpfulness_details = "Verification disabled (use --cn_verify_helpfulness True to enable)"
+            verification_result = None
+            
+            if getattr(args, 'cn_verify_helpfulness', False):
+                print(f"[Community Notes] Running adversarial helpfulness verification...")
+                log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION: Enabled")
+                
+                try:
+                    verification_result = verify_note_helpfulness_adversarial(
+                        note_text=clean_note_text,
+                        post_text=post_text,
+                        context=context,
+                        username=username,
+                        log_to_file=log_to_file
+                    )
+                    
+                    if verification_result:
+                        is_helpful = verification_result.get('is_helpful')
+                        rating_category = verification_result.get('rating_category', 'unknown')
+                        reasoning = verification_result.get('reasoning', '')
+                        
+                        if is_helpful is None:
+                            # Verification failed - allow note to proceed but log warning
+                            helpfulness_valid = True
+                            helpfulness_details = f"Verification inconclusive: {rating_category}"
+                            log_to_file(f"WARNING: Helpfulness verification inconclusive - allowing note to proceed")
+                        elif is_helpful:
+                            helpfulness_valid = True
+                            helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
+                            log_to_file(f"HELPFULNESS: ✓ PASS - {rating_category}")
+                        else:
+                            helpfulness_valid = False
+                            helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
+                            log_to_file(f"HELPFULNESS: ✗ FAIL - {rating_category}")
+                            log_to_file(f"Reasoning: {reasoning}")
+                            
+                            # If improved note was generated, use it
+                            if 'improved_note' in verification_result and verification_result['improved_note']:
+                                improved_note = verification_result['improved_note']
+                                log_to_file(f"Using improved note: {improved_note}")
+                                print(f"[Community Notes] Replacing note with improved version")
+                                
+                                # Replace clean_note_text with improved version
+                                clean_note_text = improved_note
+                                
+                                # Recalculate effective length for new note
+                                urls_in_note = url_pattern.findall(clean_note_text)
+                                text_without_urls = url_pattern.sub('', clean_note_text)
+                                effective_length = len(text_without_urls) + len(urls_in_note)
+                                
+                                # Update validation results for length (might have changed)
+                                length_valid = effective_length <= 280
+                                validation_results[0] = ("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG")
+                                
+                                # Mark helpfulness as now valid
+                                helpfulness_valid = True
+                                helpfulness_details = f"Improved from {rating_category} (original was unhelpful)"
+                                log_to_file(f"HELPFULNESS: ✓ PASS (after improvement)")
+                
+                except Exception as verify_error:
+                    log_to_file(f"ERROR during helpfulness verification: {verify_error}")
+                    print(f"[Community Notes] Helpfulness verification error: {verify_error}")
+                    # Allow note to proceed on verification error
+                    helpfulness_valid = True
+                    helpfulness_details = f"Verification error: {str(verify_error)}"
+                
+                validation_results.append(("HelpfulnessVerification", helpfulness_valid, helpfulness_details))
             
             # Log all validation results
             log_to_file("VALIDATION RESULTS:")

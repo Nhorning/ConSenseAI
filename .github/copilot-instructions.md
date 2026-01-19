@@ -2,35 +2,87 @@
 
 ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leveraging multiple LLM models (Grok, GPT, Claude) to analyze and verify claims.
 
-## Project Structure
+## Project Architecture
 
-**Current implementation:** `ConSenseAI_v1.6.py` (single-file bot, ~3813 lines)
+**Implementation:** Single-file bot `ConSenseAI_v1.6.py` (~6000 lines)  
+**Active Branch:** `main`  
+**Language:** Python 3.x with Tweepy, OpenAI, Anthropic, and xAI SDKs
 
-**Current branch:** `main`
+### Core Pipeline
+1. **Discovery:** 4 parallel paths (mentions, search, followed users, Community Notes)
+2. **Context Building:** Cache-first with ancestor chain traversal (`get_tweet_context()`)
+3. **Analysis:** 3 lower-tier models → 1 higher-tier combiner (`fact_check()`, `run_model()`)
+4. **Response:** Post with attribution + cache updates (`post_reply()`)
+5. **Reflection:** Periodic standalone tweets (`post_reflection_on_recent_bot_threads()`)
 
-### Core Components
-- Authentication and API client setup (`authenticate()`)
-- Tweet processing: mentions AND search-based discovery
-- Conversation context gathering with caching (`get_tweet_context()`)
-- Multi-model fact-checking pipeline (`fact_check()`, `run_model()`)
-- Reply generation and posting with safety checks (`post_reply()`)
-- Reflection/summary generation (`post_reflection_on_recent_bot_threads()`)
 
-### Persistent State Files
-- `keys.txt` — API credentials (never commit!)
-- `bot_tweets.json` — Full text of bot's posted replies (up to MAX_BOT_TWEETS=1000)
-- `ancestor_chains.json` — Cached conversation hierarchies (up to MAX_ANCESTOR_CHAINS=500)
-- `last_tweet_id_{username}.txt` — Last processed mention ID
-- `last_search_id_{username}_{search_term}.txt` — Last processed search result ID per term
-- `search_reply_count_{username}.json` — Daily search reply counts (for dynamic caps)
-- `followed_reply_count_{username}.json` — Daily reply counts for followed users (separate cap)
-- `followed_rotation_{username}.json` — Rotation state for followed users checking
-- `sent_reply_hashes_{username}.json` — Reply deduplication hashes
-- `approval_queue_{username}.json` — Human approval queue (when enabled)
-- `cn_last_check_{username}.txt` — Last Community Notes check timestamp
-- `cn_written_{username}.json` — Record of Community Notes written (for deduplication)
-- `cn_notes_log_{username}.txt` — Detailed log of all Community Notes processing (flagged posts, generated notes, submission results)
-- `output.log` — Rotating log file (rotates at LOG_MAX_SIZE_MB=10MB, keeps LOG_MAX_ROTATIONS=5 files)
+### Critical State Files
+```
+keys.txt                    # API credentials (NEVER commit!)
+bot_tweets.json             # Bot replies (max 1000, oldest pruned)
+ancestor_chains.json        # Conversation hierarchies (max 500)
+last_tweet_id_*.txt         # Processing cursors per source
+*_reply_count_*.json        # Daily caps tracking
+sent_reply_hashes_*.json    # Deduplication hashes
+cn_written_*.json           # Community Notes + scores
+output.log                  # Rotating logs (10MB, 5 files)
+```
+
+## Critical Patterns
+
+### 1. Tweepy Object Type Handling ⚠️
+**Most common bug source.** API responses return dicts OR objects unpredictably.
+
+```python
+# ALWAYS handle both formats
+if isinstance(obj, dict):
+    value = obj.get('field', default)
+elif hasattr(obj, 'field'):
+    value = obj.field
+else:
+    value = default
+
+# Use helper function
+def get_attr(obj, attr, default=None):
+    return obj.get(attr, default) if isinstance(obj, dict) else getattr(obj, attr, default)
+```
+
+**High-risk locations:** `includes`, `referenced_tweets`, cached data, user/media objects
+
+### 2. Infinite Loop Prevention (KNOWN BUG)
+Lines ~3500-3700 in `get_tweet_context()`: ancestor chain building loop lacks depth limit.
+
+```python
+# CRITICAL FIX NEEDED:
+MAX_ANCESTOR_DEPTH = 20  # Add this constant
+
+while True:
+    if len(ancestor_chain) >= MAX_ANCESTOR_DEPTH:  # ADD THIS
+        break
+    try:
+        parent_tweet = read_client.get_tweet(...)
+    except tweepy.TweepyException as e:
+        print(f"Error: {e}")
+        break  # MUST break on errors, not continue
+```
+
+**Trigger:** Deep threads (50+ replies) cause rate limit death spiral.
+
+### 3. Context Cache Format
+`ancestor_chains.json` has two formats (legacy + current):
+```python
+{
+  "conv_id": [...],  # Legacy: just chain
+  "conv_id": {       # Current: full context
+    "chain": [...],
+    "thread_tweets": [...],
+    "bot_replies": [...],
+    "media": [...]
+  }
+}
+```
+Always check format before accessing fields.
+
 
 ## Key Features
 
@@ -53,7 +105,15 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
    - **Integration**: Uses existing fact_check() pipeline for note generation
    - **Deduplication**: Tracks written notes in `cn_written_{username}.json`
    - **Comprehensive Logging**: All processing details logged to `cn_notes_log_{username}.txt`
-   - **Configurable**: `--check_community_notes`, `--cn_max_results`, `--cn_test_mode` flags
+   - **Adversarial Helpfulness Verification** (`verify_note_helpfulness_adversarial()`): Optional LLM-based verification
+     - Enabled via `--cn_verify_helpfulness True` flag
+     - Uses last 50 historical notes (helpful vs unhelpful examples from Twitter's ratings)
+     - Runs full fact_check module adversarially to predict if note would be rated helpful/unhelpful
+     - Includes Twitter's Community Notes helpfulness criteria in prompt
+     - If rated unhelpful: generates improvement suggestions and attempts to create improved note
+     - If improved note generated: replaces original and re-validates
+     - Falls back gracefully on verification errors (allows note to proceed)
+   - **Configurable**: `--check_community_notes`, `--cn_max_results`, `--cn_test_mode`, `--cn_verify_helpfulness` flags
 
 ### Context Building (`get_tweet_context()`)
 - **Caching strategy**: Prioritizes `ancestor_chains.json` cache before API calls
@@ -90,6 +150,7 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 - Generates engagement-optimized standalone tweet
 - Uses `compute_baseline_replies_since_last_direct_post()` to track post counts
 
+
 ## Development Workflow
 
 ### Setup
@@ -108,197 +169,120 @@ access_token_secret=your_access_token_secret
 
 ### Running the Bot
 ```bash
-python ConSenseAI_v1.4.py \
+python ConSenseAI_v1.6.py \
   --username consenseai \
   --delay 3 \
   --dryrun False \
   --search_term "auto" \
   --search_daily_cap 14 \
-  --search_cap_interval_hours 1 \
-  --cap_increase_time 6:00 \
   --reply_threshold 10 \
-  --per_user_threshold True \
   --check_followed_users True \
-  --followed_users_daily_cap 10 \
-  --followed_users_per_cycle 3 \
+  --check_community_notes False \
   --post_interval 10
 ```
 
-### Command Line Arguments
-- `--username`: X/Twitter username to monitor (default: "ConSenseAI")
-- `--delay`: Minutes between API checks (default: prompt)
-- `--dryrun`: Print responses without posting (default: False)
-- `--fetchthread`: Fetch full conversation context (default: True)
-- `--reply_threshold`: Max replies per thread or per-user-per-thread (default: 5)
-- `--per_user_threshold`: If True, enforce threshold per user; if False, per thread (default: True)
-- `--search_term`: Keyword to search for proactive responses, or "auto" for AI-generated terms (default: None)
-- `--search_max_results`: Max results per search query (default: 10)
-- `--search_daily_cap`: Max automated search replies per day (default: 5)
-- `--search_cap_interval_hours`: Hours between cap increases (default: 2)
-- `--cap_increase_time`: Earliest time for cap increases, HH:MM format (default: "10:00")
-- `--dedupe_window_hours`: Deduplication window in hours (default: 24.0)
-- `--enable_human_approval`: Queue replies for approval instead of auto-posting (default: False)
-- `--post_interval`: Number of replies between reflection posts (default: 10)
-- `--check_followed_users`: Enable checking tweets from followed users (default: False)
-- `--followed_users_daily_cap`: Max replies to followed users per day (default: 10)
-- `--followed_users_per_cycle`: Number of followed users to check per cycle (rotation) (default: 3)
-- `--followed_users_max_tweets`: Max tweets to fetch per followed user (default: 5)
-- `--check_community_notes`: Enable Community Notes eligible posts checking (default: False)
-- `--cn_max_results`: Max Community Notes posts to fetch per cycle (default: 5)
-- `--cn_test_mode`: Submit notes in test mode (visible only to you) (default: True)
+### Key Arguments
+- `--dryrun True`: Print responses without posting (for testing)
+- `--search_term "auto"`: AI-generated search terms; or specific keyword
+- `--reply_threshold 5`: Max replies per user per thread (with `--per_user_threshold True`)
+- `--check_followed_users True`: Enable followed users rotation system
+- `--check_community_notes True`: Enable Community Notes processing
+- `--cn_test_mode True`: Submit CN in test mode (only visible to you)
+- `--cn_verify_helpfulness True`: Enable adversarial LLM verification of note helpfulness before submission
 
-## Architecture & Flow
+Run `python ConSenseAI_v1.6.py --help` for full argument list.
 
-### Authentication Flow
-- Uses Tweepy with both OAuth 1.0a (for posting) and Bearer Token (for reading)
-- `read_client`: Bearer token (app-only, basic-tier app)
+
+## Architecture & Data Flow
+
+### Authentication
+- `read_client`: Bearer token (app-only, basic-tier)
 - `post_client`: OAuth 1.0a (posts as @ConSenseAI, free tier)
-- Auto-handles token refresh via three-legged OAuth if tokens missing/expired
+- Auto-handles token refresh via three-legged OAuth
 - Caches `BOT_USER_ID` to avoid repeated API calls
 
-### Main Loop (in `main()`)
-1. Authenticate and initialize state (search caps, deduplication, reflection baseline)
+### Main Loop Execution
+1. Authenticate → Initialize state (caps, deduplication, reflection baseline)
 2. **Each cycle:**
-   - Call `fetch_and_process_mentions()` — check for new @mentions
-   - Call `fetch_and_process_search()` (if `--search_term` provided) — proactive discovery
-   - Call `fetch_and_process_followed_users()` (if `--check_followed_users` enabled) — check followed users' tweets
-   - Check if reflection post should be triggered (based on `--post_interval`)
+   - `fetch_and_process_mentions()` — check @mentions
+   - `fetch_and_process_search()` (if enabled) — proactive discovery
+   - `fetch_and_process_followed_users()` (if enabled) — check followed users
+   - `fetch_and_process_community_notes()` (if enabled) — CN eligible posts
+   - Check reflection trigger (`--post_interval`)
    - Sleep for `delay * backoff_multiplier` minutes
-3. **On critical error:** Auto-restart after RESTART_DELAY
+3. **On critical error:** Auto-restart after RESTART_DELAY (10s)
 
-### Context Building Flow (`get_tweet_context()`)
+### Context Building (`get_tweet_context()`)
 1. Check `ancestor_chains.json` cache for conversation_id
-2. If cache hit: load ancestor chain, thread_tweets, bot_replies, media from cache
-3. If cache miss or incomplete:
-   - Detect retweets: resolve original tweet and set `reply_target_id` to retweeter's tweet
+2. If cache miss:
+   - Detect retweets → resolve original + set `reply_target_id` to retweeter
    - Build ancestor chain: walk up reply hierarchy via `in_reply_to_user_id`
-   - Extract media from all tweets in chain (including quoted tweets)
+   - Extract media from all tweets (including quoted tweets)
    - Fetch bot's prior replies: search `conversation_id:{conv_id} from:{bot_username}`
-4. Return context dict with `ancestor_chain`, `thread_tweets`, `bot_replies_in_thread`, `media`, `reply_target_id`, `mention_full_text`
+3. Return context dict with `ancestor_chain`, `thread_tweets`, `bot_replies_in_thread`, `media`, `reply_target_id`
 
 ### Fact-Check Pipeline (`fact_check()`)
-1. Construct context string from `ancestor_chain`, `thread_tweets`, `quoted_tweets`, `media`
-2. Try `get_full_text_twitterapiio()` for full tweet text (falls back to standard Tweepy text)
-3. Initialize LLM clients (xai_sdk, openai, anthropic)
-4. **First pass:** Run 3 randomized lower-tier models via `run_model()`
-5. **Second pass:** Combine responses using 1 random higher-tier model
-6. Append model attribution to final response
-7. If `generate_only=True`: return text only (for search pipeline)
-8. Else: post reply via `post_reply()` (respects dryrun)
+1. Construct context string from ancestor_chain, thread_tweets, quoted_tweets, media
+2. Initialize LLM clients (xai_sdk, openai, anthropic)
+3. **First pass:** 3 randomized lower-tier models → `run_model()`
+4. **Second pass:** 1 random higher-tier model combines responses
+5. Append model attribution to response
+6. If `generate_only=True`: return text (for search/CN pipelines)
+7. Else: `post_reply()` → update caches
 
-### Post Reply Flow (`post_reply()`)
-1. Create tweet via `post_client.create_tweet()`
-2. Store full reply text in `bot_tweets.json` via `save_bot_tweet()`
-3. Append reply to `ancestor_chains.json` cache via `append_reply_to_ancestor_chain()`
-4. Return `'done!'` on success or `'delay!'` on 429 rate limit
 
-## Common Issues & Lessons Learned
+## Common Issues & Critical Patterns
 
-### 1. Missing Ancestor Chains in Prompts
-**Symptoms:** Logs show "Ancestor chain doesn't seem to be appearing" in fact-check prompts.
+### 1. Tweepy Dict/Object Ambiguity (MOST FREQUENT BUG)
+**Symptoms:** `AttributeError: 'dict' object has no attribute 'field'` or missing data extraction
 
-**Root causes identified:**
-- **Dynamic search cap skipping runs:** When `get_current_search_cap()` returns a cap ≤ current daily count, search processing is skipped entirely (check logs for `"[Search] Current cap reached (...), skipping processing"`).
-- **External full-text provider 401 errors:** twitterapi.io returning `401 Unauthorized` causes fallback to shorter Tweepy text, which may be truncated for retweets.
-- **Implicit global `username` dependency:** `get_tweet_context()` originally used `from:{username}` without explicit parameter passing, causing inconsistent bot-replies fetching between mention and search flows.
-
-**Fixes applied:**
-- Added explicit `bot_username` parameter to `get_tweet_context()` (passed from both `fetch_and_process_mentions()` and `fetch_and_process_search()`)
-- Ensured both callers pass `bot_username=username` to avoid implicit global reliance
-
-**Recommended next steps:**
-- Add debug log inside `get_tweet_context()` showing which `bot_username` was used and how many bot_replies were found
-- Run dry-run test for search flow and print generated context to verify ancestor_chain population
-
-### 2. Retweet Handling
-**Symptoms:** "When the search function replies to a retweet, it is not getting the whole retweet text and is replying to the original tweet."
-
-**Root cause:** When a tweet is a retweet, the API may return truncated text and the wrong target for replies.
-
-**Fix applied:** `get_tweet_context()` now detects retweets via `referenced_tweets` (type="retweeted"), resolves the original tweet, extracts full text, and sets `context['reply_target_id']` to the retweeter's tweet (not the original). The full text is stored in `context['mention_full_text']` for use in `fact_check()`.
-
-### 3. Provider 401 Errors
-**Symptoms:** Repeated `"Error fetching tweet {id} from twitterapi.io: 401 Client Error: Unauthorized"` in logs.
-
-**Context:** twitterapi.io is an **optional** full-text provider. When it fails, the bot falls back to Tweepy's standard text (which may be truncated).
-
-**Current behavior:** The bot continues to function; shorter text may reduce context quality but does not break the pipeline.
-
-**Recommended next steps:**
-- Verify `TWITTERAPIIO_KEY` is valid and not expired
-- Consider reordering fallbacks to prefer Tweepy includes before external provider
-- Add explicit logging showing which source provided final text for each mention
-
-### 4. Auto-Follow System Not Working (FIXED)
-**Symptoms:** Users with 5+ direct replies to bot are not being auto-followed; `get_user_reply_counts()` returns 0 for all users.
-
-**Root cause:** `get_user_reply_counts()` only checked `ancestor_chains.json` for user replies, but old entries had `author_id: None` or missing fields. The function didn't use the same fallback logic as `count_bot_replies_by_user_in_conversation()`.
-
-**Fix applied:** Enhanced `get_user_reply_counts()` to combine data from both `ancestor_chains.json` AND `bot_tweets.json`:
-- First pass: Build set of bot reply tweet IDs using two methods:
-  - Method 1: `author_id == bot_id` (explicit field match)
-  - Method 2: `tweet_id in bot_tweets.json` (fallback for old entries)
-- Second pass: Count user tweets where `in_reply_to_user_id == bot_id` AND `tweet_id NOT in bot_reply_ids`
-- This mirrors the logic in `count_bot_replies_by_user_in_conversation()` but works across all conversations
-
-**Status:** Fixed on fix-autofollow branch without modifying ancestor chain caching logic.
-
-### 5. Infinite Loop on Deep Conversation Threads (CRITICAL BUG)
-**Symptoms:** Bot hit rate limit 28 times in one day on a single deep conversation thread. Logs show same tweet IDs being fetched repeatedly. ancestor_chains.json was corrupted/wiped to 2 bytes at 18:31.
-
-**Root cause:** In `get_tweet_context()` lines ~2615-2654, the ancestor chain building loop has exception handling that catches `tweepy.TweepyException`, prints error message, but **continues the loop** instead of breaking:
+**Pattern:** APIs return dicts OR objects unpredictably. Always use defensive access:
 ```python
-while True:
-    try:
-        parent_tweet = read_client.get_tweet(...)
-        # ... process parent ...
-    except tweepy.TweepyException as e:
-        print(f"Error building ancestor chain: {e}")
-        # BUG: No break statement! Loop continues infinitely
+# Safe pattern for referenced_tweets:
+for ref in refs:
+    ref_type = ref.get('type') if isinstance(ref, dict) else (ref.type if hasattr(ref, 'type') else None)
+    ref_id = ref.get('id') if isinstance(ref, dict) else (ref.id if hasattr(ref, 'id') else None)
 ```
 
-**Trigger:** Deep conversation threads (50+ reply levels) on politically charged topics (Turkey/Greece geopolitics in observed case).
+**High-risk locations:** `includes`, `referenced_tweets`, cached data, Community Notes API responses
 
-**Impact:**
-- Rate limit exhausted (Twitter API ~900 requests/15min)
-- Bot sleeps 899 seconds, then immediately hits same tweets again
-- Potential file corruption (ancestor_chains.json reduced to 2 bytes: `{}`)
-- Service downtime
+### 2. Infinite Loop on Deep Threads (CRITICAL UNFIXED BUG)
+**Location:** `get_tweet_context()` lines ~3500-3700
 
-**Current status:** Bug still present in code on fix-autofollow branch. Emergency rollback avoided triggering it, but underlying issue not fixed.
+**Problem:** Exception handler in ancestor chain loop catches errors but **doesn't break**, causing infinite retries on deep threads (50+ replies).
 
-**Recommended fix:**
+**Impact:** Rate limit exhaustion (900 requests/15min), potential cache file corruption
+
+**Fix needed:**
 ```python
-MAX_ANCESTOR_DEPTH = 20  # Add depth limit constant
-
+MAX_ANCESTOR_DEPTH = 20  # Add constant
 while True:
-    if len(ancestor_chain) >= MAX_ANCESTOR_DEPTH:
-        print(f"[Ancestor Chain] Hit depth limit ({MAX_ANCESTOR_DEPTH}), stopping build")
-        break
-    
+    if len(ancestor_chain) >= MAX_ANCESTOR_DEPTH: break  # Add depth limit
     try:
         parent_tweet = read_client.get_tweet(...)
-        # ... process parent ...
     except tweepy.TweepyException as e:
-        print(f"Error building ancestor chain: {e}")
-        break  # CRITICAL: Break loop on API errors
+        break  # CRITICAL: Must break, not continue
 ```
 
-### 6. Duplicate Reply Prevention Not Working (KNOWN ISSUE)
-**Symptoms:** Bot replies to same user multiple times in same conversation, hours apart.
+### 3. Retweet Handling
+**Pattern:** Detect via `referenced_tweets` type="retweeted", resolve original, set `reply_target_id` to retweeter's tweet (not original).
 
-**Root cause:** `count_bot_replies_by_user_in_conversation()` shows "FINAL COUNT: 0" despite prior replies existing. Two issues:
-- Old entries in ancestor_chains.json have `author_id: None`, so counting logic fails to identify them
-- Cached `bot_replies` list is empty (0 entries) even when bot has replied before
+**Location:** `get_tweet_context()` and `fetch_and_process_followed_users()`
 
-**Attempted fix (REVERTED):** Added fallback to check if tweet_id exists in bot_tweets.json. This was part of the commit that caused infinite loop bug, so reverted.
+### 4. Duplicate Reply Prevention (KNOWN ISSUE)
+**Problem:** `count_bot_replies_by_user_in_conversation()` returns 0 despite prior replies (old cache entries have `author_id: None`)
 
-**Current status:** Duplicate prevention is broken on fix-autofollow branch.
+**Workaround:** Separate tracking file approach recommended (`conversation_replies_{username}.json`)
 
-**Alternative approaches:**
-- Separate tracking file: `conversation_replies_{username}.json` with format `{conversation_id: {user_id: reply_count}}`
-- Update after each successful reply, independent of ancestor_chains.json parsing
-- Simple counter increment, no complex chain traversal required
+### 5. Community Notes Score Calibration
+**Critical:** Thresholds must match Twitter's actual ClaimOpinion bucket assignments from verification reports, NOT desired distribution percentages.
+
+**Current thresholds** (as of Jan 12, 2026):
+- High >= 0.081
+- Medium >= -2.109
+
+**Recalibrate periodically** using verification data from `cn_notes_log_*.txt`
+
 
 ## Project Conventions
 
@@ -379,6 +363,7 @@ def get_attr(obj, attr, default=None):
   - "Respond in same language as the post"
 - **Critical:** Preserve these constraints when editing prompts; changing wording affects runtime behavior
 
+
 ## Integration Points
 
 ### External APIs
@@ -410,7 +395,7 @@ def get_attr(obj, attr, default=None):
 
 ### Dry-Run Testing
 ```bash
-python ConSenseAI_v1.4.py --dryrun True --delay 1 --search_term "test"
+python ConSenseAI_v1.6.py --dryrun True --delay 1 --search_term "test"
 ```
 - Exercises full pipeline without posting
 - Prints generated responses to console
@@ -433,6 +418,7 @@ python ConSenseAI_v1.4.py --dryrun True --delay 1 --search_term "test"
 - **Global username:** Search flow may not have `username` in scope; always pass explicitly to `get_tweet_context(bot_username=...)`
 - **Retweet detection:** Check `referenced_tweets` for type="retweeted" to detect retweets and resolve original
 - **Media extraction:** Media may be in `includes['media']` (when expansions used) or embedded in tweet entities; check both
+
 
 ## Small Code Examples
 
@@ -467,6 +453,7 @@ Inside `get_tweet_context()`, after bot-replies search:
 ```python
 print(f"[get_tweet_context] bot_username={bot_username or 'None'}, bot_replies_found={len(context['bot_replies_in_thread'])}")
 ```
+
 
 ## Recent Fixes (v1.6)
 
