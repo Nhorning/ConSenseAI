@@ -4869,7 +4869,10 @@ ORIGINAL POST:
 CURRENT NOTE (rated unhelpful):
 {note_text}
 
-FEEDBACK:
+EVALUATION REASONING:
+{reasoning}
+
+SPECIFIC IMPROVEMENT FEEDBACK:
 {improvements}
 
 TASK: Rewrite the Community Note to address all the feedback above. Make it neutral, fact-based, well-sourced, and helpful to readers. Provide ONLY the improved note text, no commentary.
@@ -5557,12 +5560,22 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
             # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
             
+            # Log validation results so far before expensive helpfulness check
+            log_to_file("INITIAL VALIDATION RESULTS (before helpfulness check):")
+            for name, passed, details in validation_results:
+                status = "✓ PASS" if passed else "✗ FAIL"
+                log_to_file(f"  {name}: {status} - {details}")
+            
+            # Check if basic validations (length, URLs) passed before running expensive helpfulness verification
+            basic_validations_passed = length_valid and url_valid
+            
             # 6. Adversarial Helpfulness Verification (if enabled via --cn_verify_helpfulness)
-            helpfulness_valid = True  # Default to valid if verification disabled
+            # Only run if basic validations pass to avoid wasting API calls
+            helpfulness_valid = True  # Default to valid if verification disabled or skipped
             helpfulness_details = "Verification disabled (use --cn_verify_helpfulness True to enable)"
             verification_result = None
             
-            if getattr(args, 'cn_verify_helpfulness', False):
+            if getattr(args, 'cn_verify_helpfulness', False) and basic_validations_passed:
                 print(f"[Community Notes] Running adversarial helpfulness verification...")
                 log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION: Enabled")
                 
@@ -5626,6 +5639,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     helpfulness_details = f"Verification error: {str(verify_error)}"
                 
                 validation_results.append(("HelpfulnessVerification", helpfulness_valid, helpfulness_details))
+            elif getattr(args, 'cn_verify_helpfulness', False) and not basic_validations_passed:
+                # Helpfulness verification was enabled but skipped due to failed basic validations
+                helpfulness_details = "Skipped (basic validations failed - fix length/URLs first)"
+                validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
+                log_to_file(f"HELPFULNESS VERIFICATION: Skipped (basic validations must pass first)")
             
             # Log all validation results
             log_to_file("VALIDATION RESULTS:")
