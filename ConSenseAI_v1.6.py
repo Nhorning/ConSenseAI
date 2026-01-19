@@ -4695,9 +4695,10 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
                 note_content = note_data.get('note', '')
                 original_post = note_data.get('post_text', '')
                 
-                # Helpful: currently_rated_helpful, needs_more_ratings (implicit helpful)
+                # Only count notes with explicit Twitter ratings (not "needs_more_ratings")
+                # Helpful: currently_rated_helpful
                 # Unhelpful: currently_rated_not_helpful
-                if rating_status in ['currently_rated_helpful', 'needs_more_ratings']:
+                if rating_status == 'currently_rated_helpful':
                     helpful_examples.append({
                         'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
                         'note': note_content,
@@ -4710,7 +4711,7 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
                         'rating': rating_status
                     })
             
-            log_to_file(f"Loaded {len(helpful_examples)} helpful and {len(unhelpful_examples)} unhelpful examples from history")
+            log_to_file(f"Loaded {len(helpful_examples)} helpful and {len(unhelpful_examples)} unhelpful examples from history (excluding {len(recent_notes) - len(helpful_examples) - len(unhelpful_examples)} unrated)")
             print(f"[CN Verification] Historical examples: {len(helpful_examples)} helpful, {len(unhelpful_examples)} unhelpful")
     
     except Exception as e:
