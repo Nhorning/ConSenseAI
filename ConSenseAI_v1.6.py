@@ -4788,23 +4788,24 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "
     log_to_file("Running adversarial evaluation using fact_check module...")
     print("[CN Verification] Querying LLMs for helpfulness evaluation...")
     
-    # Create verification context
+    # Create verification context with custom instructions
     verification_context = {
         'ancestor_chain': context.get('ancestor_chain', []),
         'thread_tweets': context.get('thread_tweets', []),
         'bot_replies_in_thread': [],
         'media': context.get('media', []),
         'reply_target_id': None,
-        'mention_full_text': post_text
+        'mention_full_text': f"PROPOSED COMMUNITY NOTE:\n{note_text}",
+        'context_instructions': verification_prompt  # Pass verification prompt as instructions
     }
     
     # Generate verification verdict using fact_check
     # Set generate_only=True to get text response without posting
     try:
-        # Call fact_check with custom verification prompt
+        # Call fact_check with the post as tweet_text and verification prompt in context
         log_to_file("Calling fact_check() for adversarial verification...")
         verdict = fact_check(
-            tweet_text=verification_prompt,
+            tweet_text=post_text,  # The original post being fact-checked
             tweet_id=f"cn_verify_{int(time.time())}",
             context=verification_context,
             generate_only=True,
