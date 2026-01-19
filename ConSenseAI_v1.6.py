@@ -5560,24 +5560,19 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # claim_valid, claim_details = validate_claim_opinion(clean_note_text)
             # validation_results.append(("ClaimOpinion", claim_valid, claim_details))
             
-            # Log validation results so far before expensive helpfulness check
-            log_to_file("INITIAL VALIDATION RESULTS (before helpfulness check):")
+            # Log validation results so far
+            log_to_file("INITIAL VALIDATION RESULTS:")
             for name, passed, details in validation_results:
                 status = "✓ PASS" if passed else "✗ FAIL"
                 log_to_file(f"  {name}: {status} - {details}")
             
-            # Check if basic validations (length, URLs) passed before running expensive helpfulness verification
+            # Run helpfulness verification BEFORE retry loop (for initial note)
+            # Only run if basic validations (length, URLs) passed to avoid wasting API calls
             basic_validations_passed = length_valid and url_valid
             
-            # 6. Adversarial Helpfulness Verification (if enabled via --cn_verify_helpfulness)
-            # Only run if basic validations pass to avoid wasting API calls
-            helpfulness_valid = True  # Default to valid if verification disabled or skipped
-            helpfulness_details = "Verification disabled (use --cn_verify_helpfulness True to enable)"
-            verification_result = None
-            
             if getattr(args, 'cn_verify_helpfulness', False) and basic_validations_passed:
-                print(f"[Community Notes] Running adversarial helpfulness verification...")
-                log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION: Enabled")
+                print(f"[Community Notes] Running adversarial helpfulness verification (initial attempt)...")
+                log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION: Running on initial note")
                 
                 try:
                     verification_result = verify_note_helpfulness_adversarial(
@@ -5594,59 +5589,37 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         reasoning = verification_result.get('reasoning', '')
                         
                         if is_helpful is None:
-                            # Verification failed - allow note to proceed but log warning
-                            helpfulness_valid = True
+                            # Verification inconclusive - block submission
+                            helpfulness_valid = False
                             helpfulness_details = f"Verification inconclusive: {rating_category}"
-                            log_to_file(f"WARNING: Helpfulness verification inconclusive - allowing note to proceed")
+                            log_to_file(f"HELPFULNESS: ✗ FAIL - Verification inconclusive, blocking submission")
+                            validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
                         elif is_helpful:
                             helpfulness_valid = True
                             helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
                             log_to_file(f"HELPFULNESS: ✓ PASS - {rating_category}")
+                            validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
                         else:
                             helpfulness_valid = False
                             helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
                             log_to_file(f"HELPFULNESS: ✗ FAIL - {rating_category}")
                             log_to_file(f"Reasoning: {reasoning}")
-                            
-                            # If improved note was generated, use it
-                            if 'improved_note' in verification_result and verification_result['improved_note']:
-                                improved_note = verification_result['improved_note']
-                                log_to_file(f"Using improved note: {improved_note}")
-                                print(f"[Community Notes] Replacing note with improved version")
-                                
-                                # Replace clean_note_text with improved version
-                                clean_note_text = improved_note
-                                
-                                # Recalculate effective length for new note
-                                urls_in_note = url_pattern.findall(clean_note_text)
-                                text_without_urls = url_pattern.sub('', clean_note_text)
-                                effective_length = len(text_without_urls) + len(urls_in_note)
-                                
-                                # Update validation results for length (might have changed)
-                                length_valid = effective_length <= 280
-                                validation_results[0] = ("Length", length_valid, f"{effective_length}/280 chars" if length_valid else f"{effective_length}/280 chars - TOO LONG")
-                                
-                                # Mark helpfulness as now valid
-                                helpfulness_valid = True
-                                helpfulness_details = f"Improved from {rating_category} (original was unhelpful)"
-                                log_to_file(f"HELPFULNESS: ✓ PASS (after improvement)")
+                            validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
                 
                 except Exception as verify_error:
                     log_to_file(f"ERROR during helpfulness verification: {verify_error}")
                     print(f"[Community Notes] Helpfulness verification error: {verify_error}")
                     # Allow note to proceed on verification error
-                    helpfulness_valid = True
                     helpfulness_details = f"Verification error: {str(verify_error)}"
-                
-                validation_results.append(("HelpfulnessVerification", helpfulness_valid, helpfulness_details))
+                    validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
             elif getattr(args, 'cn_verify_helpfulness', False) and not basic_validations_passed:
-                # Helpfulness verification was enabled but skipped due to failed basic validations
-                helpfulness_details = "Skipped (basic validations failed - fix length/URLs first)"
+                # Helpfulness verification enabled but basic validations failed
+                helpfulness_details = "Skipped (fix length/URLs first)"
                 validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
-                log_to_file(f"HELPFULNESS VERIFICATION: Skipped (basic validations must pass first)")
+                log_to_file(f"HELPFULNESS VERIFICATION: Skipped (basic validations failed)")
             
-            # Log all validation results
-            log_to_file("VALIDATION RESULTS:")
+            # Log all validation results including helpfulness
+            log_to_file("FINAL INITIAL VALIDATION RESULTS:")
             for name, passed, details in validation_results:
                 status = "✓ PASS" if passed else "✗ FAIL"
                 log_to_file(f"  {name}: {status} - {details}")
@@ -5895,6 +5868,63 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         
                         log_to_file(f"RETRY RESULT:")
                         log_to_file(clean_note_text)
+                        
+                        # Run helpfulness verification on retry if basic validations now pass
+                        basic_validations_passed = length_valid and url_valid
+                        
+                        # Adversarial Helpfulness Verification (if enabled via --cn_verify_helpfulness)
+                        # Only run if basic validations pass to avoid wasting API calls
+                        if getattr(args, 'cn_verify_helpfulness', False) and basic_validations_passed:
+                            print(f"[Community Notes] Running adversarial helpfulness verification (retry {retry_count + 1})...")
+                            log_to_file(f"ADVERSARIAL HELPFULNESS VERIFICATION: Running on retry {retry_count + 1}")
+                            
+                            try:
+                                verification_result = verify_note_helpfulness_adversarial(
+                                    note_text=clean_note_text,
+                                    post_text=post_text,
+                                    context=context,
+                                    username=username,
+                                    log_to_file=log_to_file
+                                )
+                                
+                                if verification_result:
+                                    is_helpful = verification_result.get('is_helpful')
+                                    rating_category = verification_result.get('rating_category', 'unknown')
+                                    reasoning = verification_result.get('reasoning', '')
+                                    
+                                    if is_helpful is None:
+                                        # Verification inconclusive - block submission
+                                        helpfulness_valid = False
+                                        helpfulness_details = f"Verification inconclusive: {rating_category}"
+                                        log_to_file(f"HELPFULNESS: ✗ FAIL - Verification inconclusive (retry {retry_count + 1})")
+                                        validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
+                                    elif is_helpful:
+                                        helpfulness_valid = True
+                                        helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
+                                        log_to_file(f"HELPFULNESS: ✓ PASS - {rating_category}")
+                                        validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
+                                    else:
+                                        helpfulness_valid = False
+                                        helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
+                                        log_to_file(f"HELPFULNESS: ✗ FAIL - {rating_category}")
+                                        log_to_file(f"Reasoning: {reasoning}")
+                                        validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
+                                        
+                                        # If improved note was generated, could trigger another retry
+                                        # But for now, just mark as failed and let normal retry logic handle it
+                            
+                            except Exception as verify_error:
+                                log_to_file(f"ERROR during helpfulness verification: {verify_error}")
+                                print(f"[Community Notes] Helpfulness verification error: {verify_error}")
+                                # Allow note to proceed on verification error
+                                helpfulness_details = f"Verification error: {str(verify_error)}"
+                                validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
+                        elif getattr(args, 'cn_verify_helpfulness', False) and not basic_validations_passed:
+                            # Helpfulness verification enabled but basic validations still failing
+                            helpfulness_details = "Skipped (fix length/URLs first)"
+                            validation_results.append(("HelpfulnessVerification", True, helpfulness_details))
+                            log_to_file(f"HELPFULNESS VERIFICATION: Skipped (basic validations still failing)")
+                        
                         log_to_file("RETRY VALIDATION RESULTS:")
                         for name, passed, details in validation_results:
                             status = "✓ PASS" if passed else "✗ FAIL"
