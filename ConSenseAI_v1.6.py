@@ -4773,13 +4773,16 @@ UNHELPFULNESS CRITERIA:
     verification_prompt += """
 
 TASK:
-1. Determine if the proposed note would be rated as currently_rated_helpful or currently_rated_not_helpful
-2. Provide your reasoning based on the criteria and examples above
-3. If unhelpful, suggest specific improvements to make it helpful
+1. Reason through why the examples provided (if any) belong in their various categories
+2. Determine if the proposed note would be rated as currently_rated_helpful or currently_rated_not_helpful
+3. Provide your reasoning based on the criteria and examples above
+4. If unhelpful, suggest specific improvements to make it helpful
 
 REQUIRED OUTPUT FORMAT:
+
+EXAMPLE REASONING: [state why you believe each example given fits in it's given category]
 RATING: [currently_rated_helpful OR currently_rated_not_helpful]
-REASONING: [Your detailed analysis comparing the note against the criteria]
+REASONING: [Your detailed analysis of why the note fits the chosen rating] 
 IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "N/A"]
 """
     
