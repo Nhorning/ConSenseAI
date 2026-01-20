@@ -5233,7 +5233,11 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 else:
                     score_guidance += f"You are within acceptable ranges. Continue writing neutral, fact-based notes."
             
-            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{suggested_urls_text}{score_guidance}{examples_text}\n\
+            # Add post timestamp for temporal awareness
+            post_created_at = post_data.get('created_at', 'unknown')
+            timestamp_context = f"\n- IMPORTANT TEMPORAL CONTEXT: The post you are fact-checking was posted on {post_created_at}. When evaluating time-sensitive claims (like 'yesterday', 'today', 'recently', etc.), interpret them relative to this post date, NOT the current date. Example: If the post says 'yesterday' and was posted on Jan 8, 2026, it refers to Jan 7, 2026."
+            
+            context['context_instructions'] = f"\nPrompt: This post has been flagged as potentially needing a Community Note. Analyze it for misleading claims and create a draft community note{timestamp_context}{suggested_urls_text}{score_guidance}{examples_text}\n\
                 - CRITICAL URL REQUIREMENTS: Provide ONLY direct, specific source URLs (e.g., https://nytimes.com/2025/12/specific-article-title, NOT generic pages like https://nytimes.com/search). URLs must link directly to the exact article, study, or data that supports your fact-check. Do NOT use search pages, photo galleries, media indexes, or landing pages. Each URL must be a complete, working link to a source that ***supports the content of your note***.\n\
                 - CRITICAL: The text of your note must be less than 280 characters (source links only count as one character). Be extremely concise *PARTICULARLY IF YOU ARE IN THE FINAL PASS*\n\
                 - CRITICAL: Double check time sensitve information with a web search (current status of public figures, laws etc.)\n\
