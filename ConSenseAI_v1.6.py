@@ -4775,7 +4775,7 @@ UNHELPFULNESS CRITERIA:
 TASK:
 1. Reason through why the examples provided (if any) belong in their various categories
 2. Determine if the proposed note would be rated as currently_rated_helpful or currently_rated_not_helpful
-3. Provide your reasoning based on the criteria and examples above
+3. Provide your reasoning based on the criteria and examples above - particularly why it would not be grouped with examples in the other category
 4. If unhelpful, suggest specific improvements to make it helpful
 
 REQUIRED OUTPUT FORMAT:
