@@ -2735,7 +2735,9 @@ def generate_auto_search_term(n=20, current_term=None, used_terms=None):
             used_terms = [current_term] if current_term else []
         
         if used_terms:
-            used_terms_text = ', '.join(f'"{term}"' for term in used_terms if term)
+            # Cap at 100 most recent terms to avoid overwhelming the prompt
+            terms_to_show = used_terms[-100:] if len(used_terms) > 100 else used_terms
+            used_terms_text = ', '.join(f'"{term}"' for term in terms_to_show if term)
             avoid_clause = f"DO NOT reuse any of these previously used terms: {used_terms_text}. "
         else:
             avoid_clause = ""
