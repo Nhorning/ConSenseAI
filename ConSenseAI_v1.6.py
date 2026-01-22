@@ -2171,9 +2171,18 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             if verbose:
                                 print(f"[Claude Text Block] {block.text[:150]}..." if len(block.text) > 150 else f"[Claude Text Block] {block.text}")
                 
-                # Join valid text blocks with spaces between them
+                # Join valid text blocks intelligently (no space before punctuation)
                 if text_responses:
-                    combined = ' '.join(text_responses)
+                    combined = ""
+                    for i, text in enumerate(text_responses):
+                        if i == 0:
+                            combined = text
+                        elif text and text[0] in '.,!?;:)]}':
+                            # No space before punctuation
+                            combined += text
+                        else:
+                            # Add space before normal text
+                            combined += ' ' + text
                     verdict[model['name']] = combined
         
                 # Handle minimal or unhelpful responses
