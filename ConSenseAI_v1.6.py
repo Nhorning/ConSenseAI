@@ -4786,16 +4786,17 @@ UNHELPFULNESS CRITERIA:
 
 TASK:
 1. Reason through why the examples provided (if any) belong in their various categories
-2. Determine if the proposed note would be rated as currently_rated_helpful or currently_rated_not_helpful
+2. Determine if the proposed note would be rated as currently_rated_helpful, currently_rated_not_helpful, OR not_needed
+   - Use 'not_needed' if the post doesn't actually need a Community Note (e.g., already correct, no misleading claims, satire/opinion clearly marked, etc.)
 3. Provide your reasoning based on the criteria and examples above - particularly why it would not be grouped with examples in the other category
 4. If unhelpful, suggest specific improvements to make it helpful
 
 REQUIRED OUTPUT FORMAT:
 
 EXAMPLE REASONING: [state why you believe each example given fits in it's given category]
-RATING: [currently_rated_helpful OR currently_rated_not_helpful]
+RATING: [currently_rated_helpful OR currently_rated_not_helpful OR not_needed]
 REASONING: [Your detailed analysis of why the note fits the chosen rating] 
-IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "N/A"]
+IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful or not_needed, write "N/A"]
 """
     
     # Use fact_check module to run adversarial evaluation
@@ -4854,7 +4855,9 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "
             line = line.strip()
             if line.startswith('RATING:'):
                 rating_text = line.replace('RATING:', '').strip()
-                if 'currently_rated_helpful' in rating_text.lower():
+                if 'not_needed' in rating_text.lower():
+                    rating_category = 'not_needed'
+                elif 'currently_rated_helpful' in rating_text.lower():
                     rating_category = 'currently_rated_helpful'
                 elif 'currently_rated_not_helpful' in rating_text.lower():
                     rating_category = 'currently_rated_not_helpful'
@@ -4884,24 +4887,26 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful, write "
         
         # Determine helpfulness (only if we have a valid rating)
         is_helpful = rating_category == 'currently_rated_helpful'
+        is_not_needed = rating_category == 'not_needed'
         
         log_to_file(f"Verification Result: {rating_category}")
         log_to_file(f"Reasoning: {reasoning}")
-        if not is_helpful:
+        if not is_helpful and not is_not_needed:
             log_to_file(f"Improvement Suggestions: {improvements}")
         
         print(f"[CN Verification] Result: {rating_category}")
-        print(f"[CN Verification] Helpful: {is_helpful}")
+        print(f"[CN Verification] Helpful: {is_helpful}, Not Needed: {is_not_needed}")
         
         result = {
             'is_helpful': is_helpful,
+            'is_not_needed': is_not_needed,
             'rating_category': rating_category or 'unknown',
             'reasoning': reasoning,
-            'improvement_suggestions': improvements if not is_helpful else None
+            'improvement_suggestions': improvements if not is_helpful and not is_not_needed else None
         }
         
-        # If unhelpful, attempt to generate improved note
-        if not is_helpful and improvements and improvements.lower() != 'n/a':
+        # If unhelpful (but not 'not_needed'), attempt to generate improved note
+        if not is_helpful and not is_not_needed and improvements and improvements.lower() != 'n/a':
             print("[CN Verification] Note rated unhelpful - attempting to generate improved version...")
             log_to_file("Generating improved note based on feedback...")
             
@@ -5092,10 +5097,17 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         log_to_file(f"POST ID: {post_id}")
         # Skip if we've already written a note for this post
         if post_id in written_notes:
-            print(f"[Community Notes] Skipping {post_id} - already written note")
-            log_to_file("STATUS: SKIPPED (already wrote note)")
-            posts_skipped_already_written += 1
-            continue
+            # Check if it's marked as not_needed
+            if written_notes[post_id].get('not_needed'):
+                print(f"[Community Notes] Post {post_id} previously flagged as not needing a note, skipping")
+                log_to_file(f"STATUS: SKIPPED (not_needed) - {written_notes[post_id].get('not_needed_reason', 'no reason given')[:100]}")
+                posts_skipped_already_written += 1
+                continue
+            else:
+                print(f"[Community Notes] Skipping {post_id} - already written note")
+                log_to_file("STATUS: SKIPPED (already wrote note)")
+                posts_skipped_already_written += 1
+                continue
 
         log_to_file(f"POST TEXT: {post_data.get('text', '')}")
         log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
@@ -5634,10 +5646,33 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     
                     if verification_result:
                         is_helpful = verification_result.get('is_helpful')
+                        is_not_needed = verification_result.get('is_not_needed', False)
                         rating_category = verification_result.get('rating_category', 'unknown')
                         reasoning = verification_result.get('reasoning', '')
                         
-                        if is_helpful is None:
+                        if is_not_needed:
+                            # Note flagged as not needed - skip this post and mark it
+                            helpfulness_valid = False
+                            helpfulness_details = f"Not needed: {reasoning[:100]}..."
+                            log_to_file(f"HELPFULNESS: ✗ SKIP - Note not needed for this post")
+                            log_to_file(f"Reasoning: {reasoning}")
+                            validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
+                            
+                            # Mark post as not_needed in cn_written to skip future attempts
+                            if not args.dryrun:
+                                written_notes[post_id] = {
+                                    "not_needed": True,
+                                    "not_needed_reason": reasoning,
+                                    "timestamp": datetime.datetime.now().isoformat(),
+                                    "post_text": post_text
+                                }
+                                try:
+                                    with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                                        json.dump(written_notes, f, indent=2)
+                                    log_to_file(f"Marked post {post_id} as 'not_needed' to skip future evaluations")
+                                except Exception as save_error:
+                                    log_to_file(f"Error saving not_needed flag: {save_error}")
+                        elif is_helpful is None:
                             # Verification inconclusive - block submission
                             helpfulness_valid = False
                             helpfulness_details = f"Verification inconclusive: {rating_category}"
@@ -5938,10 +5973,35 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 
                                 if verification_result:
                                     is_helpful = verification_result.get('is_helpful')
+                                    is_not_needed = verification_result.get('is_not_needed', False)
                                     rating_category = verification_result.get('rating_category', 'unknown')
                                     reasoning = verification_result.get('reasoning', '')
                                     
-                                    if is_helpful is None:
+                                    if is_not_needed:
+                                        # Note flagged as not needed - skip this post and mark it
+                                        helpfulness_valid = False
+                                        helpfulness_details = f"Not needed: {reasoning[:100]}..."
+                                        log_to_file(f"HELPFULNESS: ✗ SKIP - Note not needed for this post (retry {retry_count + 1})")
+                                        log_to_file(f"Reasoning: {reasoning}")
+                                        validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
+                                        
+                                        # Mark post as not_needed in cn_written to skip future attempts
+                                        if not args.dryrun:
+                                            written_notes[post_id] = {
+                                                "not_needed": True,
+                                                "not_needed_reason": reasoning,
+                                                "timestamp": datetime.datetime.now().isoformat(),
+                                                "post_text": post_text
+                                            }
+                                            try:
+                                                with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                                                    json.dump(written_notes, f, indent=2)
+                                                log_to_file(f"Marked post {post_id} as 'not_needed' to skip future evaluations")
+                                            except Exception as save_error:
+                                                log_to_file(f"Error saving not_needed flag: {save_error}")
+                                        # Break retry loop - no point retrying if not needed
+                                        break
+                                    elif is_helpful is None:
                                         # Verification inconclusive - block submission
                                         helpfulness_valid = False
                                         helpfulness_details = f"Verification inconclusive: {rating_category}"
