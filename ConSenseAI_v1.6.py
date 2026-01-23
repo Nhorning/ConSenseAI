@@ -4733,22 +4733,24 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
     # Community Notes helpfulness criteria - EXACT checkboxes from Twitter/X rating interface
     helpful_criteria = """
     When users rate a Community Note as HELPFUL, they select from these reasons:
-    ✓ Addresses the post's claim - The note directly responds to the claim or content in the post
-    ✓ Important context - Provides important information that helps understand the post better
-    ✓ Unbiased language - Written neutrally without taking sides or expressing opinions
-    ✓ Good sources - Cites high-quality, credible, authoritative sources
-    ✓ Easy to understand - Clear, concise, and accessible language
-    ✓ Empathetic - Respectful tone that considers different perspectives
+    ✓ Cites high-quality sources
+    ✓ Easy to understand
+    ✓ Directly addresses the posts claim
+    ✓ Provides important context
+    ✓ Neutral or unbiased language
+    
     """
     
     unhelpful_criteria = """
     When users rate a Community Note as NOT HELPFUL, they select from these reasons:
-    ✗ Incorrect information - The note contains factual errors or inaccuracies
-    ✗ Sources not included or unreliable - Missing citations or uses questionable sources
-    ✗ Opinion or speculation - Expresses personal views or makes unverified claims
-    ✗ Misses key points or irrelevant - Doesn't address the main claim or goes off-topic
-    ✗ Argumentative or biased language - Uses inflammatory, sarcastic, or partisan tone
-    ✗ Typos or unclear - Hard to understand due to errors or confusing writing
+    ✗ Sources not inclueded or unreliable 
+    ✗ Sources do not support note
+    ✗ Incorrect information
+    ✗ Opinion or speculation
+    ✗ Typos or unclear language
+    ✗ Misses key points or irrelevant
+    ✗ Argumentative or biased language
+    ✗ Harrasment or abuse
     """
     
     # Build verification prompt with examples
@@ -4785,7 +4787,7 @@ UNHELPFULNESS CRITERIA:
     verification_prompt += """
 
 TASK:
-1. Reason through why the examples provided (if any) belong in their various categories
+1. Reason through why the examples provided (if any) belong in their various categories. Consider what users may have selected.
 2. Determine if the proposed note would be rated as currently_rated_helpful, currently_rated_not_helpful, OR not_needed
    - Use 'not_needed' if the post doesn't actually need a Community Note (e.g., already correct, no misleading claims, satire/opinion clearly marked, etc.)
 3. Provide your reasoning based on the criteria and examples above - particularly why it would not be grouped with examples in the other category
