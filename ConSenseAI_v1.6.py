@@ -5103,6 +5103,110 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     posts = resp.get('data', [])
     includes = resp.get('includes', {})
     
+    # Define writing limit calculation function (needed for early limit check in loop)
+    def calculate_writing_limit(written_notes, username):
+        """
+        Calculate Twitter's writing limit based on note performance.
+        
+        Returns dict with:
+            WL: Daily writing limit
+            WL_L: Internal writing limit (before DN_30 adjustment)
+            NH_5: Number of CRNH in last 5 non-NMR notes
+            NH_10: Number of CRNH in last 10 non-NMR notes
+            HR_R: Recent hit rate (last 20 notes)
+            HR_L: Longer-term hit rate (last 100 notes)
+            DN_30: Average daily notes in last 30 days
+            T: Total notes written
+        """
+        import math
+        from datetime import datetime, timedelta
+        
+        # Get all notes with status (excluding not_needed, None notes, test mode)
+        all_notes = []
+        for post_id, data in written_notes.items():
+            if isinstance(data, dict) and data.get('note') is not None and not data.get('test_mode', False) and not data.get('not_needed', False):
+                status = data.get('twitter_rating_status', 'needs_more_ratings')
+                timestamp = data.get('timestamp', '')
+                all_notes.append({
+                    'post_id': post_id,
+                    'status': status,
+                    'timestamp': timestamp
+                })
+        
+        # Sort by timestamp (most recent first)
+        all_notes.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        T = len(all_notes)  # Total notes written
+        
+        # Get non-NMR notes (for NH calculations)
+        non_nmr_notes = [n for n in all_notes if n['status'] != 'needs_more_ratings']
+        
+        # NH_5: Number of CRNH in last 5 non-NMR notes
+        NH_5 = sum(1 for n in non_nmr_notes[:5] if n['status'] == 'currently_rated_not_helpful')
+        
+        # NH_10: Number of CRNH in last 10 non-NMR notes
+        NH_10 = sum(1 for n in non_nmr_notes[:10] if n['status'] == 'currently_rated_not_helpful')
+        
+        # Calculate hit rates
+        def calc_hit_rate(notes):
+            if not notes:
+                return 0.0
+            crh = sum(1 for n in notes if n['status'] == 'currently_rated_helpful')
+            crnh = sum(1 for n in notes if n['status'] == 'currently_rated_not_helpful')
+            return (crh - crnh) / len(notes) if len(notes) > 0 else 0.0
+        
+        HR_R = calc_hit_rate(all_notes[:20])  # Recent hit rate (last 20)
+        HR_L = calc_hit_rate(all_notes[:100])  # Long-term hit rate (last 100)
+        
+        # DN_30: Average daily notes in last 30 days
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+        recent_notes = []
+        for note in all_notes:
+            try:
+                note_time = datetime.fromisoformat(note['timestamp'])
+                if note_time >= thirty_days_ago:
+                    recent_notes.append(note)
+            except:
+                pass
+        DN_30 = len(recent_notes) / 30.0 if recent_notes else 0.0
+        
+        # Calculate writing limit
+        if NH_10 >= 8:
+            WL = 2
+            WL_L = None
+        elif NH_5 >= 3:
+            WL = 5
+            WL_L = None
+        else:
+            if T < 20:  # New writer
+                WL = 10
+                WL_L = None
+            else:
+                # Calculate WL_L based on hit rates
+                if HR_L < 0.1:
+                    WL_L = 200 * max(HR_R, HR_L)
+                elif HR_L < 0.15:
+                    WL_L = 20 + 1600 * (HR_L - 0.1)
+                elif HR_L < 0.2:
+                    WL_L = 100 + 8000 * (HR_L - 0.15)
+                else:
+                    WL_L = 500
+                
+                # WL = max(5, floor(min(DN_30 * 5, WL_L)))
+                WL = max(5, math.floor(min(DN_30 * 5, WL_L)))
+        
+        return {
+            'WL': WL,
+            'WL_L': WL_L,
+            'NH_5': NH_5,
+            'NH_10': NH_10,
+            'HR_R': HR_R,
+            'HR_L': HR_L,
+            'DN_30': DN_30,
+            'T': T
+        }
+    
     print(f"[Community Notes] Found {len(posts)} eligible posts")
     log_to_file(f"Found {len(posts)} eligible posts to process")
     
@@ -5129,6 +5233,34 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         log_to_file(f"POST TEXT: {post_data.get('text', '')}")
         log_to_file(f"AUTHOR ID: {post_data.get('author_id')}")
         log_to_file(f"CREATED AT: {post_data.get('created_at')}")
+        
+        # Check writing limit BEFORE processing to avoid wasting API calls
+        if not args.dryrun and not test_mode:
+            # Calculate current writing limit based on performance
+            wl_metrics = calculate_writing_limit(written_notes, username)
+            current_limit = wl_metrics['WL']
+            
+            # Count notes written in last 24 hours (production notes only)
+            now = datetime.datetime.now()
+            twenty_four_hours_ago = now - datetime.timedelta(hours=24)
+            notes_last_24h = 0
+            for pid, note_data in written_notes.items():
+                if isinstance(note_data, dict) and note_data.get('note') and not note_data.get('test_mode', False) and not note_data.get('not_needed', False):
+                    try:
+                        note_time = datetime.datetime.fromisoformat(note_data['timestamp'])
+                        if note_time >= twenty_four_hours_ago:
+                            notes_last_24h += 1
+                    except:
+                        pass
+            
+            log_to_file(f"EARLY LIMIT CHECK: {notes_last_24h}/{current_limit} notes written in last 24 hours")
+            print(f"[Community Notes] Early limit check: {notes_last_24h}/{current_limit} notes in last 24h")
+            
+            if notes_last_24h >= current_limit:
+                log_to_file(f"WRITING LIMIT REACHED: Stopping CN processing before expensive analysis (limit applies to 24-hour rolling window)")
+                print(f"[Community Notes] Daily writing limit reached ({current_limit}). Stopping processing.")
+                posts_failed_generation += 1
+                break  # Exit the main processing loop immediately
         
         # Extract suggested source links from post data (provided by Twitter Community Notes)
         suggested_urls = []
@@ -6073,6 +6205,34 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 posts_failed_generation += 1
                 continue
             
+            # Check writing limit BEFORE attempting submission to avoid Twitter API rejection
+            if not args.dryrun and not test_mode:
+                # Calculate current writing limit based on performance
+                wl_metrics = calculate_writing_limit(written_notes, username)
+                current_limit = wl_metrics['WL']
+                
+                # Count notes written in last 24 hours (production notes only)
+                now = datetime.datetime.now()
+                twenty_four_hours_ago = now - datetime.timedelta(hours=24)
+                notes_last_24h = 0
+                for pid, note_data in written_notes.items():
+                    if isinstance(note_data, dict) and note_data.get('note') and not note_data.get('test_mode', False) and not note_data.get('not_needed', False):
+                        try:
+                            note_time = datetime.datetime.fromisoformat(note_data['timestamp'])
+                            if note_time >= twenty_four_hours_ago:
+                                notes_last_24h += 1
+                        except:
+                            pass
+                
+                log_to_file(f"PRE-SUBMISSION LIMIT CHECK: {notes_last_24h}/{current_limit} notes written in last 24 hours")
+                print(f"[Community Notes] Pre-submission limit check: {notes_last_24h}/{current_limit} notes in last 24h")
+                
+                if notes_last_24h >= current_limit:
+                    log_to_file(f"WRITING LIMIT REACHED: Skipping submission and stopping CN processing (limit applies to 24-hour rolling window)")
+                    print(f"[Community Notes] Daily writing limit reached ({current_limit}). Stopping processing.")
+                    posts_failed_generation += 1
+                    break  # Exit the main processing loop
+            
             # Prepare note submission using Twitter API v2
             # Community Notes API endpoint: POST /2/notes
             # All notes use misinformed_or_potentially_misleading classification
@@ -6263,109 +6423,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     log_to_file(f"  - Posts skipped (already processed): {posts_skipped_already_written}")
     log_to_file(f"  - Failed generations: {posts_failed_generation}")
     log_to_file("=" * 80 + "\n")
-    
-    def calculate_writing_limit(written_notes, username):
-        """
-        Calculate Twitter's writing limit based on note performance.
-        
-        Returns dict with:
-            WL: Daily writing limit
-            WL_L: Internal writing limit (before DN_30 adjustment)
-            NH_5: Number of CRNH in last 5 non-NMR notes
-            NH_10: Number of CRNH in last 10 non-NMR notes
-            HR_R: Recent hit rate (last 20 notes)
-            HR_L: Longer-term hit rate (last 100 notes)
-            DN_30: Average daily notes in last 30 days
-            T: Total notes written
-        """
-        import math
-        from datetime import datetime, timedelta
-        
-        # Get all notes with status (excluding not_needed, None notes, test mode)
-        all_notes = []
-        for post_id, data in written_notes.items():
-            if isinstance(data, dict) and data.get('note') is not None and not data.get('test_mode', False) and not data.get('not_needed', False):
-                status = data.get('twitter_rating_status', 'needs_more_ratings')
-                timestamp = data.get('timestamp', '')
-                all_notes.append({
-                    'post_id': post_id,
-                    'status': status,
-                    'timestamp': timestamp
-                })
-        
-        # Sort by timestamp (most recent first)
-        all_notes.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        T = len(all_notes)  # Total notes written
-        
-        # Get non-NMR notes (for NH calculations)
-        non_nmr_notes = [n for n in all_notes if n['status'] != 'needs_more_ratings']
-        
-        # NH_5: Number of CRNH in last 5 non-NMR notes
-        NH_5 = sum(1 for n in non_nmr_notes[:5] if n['status'] == 'currently_rated_not_helpful')
-        
-        # NH_10: Number of CRNH in last 10 non-NMR notes
-        NH_10 = sum(1 for n in non_nmr_notes[:10] if n['status'] == 'currently_rated_not_helpful')
-        
-        # Calculate hit rates
-        def calc_hit_rate(notes):
-            if not notes:
-                return 0.0
-            crh = sum(1 for n in notes if n['status'] == 'currently_rated_helpful')
-            crnh = sum(1 for n in notes if n['status'] == 'currently_rated_not_helpful')
-            return (crh - crnh) / len(notes) if len(notes) > 0 else 0.0
-        
-        HR_R = calc_hit_rate(all_notes[:20])  # Recent hit rate (last 20)
-        HR_L = calc_hit_rate(all_notes[:100])  # Long-term hit rate (last 100)
-        
-        # DN_30: Average daily notes in last 30 days
-        now = datetime.now()
-        thirty_days_ago = now - timedelta(days=30)
-        recent_notes = []
-        for note in all_notes:
-            try:
-                note_time = datetime.fromisoformat(note['timestamp'])
-                if note_time >= thirty_days_ago:
-                    recent_notes.append(note)
-            except:
-                pass
-        DN_30 = len(recent_notes) / 30.0 if recent_notes else 0.0
-        
-        # Calculate writing limit
-        if NH_10 >= 8:
-            WL = 2
-            WL_L = None
-        elif NH_5 >= 3:
-            WL = 5
-            WL_L = None
-        else:
-            if T < 20:  # New writer
-                WL = 10
-                WL_L = None
-            else:
-                # Calculate WL_L based on hit rates
-                if HR_L < 0.1:
-                    WL_L = 200 * max(HR_R, HR_L)
-                elif HR_L < 0.15:
-                    WL_L = 20 + 1600 * (HR_L - 0.1)
-                elif HR_L < 0.2:
-                    WL_L = 100 + 8000 * (HR_L - 0.15)
-                else:
-                    WL_L = 500
-                
-                # WL = max(5, floor(min(DN_30 * 5, WL_L)))
-                WL = max(5, math.floor(min(DN_30 * 5, WL_L)))
-        
-        return {
-            'WL': WL,
-            'WL_L': WL_L,
-            'NH_5': NH_5,
-            'NH_10': NH_10,
-            'HR_R': HR_R,
-            'HR_L': HR_L,
-            'DN_30': DN_30,
-            'T': T
-        }
     
     # Generate end-of-run verification report (production mode only)
     rating_status_counts = None  # Will be populated if verification succeeds
