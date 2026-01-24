@@ -6249,6 +6249,109 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     log_to_file(f"  - Failed generations: {posts_failed_generation}")
     log_to_file("=" * 80 + "\n")
     
+    def calculate_writing_limit(written_notes, username):
+        """
+        Calculate Twitter's writing limit based on note performance.
+        
+        Returns dict with:
+            WL: Daily writing limit
+            WL_L: Internal writing limit (before DN_30 adjustment)
+            NH_5: Number of CRNH in last 5 non-NMR notes
+            NH_10: Number of CRNH in last 10 non-NMR notes
+            HR_R: Recent hit rate (last 20 notes)
+            HR_L: Longer-term hit rate (last 100 notes)
+            DN_30: Average daily notes in last 30 days
+            T: Total notes written
+        """
+        import math
+        from datetime import datetime, timedelta
+        
+        # Get all notes with status (excluding not_needed, None notes, test mode)
+        all_notes = []
+        for post_id, data in written_notes.items():
+            if isinstance(data, dict) and data.get('note') is not None and not data.get('test_mode', False) and not data.get('not_needed', False):
+                status = data.get('twitter_rating_status', 'needs_more_ratings')
+                timestamp = data.get('timestamp', '')
+                all_notes.append({
+                    'post_id': post_id,
+                    'status': status,
+                    'timestamp': timestamp
+                })
+        
+        # Sort by timestamp (most recent first)
+        all_notes.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        T = len(all_notes)  # Total notes written
+        
+        # Get non-NMR notes (for NH calculations)
+        non_nmr_notes = [n for n in all_notes if n['status'] != 'needs_more_ratings']
+        
+        # NH_5: Number of CRNH in last 5 non-NMR notes
+        NH_5 = sum(1 for n in non_nmr_notes[:5] if n['status'] == 'currently_rated_not_helpful')
+        
+        # NH_10: Number of CRNH in last 10 non-NMR notes
+        NH_10 = sum(1 for n in non_nmr_notes[:10] if n['status'] == 'currently_rated_not_helpful')
+        
+        # Calculate hit rates
+        def calc_hit_rate(notes):
+            if not notes:
+                return 0.0
+            crh = sum(1 for n in notes if n['status'] == 'currently_rated_helpful')
+            crnh = sum(1 for n in notes if n['status'] == 'currently_rated_not_helpful')
+            return (crh - crnh) / len(notes) if len(notes) > 0 else 0.0
+        
+        HR_R = calc_hit_rate(all_notes[:20])  # Recent hit rate (last 20)
+        HR_L = calc_hit_rate(all_notes[:100])  # Long-term hit rate (last 100)
+        
+        # DN_30: Average daily notes in last 30 days
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+        recent_notes = []
+        for note in all_notes:
+            try:
+                note_time = datetime.fromisoformat(note['timestamp'])
+                if note_time >= thirty_days_ago:
+                    recent_notes.append(note)
+            except:
+                pass
+        DN_30 = len(recent_notes) / 30.0 if recent_notes else 0.0
+        
+        # Calculate writing limit
+        if NH_10 >= 8:
+            WL = 2
+            WL_L = None
+        elif NH_5 >= 3:
+            WL = 5
+            WL_L = None
+        else:
+            if T < 20:  # New writer
+                WL = 10
+                WL_L = None
+            else:
+                # Calculate WL_L based on hit rates
+                if HR_L < 0.1:
+                    WL_L = 200 * max(HR_R, HR_L)
+                elif HR_L < 0.15:
+                    WL_L = 20 + 1600 * (HR_L - 0.1)
+                elif HR_L < 0.2:
+                    WL_L = 100 + 8000 * (HR_L - 0.15)
+                else:
+                    WL_L = 500
+                
+                # WL = max(5, floor(min(DN_30 * 5, WL_L)))
+                WL = max(5, math.floor(min(DN_30 * 5, WL_L)))
+        
+        return {
+            'WL': WL,
+            'WL_L': WL_L,
+            'NH_5': NH_5,
+            'NH_10': NH_10,
+            'HR_R': HR_R,
+            'HR_L': HR_L,
+            'DN_30': DN_30,
+            'T': T
+        }
+    
     # Generate end-of-run verification report (production mode only)
     rating_status_counts = None  # Will be populated if verification succeeds
     if not test_mode and not args.dryrun:
@@ -6355,6 +6458,31 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         log_to_file(f"\nRATING STATUS SUMMARY ({len(verify_data['data'])} notes retrieved):")
                         for status, count in sorted(rating_status_counts.items()):
                             log_to_file(f"  {status}: {count}")
+                        
+                        # Calculate and log writing limit metrics
+                        try:
+                            wl_metrics = calculate_writing_limit(written_notes, username)
+                            log_to_file(f"\nWRITING LIMIT CALCULATION:")
+                            log_to_file(f"  Total Notes (T): {wl_metrics['T']}")
+                            log_to_file(f"  NH_5 (CRNH in last 5 non-NMR): {wl_metrics['NH_5']}")
+                            log_to_file(f"  NH_10 (CRNH in last 10 non-NMR): {wl_metrics['NH_10']}")
+                            log_to_file(f"  HR_R (Recent hit rate, last 20): {wl_metrics['HR_R']:.3f}")
+                            log_to_file(f"  HR_L (Long-term hit rate, last 100): {wl_metrics['HR_L']:.3f}")
+                            log_to_file(f"  DN_30 (Avg daily notes, 30 days): {wl_metrics['DN_30']:.2f}")
+                            if wl_metrics['WL_L'] is not None:
+                                log_to_file(f"  WL_L (Internal limit): {wl_metrics['WL_L']:.2f}")
+                            log_to_file(f"  WL (Daily Writing Limit): {wl_metrics['WL']}")
+                            
+                            # Print to console
+                            print(f"\n[Community Notes] Writing Limit Metrics:")
+                            print(f"  - Total Notes: {wl_metrics['T']}")
+                            print(f"  - Recent Hit Rate (HR_R): {wl_metrics['HR_R']:.1%}")
+                            print(f"  - Long-term Hit Rate (HR_L): {wl_metrics['HR_L']:.1%}")
+                            print(f"  - Daily Writing Limit (WL): {wl_metrics['WL']}")
+                        except Exception as wl_error:
+                            log_to_file(f"\nWRITING LIMIT CALCULATION ERROR: {wl_error}")
+                            import traceback
+                            log_to_file(traceback.format_exc())
                         
                         # Print simplified summary to console (matching run complete report style)
                         print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")

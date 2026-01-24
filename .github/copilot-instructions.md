@@ -108,11 +108,19 @@ Always check format before accessing fields.
    - **Adversarial Helpfulness Verification** (`verify_note_helpfulness_adversarial()`): Optional LLM-based verification
      - Enabled via `--cn_verify_helpfulness True` flag
      - Uses last 50 historical notes (helpful vs unhelpful examples from Twitter's ratings)
-     - Runs full fact_check module adversarially to predict if note would be rated helpful/unhelpful
+     - Runs full fact_check module adversarially to predict if note would be rated helpful/unhelpful/not_needed
      - Includes Twitter's Community Notes helpfulness criteria in prompt
-     - If rated unhelpful: generates improvement suggestions and attempts to create improved note
+     - **Three possible outcomes**:
+       1. `currently_rated_helpful`: Note passes verification, proceeds to submission
+       2. `currently_rated_not_helpful`: Note fails, triggers retry with improvements
+       3. `not_needed`: Post doesn't actually need a note (e.g., no misleading claims, satire clearly marked)
+     - **Runs before submission**: Executes after basic validations (length, URLs, Twitter score) pass, before submitting note
+     - **Runs on retries**: Also executed after each retry attempt that passes basic validations
+     - **Not Needed Tracking**: Posts flagged as `not_needed` are saved to `cn_written_{username}.json` with `not_needed: True` and `not_needed_reason` fields to skip future attempts
+     - If rated unhelpful or inconclusive: blocks submission and triggers retry
+     - If rated not_needed: blocks submission, saves flag, skips future evaluations of that post
      - If improved note generated: replaces original and re-validates
-     - Falls back gracefully on verification errors (allows note to proceed)
+     - Only allows submission if verified as helpful (blocks on inconclusive/unhelpful/not_needed/errors)
    - **Configurable**: `--check_community_notes`, `--cn_max_results`, `--cn_test_mode`, `--cn_verify_helpfulness` flags
 
 ### Context Building (`get_tweet_context()`)
