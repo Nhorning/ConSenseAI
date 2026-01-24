@@ -2005,9 +2005,8 @@ def load_keys():
 
 import openai
 import xai_sdk
-from xai_sdk.search import SearchParameters
-#from xai_sdk.chat import system, user
-from xai_sdk.chat import system, user, SearchParameters, image
+from xai_sdk.tools import web_search, x_search
+from xai_sdk.chat import system, user, image
 import anthropic
 import re
 import tweepy
@@ -2019,13 +2018,13 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
         try: 
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
-                # xAI SDK call with Live Search
+                # xAI SDK call with Agent Tools API (web search + X search)
                 chat = model['client'].chat.create(
                     model=model['name'],
-                    search_parameters=SearchParameters(
-                        mode="auto",
-                        max_search_results=10,
-                    ),
+                    tools=[
+                        web_search(),
+                        x_search(),
+                    ],
                     #max_tokens=150
                 )
                 chat.append(system(system_prompt['content'])),
@@ -2043,10 +2042,13 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                     chat.append(user(user_msg))
                 response = chat.sample()
                 verdict[model['name']] = response.content.strip()
-                if hasattr(response, 'usage') and response.usage is not None and hasattr(response.usage, 'num_sources_used'):
-                    print(f"{model['name']} sources used: {response.usage.num_sources_used}")
+                # Check for tool usage in new Agent Tools API
+                if hasattr(response, 'server_side_tool_usage') and response.server_side_tool_usage:
+                    web_calls = response.server_side_tool_usage.get('SERVER_SIDE_TOOL_WEB_SEARCH', 0)
+                    x_calls = response.server_side_tool_usage.get('SERVER_SIDE_TOOL_X_SEARCH', 0)
+                    print(f"{model['name']} tool usage: {web_calls} web searches, {x_calls} X searches")
                 else:
-                    print(f"{model['name']} sources used: Not available")
+                    print(f"{model['name']} tool usage: Not available")
             #elif model['api'] == "openai":
                 # OpenAI SDK call
             #    response = model['client'].chat.completions.create(
