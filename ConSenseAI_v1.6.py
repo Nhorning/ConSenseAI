@@ -4580,7 +4580,7 @@ backoff_multiplier = 1
 COMMUNITY_NOTES_LAST_CHECK_FILE = f'cn_last_check_{username}.txt'
 COMMUNITY_NOTES_WRITTEN_FILE = f'cn_written_{username}.json'
 
-def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename, cn_on_reflection=False, post_interval=None, cn_max_results=None, rating_status_counts=None):
+def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_skipped, posts_failed, log_filename, cn_on_reflection=False, post_interval=None, cn_max_results=None, rating_status_counts=None, wl_metrics=None):
     """
     Tweet a summary of the Community Notes run completion.
     
@@ -4594,6 +4594,7 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         post_interval: Number of replies between reflections (if cn_on_reflection=True)
         cn_max_results: Number of CN posts processed per cycle (if cn_on_reflection=True)
         rating_status_counts: Dict of Twitter's rating status counts from verification (production mode)
+        wl_metrics: Writing limit metrics dict from calculate_writing_limit()
     """
     try:
         total_processed = notes_written + posts_not_needing_notes + posts_skipped + posts_failed
@@ -4620,9 +4621,19 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         # Add verification report if available (production mode)
         if rating_status_counts:
             summary_lines.append("")
-            summary_lines.append("📊 Twitter Verification:")
-            for status, count in sorted(rating_status_counts.items()):
-                summary_lines.append(f"  {status}: {count}")
+            summary_lines.append("📊 Verification:")
+            helpful_count = rating_status_counts.get('currently_rated_helpful', 0)
+            unhelpful_count = rating_status_counts.get('currently_rated_not_helpful', 0)
+            nmr_count = rating_status_counts.get('needs_more_ratings', 0)
+            summary_lines.append(f"✅ Helpful: {helpful_count}")
+            summary_lines.append(f"❌ Not Helpful: {unhelpful_count}")
+            summary_lines.append(f"⏳ Needs More Ratings: {nmr_count}")
+            
+            # Add writing limit metrics if available
+            if wl_metrics:
+                summary_lines.append("")
+                summary_lines.append(f"Hit Rate: {wl_metrics['HR_R']:.1%} recent, {wl_metrics['HR_L']:.1%} long-term")
+                summary_lines.append(f"📝 Writing Limit: {wl_metrics['WL']}/day")
         
         summary_tweet = "\n".join(summary_lines)
         
@@ -6486,34 +6497,6 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             import traceback
                             log_to_file(traceback.format_exc())
                         
-                        # Post verification report tweet (if post_client provided and not dry run)
-                        if post_client and not args.dryrun and 'wl_metrics' in locals():
-                            try:
-                                # Count helpful and unhelpful notes
-                                helpful_count = rating_status_counts.get('currently_rated_helpful', 0)
-                                unhelpful_count = rating_status_counts.get('currently_rated_not_helpful', 0)
-                                nmr_count = rating_status_counts.get('needs_more_ratings', 0)
-                                
-                                # Build tweet with emojis
-                                report_tweet = f"Community Notes Report:\n\n"
-                                report_tweet += f"✅ Helpful: {helpful_count}\n"
-                                report_tweet += f"❌ Not Helpful: {unhelpful_count}\n"
-                                report_tweet += f"⏳ Needs More Ratings: {nmr_count}\n\n"
-                                report_tweet += f"📊 Performance:\n"
-                                report_tweet += f"Recent Hit Rate: {wl_metrics['HR_R']:.1%}\n"
-                                report_tweet += f"Long-term Hit Rate: {wl_metrics['HR_L']:.1%}\n\n"
-                                report_tweet += f"📝 Daily Writing Limit: {wl_metrics['WL']}"
-                                
-                                # Post the tweet
-                                response = post_client.create_tweet(text=report_tweet)
-                                tweet_id = response.data['id']
-                                log_to_file(f"\nVERIFICATION REPORT TWEET: Posted as {tweet_id}")
-                                log_to_file(f"Tweet text: {report_tweet}")
-                                print(f"[Community Notes] Posted verification report tweet: {tweet_id}")
-                            except Exception as tweet_error:
-                                log_to_file(f"\nVERIFICATION REPORT TWEET ERROR: {tweet_error}")
-                                print(f"[Community Notes] Error posting verification tweet: {tweet_error}")
-                        
                         # Print simplified summary to console (matching run complete report style)
                         print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
                         for status, count in sorted(rating_status_counts.items()):
@@ -6553,6 +6536,14 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     # Tweet summary when in production mode (test_mode=False)
     if notes_written > 0 and not test_mode and not args.dryrun:
         try:
+            # Get wl_metrics if available from verification
+            wl_metrics_for_tweet = None
+            if rating_status_counts:
+                try:
+                    wl_metrics_for_tweet = calculate_writing_limit(written_notes, username)
+                except:
+                    pass
+            
             tweet_community_notes_summary(
                 notes_written=notes_written,
                 posts_not_needing_notes=posts_not_needing_notes,
@@ -6562,7 +6553,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 cn_on_reflection=args.cn_on_reflection,
                 post_interval=args.post_interval,
                 cn_max_results=args.cn_max_results,
-                rating_status_counts=rating_status_counts
+                rating_status_counts=rating_status_counts,
+                wl_metrics=wl_metrics_for_tweet
             )
         except Exception as tweet_error:
             print(f"[Community Notes] Warning: Could not post summary tweet: {tweet_error}")
