@@ -4969,7 +4969,7 @@ IMPROVED NOTE:"""
             'improvement_suggestions': None
         }
 
-def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True):
+def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=True, post_client=None):
     """
     Fetch posts eligible for Community Notes and propose notes using ConSenseAI's fact-checking pipeline.
     
@@ -4977,6 +4977,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         user_id: Bot user ID (for checking if we've already written notes)
         max_results: Maximum number of posts to fetch (default 5)
         test_mode: If True, submit notes in test mode (default True, recommended for development)
+        post_client: Tweepy client for posting verification report tweet (optional)
     
     Returns:
         int: Number of notes written
@@ -6389,7 +6390,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     "https://api.x.com/2/notes/search/notes_written",
                     params={
                         "test_mode": "false",  # Always fetch production notes
-                        "max_results": min(production_notes_count, 50),  # Fetch up to 50 production notes
+                        "max_results": 100,  # Fetch up to 100 production notes for accurate metrics
                         "note.fields": "id,info,status,test_result"
                     }
                 )
@@ -6483,6 +6484,34 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             log_to_file(f"\nWRITING LIMIT CALCULATION ERROR: {wl_error}")
                             import traceback
                             log_to_file(traceback.format_exc())
+                        
+                        # Post verification report tweet (if post_client provided and not dry run)
+                        if post_client and not args.dryrun and 'wl_metrics' in locals():
+                            try:
+                                # Count helpful and unhelpful notes
+                                helpful_count = rating_status_counts.get('currently_rated_helpful', 0)
+                                unhelpful_count = rating_status_counts.get('currently_rated_not_helpful', 0)
+                                nmr_count = rating_status_counts.get('needs_more_ratings', 0)
+                                
+                                # Build tweet with emojis
+                                report_tweet = f"Community Notes Report:\n\n"
+                                report_tweet += f"✅ Helpful: {helpful_count}\n"
+                                report_tweet += f"❌ Not Helpful: {unhelpful_count}\n"
+                                report_tweet += f"⏳ Needs More Ratings: {nmr_count}\n\n"
+                                report_tweet += f"📊 Performance:\n"
+                                report_tweet += f"Recent Hit Rate: {wl_metrics['HR_R']:.1%}\n"
+                                report_tweet += f"Long-term Hit Rate: {wl_metrics['HR_L']:.1%}\n\n"
+                                report_tweet += f"📝 Daily Writing Limit: {wl_metrics['WL']}"
+                                
+                                # Post the tweet
+                                response = post_client.create_tweet(text=report_tweet)
+                                tweet_id = response.data['id']
+                                log_to_file(f"\nVERIFICATION REPORT TWEET: Posted as {tweet_id}")
+                                log_to_file(f"Tweet text: {report_tweet}")
+                                print(f"[Community Notes] Posted verification report tweet: {tweet_id}")
+                            except Exception as tweet_error:
+                                log_to_file(f"\nVERIFICATION REPORT TWEET ERROR: {tweet_error}")
+                                print(f"[Community Notes] Error posting verification tweet: {tweet_error}")
                         
                         # Print simplified summary to console (matching run complete report style)
                         print(f"\n[Community Notes] Verification Report ({len(verify_data['data'])} notes):")
@@ -6660,7 +6689,7 @@ def main():
                         print(f"[Main] Checking for Community Notes eligible posts")
                         cn_max_results = getattr(args, 'cn_max_results', 5)
                         cn_test_mode = getattr(args, 'cn_test_mode', True)
-                        fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode)
+                        fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode, post_client=post_client)
                     except Exception as e:
                         print(f"[Main] Community Notes check error: {e}")
                         # Don't raise - just log and continue
@@ -6682,7 +6711,7 @@ def main():
                                     print(f"[Reflection] Checking for Community Notes eligible posts")
                                     cn_max_results = getattr(args, 'cn_max_results', 5)
                                     cn_test_mode = getattr(args, 'cn_test_mode', True)
-                                    fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode)
+                                    fetch_and_process_community_notes(user_id=user_id, max_results=cn_max_results, test_mode=cn_test_mode, post_client=post_client)
                                 except Exception as e:
                                     print(f"[Reflection] Community Notes check error: {e}")
                                     # Don't raise - just log and continue
