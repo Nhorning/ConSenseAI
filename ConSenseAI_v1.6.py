@@ -5008,6 +5008,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         # This endpoint supports OAuth 1.0a User Context (existing bot tokens)
         from requests_oauthlib import OAuth1Session
         import requests
+        import time
         
         # Use separate keys for Community Notes project (must be from a project with CN API access)
         # Check if CN-specific keys exist, otherwise fall back to main keys
