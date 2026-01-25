@@ -4703,15 +4703,15 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
             with open(cn_written_file, 'r') as f:
                 historical_notes = json.load(f)
             
-            # Extract last 50 notes with Twitter-assigned rating status
+            # Extract last 100 notes with Twitter-assigned rating status
             notes_with_ratings = []
             for post_id, note_data in historical_notes.items():
                 if isinstance(note_data, dict) and 'twitter_rating_status' in note_data:
                     notes_with_ratings.append((post_id, note_data))
             
-            # Sort by timestamp (most recent first) and take last 50
+            # Sort by timestamp (most recent first) and take last 100
             notes_with_ratings.sort(key=lambda x: x[1].get('timestamp', ''), reverse=True)
-            recent_notes = notes_with_ratings[:50]
+            recent_notes = notes_with_ratings[:100]
             
             # Categorize as helpful or unhelpful
             for post_id, note_data in recent_notes:
