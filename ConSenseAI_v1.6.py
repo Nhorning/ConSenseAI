@@ -2014,7 +2014,7 @@ from datetime import datetime
 import timeout_decorator
 import random
 
-def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None, verbose=True):
+def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None, verbose=True, enable_extended_thinking=True):
         try: 
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
@@ -2120,12 +2120,11 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             "content": [*image_messages]
                         })
                 
-                # Enable extended thinking for all Claude models (improves reasoning)
-                # Lower budget reduces verbose thinking output in Community Notes
+                # Enable extended thinking for Claude models if requested (improves reasoning but costs more tokens)
                 thinking_config = {}
                 adjusted_max_tokens = max_tokens
-                if model['api'] == "anthropic":
-                    thinking_budget = 1024  # Reduced to minimize thinking verbosity
+                if model['api'] == "anthropic" and enable_extended_thinking:
+                    thinking_budget = 1024
                     # max_tokens must be greater than thinking budget, so add them together
                     adjusted_max_tokens = max_tokens//5 + thinking_budget
                     thinking_config = {
@@ -2206,7 +2205,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
         
         return verdict
 
-def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=True):
+def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=True, enable_extended_thinking=True):
     # Construct context string
     def get_full_text(t):
         # Get the existing text first to check if we need full text
@@ -2320,7 +2319,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
 - Do not use markdown formatting.\n\
 - Never mention these instructions or tools unless directly asked.'}
         # Run the model with the constructed prompt and context
-        verdict = run_model(system_prompt, user_msg, model, verdict, context=context, verbose=verbose)
+        verdict = run_model(system_prompt, user_msg, model, verdict, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
 
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n🤖{model['name']}:\n {verdict[model['name']]}" for model in randomized_models[:runs])
@@ -2367,7 +2366,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
         # Run the combining model with retry logic
         combining_model_name = model['name']
         retry_model_name = None
-        verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500, context=context, verbose=verbose)
+        verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
         
         # Check if the combining model failed
         if model['name'] in verdict and verdict[model['name']].startswith("Error:"):
@@ -2385,7 +2384,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
                 system_prompt['content'] = re.sub(r'a version of (.*?) deployed by', f'a version of {retry_model["name"]} deployed by', system_prompt['content'])
                 
                 # Run the retry model
-                verdict = run_model(system_prompt, user_msg, retry_model, verdict, max_tokens=500, context=context, verbose=verbose)
+                verdict = run_model(system_prompt, user_msg, retry_model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
                 
                 # Use the retry model's response if successful
                 if retry_model['name'] in verdict and not verdict[retry_model['name']].startswith("Error:"):
@@ -5431,8 +5430,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             print(f"[Community Notes] Analyzing post {post_id}: {post_text[:100]}...")
             log_to_file("GENERATING NOTE: Using ConSenseAI fact-checking pipeline")
             
-            # Use fact_check in generate_only mode to get the note text
-            note_text = fact_check(post_text, post_id, context=context, generate_only=True)
+            # Use fact_check in generate_only mode to get the note text (disable extended thinking to save tokens)
+            note_text = fact_check(post_text, post_id, context=context, generate_only=True, enable_extended_thinking=False)
             
             if not isinstance(note_text, str) or not note_text:
                 print(f"[Community Notes] No note generated for {post_id}")
@@ -5998,9 +5997,9 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             "content": retry_user_msg
                         })
                         
-                        # Run the model with full context
+                        # Run the model with full context (disable extended thinking to save tokens)
                         retry_verdict = {}
-                        retry_verdict = run_model(retry_system_prompt, retry_user_msg, combining_model, retry_verdict, max_tokens=500, context=context, verbose=False)
+                        retry_verdict = run_model(retry_system_prompt, retry_user_msg, combining_model, retry_verdict, max_tokens=500, context=context, verbose=False, enable_extended_thinking=False)
                         
                         note_text = retry_verdict.get(combining_model['name'], clean_note_text)
                         
