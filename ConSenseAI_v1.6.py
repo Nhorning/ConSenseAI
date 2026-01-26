@@ -5095,6 +5095,85 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
         except Exception as e:
             print(f"[Community Notes] Error loading written notes file: {e}")
     
+    # Refresh ratings from Twitter at START of run (before limit calculations)
+    # This ensures hit rate calculations use current data instead of stale data from previous run
+    production_notes_count = sum(1 for note_data in written_notes.values() 
+                                  if isinstance(note_data, dict) and note_data.get('note') 
+                                  and not note_data.get('test_mode', False) 
+                                  and not note_data.get('not_needed', False))
+    
+    if production_notes_count > 0:
+        try:
+            log_to_file("\n" + "=" * 80)
+            log_to_file("START-OF-RUN RATINGS REFRESH")
+            log_to_file("=" * 80)
+            print(f"[Community Notes] Refreshing ratings for {production_notes_count} production notes...")
+        
+            # Re-establish OAuth session for ratings refresh
+            cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
+            cn_api_secret = keys.get('CN_XAPI_secret') or keys.get('XAPI_secret')
+            cn_access_token = keys.get('CN_access_token') or keys.get('access_token')
+            cn_access_secret = keys.get('CN_access_token_secret') or keys.get('access_token_secret')
+            
+            oauth_refresh = OAuth1Session(
+                client_key=cn_api_key,
+                client_secret=cn_api_secret,
+                resource_owner_key=cn_access_token,
+                resource_owner_secret=cn_access_secret
+            )
+            
+            refresh_response = oauth_refresh.get(
+                "https://api.x.com/2/notes/search/notes_written",
+                params={
+                    "test_mode": "false",  # Always fetch production notes
+                    "max_results": 100,  # Fetch up to 100 production notes for accurate metrics
+                    "note.fields": "id,info,status,test_result"
+                }
+            )
+            
+            if refresh_response.status_code == 200:
+                refresh_data = refresh_response.json()
+                
+                if 'data' in refresh_data:
+                    # Update local cn_written file with current Twitter ratings
+                    updated_count = 0
+                    for note in refresh_data['data']:
+                        note_info = note.get('info', {})
+                        post_id = note_info.get('post_id', 'unknown')
+                        status = note.get('status', 'N/A')
+                        
+                        if post_id in written_notes:
+                            # Update rating status
+                            written_notes[post_id]['twitter_rating_status'] = status
+                            
+                            # Also save test_result buckets if available
+                            if 'test_result' in note and 'evaluation_outcome' in note['test_result']:
+                                scores = {}
+                                for outcome in note['test_result']['evaluation_outcome']:
+                                    evaluator_type = outcome.get('evaluator_type', '')
+                                    score_bucket = outcome.get('evaluator_score_bucket', '')
+                                    scores[evaluator_type] = score_bucket
+                                written_notes[post_id]['twitter_test_result_buckets'] = scores
+                            
+                            updated_count += 1
+                    
+                    if updated_count > 0:
+                        with open(COMMUNITY_NOTES_WRITTEN_FILE, 'w') as f:
+                            json.dump(written_notes, f, indent=2)
+                        log_to_file(f"REFRESHED: Updated ratings for {updated_count} notes")
+                        print(f"[Community Notes] Refreshed ratings for {updated_count} notes")
+                else:
+                    log_to_file("REFRESH WARNING: No notes data in response")
+            else:
+                log_to_file(f"REFRESH FAILED: HTTP {refresh_response.status_code} - {refresh_response.text}")
+            
+            log_to_file("=" * 80 + "\n")
+        except Exception as refresh_error:
+            log_to_file(f"REFRESH ERROR: {refresh_error}")
+            import traceback
+            log_to_file(traceback.format_exc())
+            print(f"[Community Notes] Warning: Could not refresh ratings: {refresh_error}")
+    
     notes_written = 0
     posts_skipped_already_written = 0
     posts_not_needing_notes = 0
@@ -6350,7 +6429,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             "test_mode": test_mode,
                             "timestamp": datetime.datetime.now().isoformat(),
                             "status": "already_exists_on_twitter",
-                            "score": twitter_claim_score if 'twitter_claim_score' in locals() else None
+                            "score": twitter_claim_score if 'twitter_claim_score' in locals() else None,
+                            "twitter_rating_status": "needs_more_ratings"  # Default status for new notes
                         }
                         notes_written += 1
                         continue
@@ -6385,7 +6465,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     "test_mode": test_mode,
                     "timestamp": datetime.datetime.now().isoformat(),
                     "conversation_id": conv_id,  # Track which conversation this belongs to
-                    "score": twitter_claim_score if 'twitter_claim_score' in locals() else None
+                    "score": twitter_claim_score if 'twitter_claim_score' in locals() else None,
+                    "twitter_rating_status": "needs_more_ratings"  # Default status for new notes
                 }
                 notes_written += 1
                 
@@ -6435,13 +6516,13 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                 print(f"[Community Notes] No production notes to verify (all notes are in test mode)")
             else:
                 # Pause to allow Twitter to process recent submissions
-                print(f"[Community Notes] Pausing 10 seconds before verification report...")
+                print(f"[Community Notes] Pausing 10 seconds before end-of-run report...")
                 time.sleep(10)
                 
                 log_to_file("\n" + "=" * 80)
-                log_to_file("END-OF-RUN VERIFICATION REPORT")
+                log_to_file("END-OF-RUN VERIFICATION REPORT (ratings already refreshed at start)")
                 log_to_file("=" * 80)
-                print(f"[Community Notes] Generating verification report for up to {min(production_notes_count, 50)} production notes...")
+                print(f"[Community Notes] Generating end-of-run report for {production_notes_count} production notes...")
             
                 # Re-establish OAuth session for verification
                 cn_api_key = keys.get('CN_XAPI_key') or keys.get('XAPI_key')
