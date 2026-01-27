@@ -2622,16 +2622,19 @@ def get_total_bot_reply_count():
 
 def compute_baseline_replies_since_last_direct_post():
     """Compute a baseline count of bot replies that occurred up to (and including)
-    the most recent standalone bot post (a bot tweet not found inside any ancestor chain).
+    the most recent reflection post (stored in bot_tweets.json as '_last_reflection_id').
 
-    Returns a tuple (baseline_count, total_reply_count, last_direct_id_or_None).
-    baseline_count: number of bot replies with id <= last_direct_id (0 if none)
+    Returns a tuple (baseline_count, total_reply_count, last_reflection_id_or_None).
+    baseline_count: number of bot replies with id <= last_reflection_id (0 if none)
     total_reply_count: total number of bot reply ids observed in ancestor chains
-    last_direct_id_or_None: string id of last direct post, or None
+    last_reflection_id_or_None: string id of last reflection post, or None
     """
     try:
         bot_tweets = load_bot_tweets()  # dict of id->text
-        # Filter out special keys like '_followed_users' and 'cn_' prefixed Community Notes IDs
+        # Get the stored last reflection ID
+        last_reflection_id = bot_tweets.get('_last_reflection_id')
+        
+        # Filter out special keys like '_' and 'cn_' prefixed IDs
         bot_ids = set(str(k) for k in bot_tweets.keys() if not str(k).startswith('_') and not str(k).startswith('cn_'))
 
         # Collect bot ids that appear in ancestor chains (i.e., replies)
@@ -2651,20 +2654,16 @@ def compute_baseline_replies_since_last_direct_post():
                 if tid and str(tid) in bot_ids:
                     reply_ids.add(str(tid))
 
-        # Standalone direct posts are bot tweets not appearing in any chain
-        standalone_ids = sorted([int(i) for i in bot_ids - reply_ids])
-        last_direct_id = str(standalone_ids[-1]) if standalone_ids else None
-
-        # Compute baseline: number of reply ids with id <= last_direct_id
+        # Compute baseline: number of reply ids with id <= last_reflection_id
         total_reply_count = len(reply_ids)
-        if last_direct_id is None:
+        if last_reflection_id is None:
             baseline_count = 0
         else:
-            ld = int(last_direct_id)
+            ld = int(last_reflection_id)
             baseline_count = sum(1 for rid in reply_ids if int(rid) <= ld)
 
-        print(f"[Reflection] Baseline computed: baseline_count={baseline_count}, total_replies={total_reply_count}, last_direct_id={last_direct_id}")
-        return baseline_count, total_reply_count, last_direct_id
+        print(f"[Reflection] Baseline computed: baseline_count={baseline_count}, total_replies={total_reply_count}, last_reflection_id={last_reflection_id}")
+        return baseline_count, total_reply_count, last_reflection_id
     except Exception as e:
         print(f"[Reflection] Error computing baseline from files: {e}")
         # Fallback: use total bot tweets as a conservative baseline
@@ -2953,7 +2952,16 @@ def post_reflection_on_recent_bot_threads(n=10):
                     created_id = getattr(posted, 'id')
                 if created_id:
                     save_bot_tweet(created_id, reflection)
-                    print(f"[Reflection] Posted reflection tweet {created_id}")
+                    # Store this as the last reflection ID for baseline tracking
+                    try:
+                        bot_tweets = load_bot_tweets()
+                        bot_tweets['_last_reflection_id'] = str(created_id)
+                        with open(TWEETS_FILE, 'w') as f:
+                            json.dump(bot_tweets, f, indent=2)
+                        print(f"[Reflection] Posted reflection tweet {created_id} and updated baseline")
+                    except Exception as e:
+                        print(f"[Reflection] Warning: Could not update _last_reflection_id: {e}")
+                        print(f"[Reflection] Posted reflection tweet {created_id}")
                     return str(created_id)
             except Exception as e:
                 print(f"[Reflection] Error posting reflection: {e}")
@@ -6756,10 +6764,10 @@ def main():
         
         # Initialize the last summary counter after authentication so BOT_USER_ID is available
         try:
-            baseline, total_replies, last_direct = compute_baseline_replies_since_last_direct_post()
-            # Start with the baseline (replies up to last direct post). Subsequent triggers count replies after that post.
+            baseline, total_replies, last_reflection = compute_baseline_replies_since_last_direct_post()
+            # Start with the baseline (replies up to last reflection post). Subsequent triggers count replies after that post.
             last_summary_count = int(baseline)
-            print(f"[Main] Initial last_summary_count (replies up to last direct post {last_direct}): {last_summary_count} (total replies: {total_replies})")
+            print(f"[Main] Initial last_summary_count (replies up to last reflection {last_reflection}): {last_summary_count} (total replies: {total_replies})")
         except Exception as e:
             print(f"[Main] Warning initializing last_summary_count from files: {e}")
             try:
