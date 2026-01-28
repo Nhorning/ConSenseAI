@@ -2805,6 +2805,7 @@ def post_reflection_on_recent_bot_threads(n=10):
     with generate_only=True. If args.dryrun is True, it will only print the generated reflection.
     Returns the reflection tweet ID if posted successfully, None otherwise.
     """
+    global username
     try:
         chains = load_ancestor_chains()
         if not chains:
