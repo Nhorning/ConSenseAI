@@ -944,7 +944,7 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 continue
         # Run models and obtain a generated reply (fact_check can return generated text when generate_only=True)
         try:
-            reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
+            reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True, enable_extended_thinking=args.enable_extended_thinking)
         except Exception as e:
             print(f"[Search] Error generating reply: {e}")
             continue
@@ -1222,7 +1222,7 @@ def fetch_and_process_followed_users():
                 
                 # Generate reply
                 try:
-                    reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True)
+                    reply_text = fact_check(get_full_text(t), t.id, context=context, generate_only=True, enable_extended_thinking=args.enable_extended_thinking)
                 except Exception as e:
                     print(f"[Followed] Error generating reply: {e}")
                     continue
@@ -2014,7 +2014,7 @@ from datetime import datetime
 import timeout_decorator
 import random
 
-def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None, verbose=True, enable_extended_thinking=True):
+def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=None, verbose=True, enable_extended_thinking=False):
         try: 
             print(f"Running Model: {model['name']}")
             if model['api'] == "xai":
@@ -2205,7 +2205,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
         
         return verdict
 
-def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=True, enable_extended_thinking=True):
+def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=True, enable_extended_thinking=False):
     # Construct context string
     def get_full_text(t):
         # Get the existing text first to check if we need full text
@@ -2773,7 +2773,7 @@ def generate_auto_search_term(n=20, current_term=None, used_terms=None):
         }
 
         # Generate the search term (non-verbose mode to reduce log clutter)
-        search_term = fact_check(summary_context, tweet_id="auto_search_gen", context=context, generate_only=True, verbose=False)
+        search_term = fact_check(summary_context, tweet_id="auto_search_gen", context=context, generate_only=True, verbose=False, enable_extended_thinking=args.enable_extended_thinking)
         
         if search_term:
             # Clean up the response - remove quotes, extra whitespace, newlines
@@ -2927,7 +2927,7 @@ def post_reflection_on_recent_bot_threads(n=10):
             'original_tweet': aggregated_chain[0]['tweet'] if aggregated_chain else None,
         }
 
-        reflection = fact_check(summary_context, tweet_id="reflection_summary", context=context, generate_only=True)
+        reflection = fact_check(summary_context, tweet_id="reflection_summary", context=context, generate_only=True, enable_extended_thinking=args.enable_extended_thinking)
         print(f"[Reflection] Generated text: {reflection}")
         
         # Sync followed users from API to keep cache accurate
@@ -3393,7 +3393,7 @@ def fetch_and_process_mentions(user_id, username):
                                     "Encourage them to follow the bot and/or consider donating to AI Against Autocracy if they support its mission."
                                 )
                                 # Post the threshold notification
-                                success = fact_check(mention.text, mention.id, context)
+                                success = fact_check(mention.text, mention.id, context, enable_extended_thinking=args.enable_extended_thinking)
                                 write_last_tweet_id(mention.id)
                                 continue
                             elif prior_replies_to_user > reply_threshold:
@@ -3416,7 +3416,7 @@ def fetch_and_process_mentions(user_id, username):
                                     "Thank everyone for the engaging discussion and encourage them to continue exploring the topic independently."
                                 )
                                 # Post the threshold notification
-                                success = fact_check(mention.text, mention.id, context)
+                                success = fact_check(mention.text, mention.id, context, enable_extended_thinking=args.enable_extended_thinking)
                                 write_last_tweet_id(mention.id)
                                 continue
                             elif prior_replies > reply_threshold:
@@ -3426,7 +3426,7 @@ def fetch_and_process_mentions(user_id, username):
                                 write_last_tweet_id(mention.id)
                                 continue
                         # Pass context to fact_check and reply
-                        success = fact_check(mention.text, mention.id, context)
+                        success = fact_check(mention.text, mention.id, context, enable_extended_thinking=args.enable_extended_thinking)
                         if success == 'done!':
                             last_tweet_id = max(last_tweet_id, mention.id)
                             write_last_tweet_id(last_tweet_id)
@@ -4544,6 +4544,7 @@ parser.add_argument('--cn_test_mode', type=lambda x: x.lower() in ['true', '1', 
 parser.add_argument('--cn_on_reflection', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, run Community Notes check only on reflection cycle instead of main loop (default True)', default=True)
 parser.add_argument('--cn_skip_score_check', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, auto-pass ClaimOpinion validation (still calls API for logging but ignores rejection, default True)', default=True)
 parser.add_argument('--cn_verify_helpfulness', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, use adversarial LLM verification to check if note would be rated helpful before submission (default False)', default=False)
+parser.add_argument('--enable_extended_thinking', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, enable Claude extended thinking mode for better reasoning but higher token costs (default False)', default=False)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
 # Set username and delay, prompting if not provided
@@ -4848,7 +4849,8 @@ IMPROVEMENTS: [If unhelpful, specific suggestions to fix it; if helpful or not_n
             tweet_id=f"cn_verify_{int(time.time())}",
             context=verification_context,
             generate_only=True,
-            verbose=True  # Enable logging to see what's happening
+            verbose=True,  # Enable logging to see what's happening
+            enable_extended_thinking=args.enable_extended_thinking
         )
         
         # Check if verdict is None or empty
@@ -4957,7 +4959,8 @@ IMPROVED NOTE:"""
                     tweet_id=f"cn_improve_{int(time.time())}",
                     context=verification_context,
                     generate_only=True,
-                    verbose=False
+                    verbose=False,
+                    enable_extended_thinking=args.enable_extended_thinking
                 )
                 
                 # Clean up the improved note
