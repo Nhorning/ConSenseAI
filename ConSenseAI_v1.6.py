@@ -4815,6 +4815,7 @@ TASK:
    - Use 'not_needed' if the post doesn't actually need a Community Note (e.g., already correct, no misleading claims, satire/opinion clearly marked, etc.)
    - Use 'not_misleading' if the note largely confirms the accuracy of the post.
    - Do *not* rate notes 'currently_rated_helpful' on video or image posts unless you can independently confirm the note directly addresses the content of the image or video.
+   - IMPORTANT: Avoid submitting 'currently_rated_helpful' if users might disagree. If there are any significant improvements to be made, rate the note 'not_helpful' and suggest the improvements.
 3. Provide your reasoning based on the criteria and examples above - particularly why it would not be grouped with examples in the other category
 4. If unhelpful, suggest specific improvements to make it helpful
 
@@ -6489,18 +6490,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 if verification_result:
                                     is_helpful = verification_result.get('is_helpful')
                                     is_not_needed = verification_result.get('is_not_needed', False)
-                                    is_not_misleading = verification_result.get('is_not_misleading', False)
                                     rating_category = verification_result.get('rating_category', 'unknown')
                                     reasoning = verification_result.get('reasoning', '')
-                                    
-                                    # Handle not_misleading rating - treat as helpful
-                                    if is_not_misleading:
-                                        log_to_file(f"CLASSIFICATION OVERRIDE (RETRY): Verification rated as 'not_misleading' - treating as helpful")
-                                        if classification != "not_misleading":
-                                            old_classification = classification
-                                            classification = "not_misleading"
-                                            log_to_file(f"CLASSIFICATION UPDATED (RETRY): Changed from '{old_classification}' to '{classification}' based on verification rating")
-                                        is_helpful = True  # Treat not_misleading as helpful for validation purposes
                                     
                                     if is_not_needed:
                                         # Note flagged as not needed - skip this post and mark it
