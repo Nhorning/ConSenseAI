@@ -4811,8 +4811,10 @@ UNHELPFULNESS CRITERIA:
 
 TASK:
 1. Reason through why the examples provided (if any) belong in their various categories. Consider what users may have selected.
-2. Determine if the proposed note would be rated as currently_rated_helpful, currently_rated_not_helpful, OR not_needed
+2. Determine if the proposed note would be rated as currently_rated_helpful, currently_rated_not_helpful, not_needed, or not_misleading based on the criteria:
    - Use 'not_needed' if the post doesn't actually need a Community Note (e.g., already correct, no misleading claims, satire/opinion clearly marked, etc.)
+   - Use 'not_misleading' if the note largely confirms the accuracy of the post.
+   - Do *not* rate notes 'currently_rated_helpful' on video or image posts unless you can independently confirm the note directly addresses the content of the image or video.
 3. Provide your reasoning based on the criteria and examples above - particularly why it would not be grouped with examples in the other category
 4. If unhelpful, suggest specific improvements to make it helpful
 
@@ -4822,7 +4824,7 @@ EXAMPLE REASONING:
 [State why you believe each example given fits in its given category]
 
 RATING:
-[currently_rated_helpful OR currently_rated_not_helpful OR not_needed]
+[currently_rated_helpful OR currently_rated_not_helpful OR not_needed OR not_misleading]
 
 REASONING:
 [Your detailed analysis of why the note fits the chosen rating]
@@ -4915,6 +4917,8 @@ IMPROVEMENTS:
                     # Rating on same line
                     if 'not_needed' in rating_text.lower():
                         rating_category = 'not_needed'
+                    elif 'not_misleading' in rating_text.lower():
+                        rating_category = 'not_misleading'
                     elif 'currently_rated_helpful' in rating_text.lower():
                         rating_category = 'currently_rated_helpful'
                     elif 'currently_rated_not_helpful' in rating_text.lower():
@@ -4940,6 +4944,8 @@ IMPROVEMENTS:
                 # Rating on next line after "RATING:"
                 if 'not_needed' in line.lower():
                     rating_category = 'not_needed'
+                elif 'not_misleading' in line.lower():
+                    rating_category = 'not_misleading'
                 elif 'currently_rated_helpful' in line.lower():
                     rating_category = 'currently_rated_helpful'
                 elif 'currently_rated_not_helpful' in line.lower():
@@ -4977,25 +4983,27 @@ IMPROVEMENTS:
         # Determine helpfulness (only if we have a valid rating)
         is_helpful = rating_category == 'currently_rated_helpful'
         is_not_needed = rating_category == 'not_needed'
+        is_not_misleading = rating_category == 'not_misleading'
         
         log_to_file(f"Verification Result: {rating_category}")
         log_to_file(f"Reasoning: {reasoning}")
-        if not is_helpful and not is_not_needed:
+        if not is_helpful and not is_not_needed and not is_not_misleading:
             log_to_file(f"Improvement Suggestions: {improvements}")
         
         print(f"[CN Verification] Result: {rating_category}")
-        print(f"[CN Verification] Helpful: {is_helpful}, Not Needed: {is_not_needed}")
+        print(f"[CN Verification] Helpful: {is_helpful}, Not Needed: {is_not_needed}, Not Misleading: {is_not_misleading}")
         
         result = {
             'is_helpful': is_helpful,
             'is_not_needed': is_not_needed,
+            'is_not_misleading': is_not_misleading,
             'rating_category': rating_category or 'unknown',
             'reasoning': reasoning,
-            'improvement_suggestions': improvements if not is_helpful and not is_not_needed else None
+            'improvement_suggestions': improvements if not is_helpful and not is_not_needed and not is_not_misleading else None
         }
         
-        # If unhelpful (but not 'not_needed'), attempt to generate improved note
-        if not is_helpful and not is_not_needed and improvements and improvements.lower() != 'n/a':
+        # If unhelpful (but not 'not_needed' or 'not_misleading'), attempt to generate improved note
+        if not is_helpful and not is_not_needed and not is_not_misleading and improvements and improvements.lower() != 'n/a':
             print("[CN Verification] Note rated unhelpful - attempting to generate improved version...")
             log_to_file("Generating improved note based on feedback...")
             
@@ -6046,14 +6054,24 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                     if verification_result:
                         is_helpful = verification_result.get('is_helpful')
                         is_not_needed = verification_result.get('is_not_needed', False)
+                        is_not_misleading = verification_result.get('is_not_misleading', False)
                         rating_category = verification_result.get('rating_category', 'unknown')
                         reasoning = verification_result.get('reasoning', '')
                         
                         # CRITICAL: Update classification based on verification results
                         # If verification says not_needed, the post doesn't require a note at all
+                        # If verification says not_misleading, treat as helpful (note confirms accuracy)
                         # If note confirms accuracy but verification says helpful, it means the post had misleading presentation
                         if is_not_needed:
                             log_to_file(f"CLASSIFICATION OVERRIDE: Verification determined post doesn't need a note (was: {classification}, now: skip)")
+                        elif is_not_misleading:
+                            # Verification explicitly rated this as 'not_misleading' - treat as helpful
+                            log_to_file(f"CLASSIFICATION OVERRIDE: Verification rated as 'not_misleading' - treating as helpful")
+                            if classification != "not_misleading":
+                                old_classification = classification
+                                classification = "not_misleading"
+                                log_to_file(f"CLASSIFICATION UPDATED: Changed from '{old_classification}' to '{classification}' based on verification rating")
+                            is_helpful = True  # Treat not_misleading as helpful for validation purposes
                         elif is_helpful and classification == "not_misleading":
                             # Note confirms accuracy but is still helpful - this means the post presentation was misleading
                             # Keep it as not_misleading since the factual claims are correct
@@ -6063,7 +6081,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             log_to_file(f"CLASSIFICATION REVIEW: Note rated helpful but may be providing context rather than correction")
                         
                         # Reclassify to not_misleading if trigger phrase is detected in verification passes
-                        if is_helpful and classification != "not_misleading":
+                        if is_helpful and classification != "not_misleading" and not is_not_misleading:
                             # Check if the current note text contains trigger phrases for not_misleading
                             not_misleading_phrases = [
                                 'this post is not misleading',
@@ -6471,8 +6489,18 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                 if verification_result:
                                     is_helpful = verification_result.get('is_helpful')
                                     is_not_needed = verification_result.get('is_not_needed', False)
+                                    is_not_misleading = verification_result.get('is_not_misleading', False)
                                     rating_category = verification_result.get('rating_category', 'unknown')
                                     reasoning = verification_result.get('reasoning', '')
+                                    
+                                    # Handle not_misleading rating - treat as helpful
+                                    if is_not_misleading:
+                                        log_to_file(f"CLASSIFICATION OVERRIDE (RETRY): Verification rated as 'not_misleading' - treating as helpful")
+                                        if classification != "not_misleading":
+                                            old_classification = classification
+                                            classification = "not_misleading"
+                                            log_to_file(f"CLASSIFICATION UPDATED (RETRY): Changed from '{old_classification}' to '{classification}' based on verification rating")
+                                        is_helpful = True  # Treat not_misleading as helpful for validation purposes
                                     
                                     if is_not_needed:
                                         # Note flagged as not needed - skip this post and mark it
