@@ -6058,6 +6058,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                         is_not_misleading = verification_result.get('is_not_misleading', False)
                         rating_category = verification_result.get('rating_category', 'unknown')
                         reasoning = verification_result.get('reasoning', '')
+                        improvement_suggestions = verification_result.get('improvement_suggestions', '')
+                        improved_note = verification_result.get('improved_note', '')
                         
                         # CRITICAL: Update classification based on verification results
                         # If verification says not_needed, the post doesn't require a note at all
@@ -6140,6 +6142,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
                             log_to_file(f"HELPFULNESS: ✗ FAIL - {rating_category}")
                             log_to_file(f"Reasoning: {reasoning}")
+                            if improvement_suggestions:
+                                log_to_file(f"Improvement Suggestions: {improvement_suggestions}")
                             validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
                 
                 except Exception as verify_error:
@@ -6203,6 +6207,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                             feedback += "Use only direct, accessible URLs from authoritative sources which you found in your search results (no search pages, galleries, or broken links). *ONLY* change the URL that didn't pass validation. Remove it or -if there are very few other URLs - replace with another URL from your actual search results. "
                         if not twitter_eval_valid and twitter_claim_score is not None:
                             feedback += f"Twitter's official evaluation scored this note {twitter_claim_score}. Higher is better. Over 0.7 is a good score. The note is too opinionated. Focus on using neutral language rather than making subjective judgments."
+                        if not helpfulness_valid and improvement_suggestions:
+                            feedback += f"\n\nHELPFULNESS FEEDBACK (from adversarial verification):\n{improvement_suggestions}"
                         # if not harassment_valid:
                         #     feedback += "Use neutral, professional tone - remove inflammatory language. "
                         # if not claim_valid:
@@ -6492,6 +6498,8 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                     is_not_needed = verification_result.get('is_not_needed', False)
                                     rating_category = verification_result.get('rating_category', 'unknown')
                                     reasoning = verification_result.get('reasoning', '')
+                                    improvement_suggestions = verification_result.get('improvement_suggestions', '')
+                                    improved_note = verification_result.get('improved_note', '')
                                     
                                     if is_not_needed:
                                         # Note flagged as not needed - skip this post and mark it
@@ -6533,6 +6541,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
                                         helpfulness_details = f"{rating_category}: {reasoning[:100]}..."
                                         log_to_file(f"HELPFULNESS: ✗ FAIL - {rating_category}")
                                         log_to_file(f"Reasoning: {reasoning}")
+                                        if improvement_suggestions:
+                                            log_to_file(f"Improvement Suggestions: {improvement_suggestions}")
+                                        if improved_note:
+                                            log_to_file(f"Improved Note Generated: {improved_note}")
                                         validation_results.append(("HelpfulnessVerification", False, helpfulness_details))
                                         
                                         # If improved note was generated, could trigger another retry
