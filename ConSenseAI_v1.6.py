@@ -4545,6 +4545,7 @@ parser.add_argument('--cn_test_mode', type=lambda x: x.lower() in ['true', '1', 
 parser.add_argument('--cn_on_reflection', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, run Community Notes check only on reflection cycle instead of main loop (default True)', default=True)
 parser.add_argument('--cn_skip_score_check', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, auto-pass ClaimOpinion validation (still calls API for logging but ignores rejection, default True)', default=True)
 parser.add_argument('--cn_verify_helpfulness', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, use adversarial LLM verification to check if note would be rated helpful before submission (default False)', default=False)
+parser.add_argument('--cn_max_retries', type=int, help='Max validation retries for Community Notes (total attempts = retries + 1, default 2)', default=2)
 parser.add_argument('--enable_extended_thinking', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, enable Claude extended thinking mode for better reasoning but higher token costs (default False)', default=False)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
@@ -6039,6 +6040,10 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             # Only run if basic validations (length, URLs) passed to avoid wasting API calls
             basic_validations_passed = length_valid and url_valid
             
+            # Initialize helpfulness verification variables (may be overwritten if verification runs)
+            helpfulness_valid = True
+            improvement_suggestions = ''
+            
             if getattr(args, 'cn_verify_helpfulness', False) and basic_validations_passed:
                 print(f"[Community Notes] Running adversarial helpfulness verification (initial attempt)...")
                 log_to_file("ADVERSARIAL HELPFULNESS VERIFICATION: Running on initial note")
@@ -6168,7 +6173,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             failed_validations = [name for name, passed, _ in validation_results if not passed]
             
             # Retry logic if note is too long or fails validation (total tries is retries + 1)
-            max_retries = 3
+            max_retries = getattr(args, 'cn_max_retries', 2)
             retry_count = 0
             
             # Pre-shuffle model list once for all retries (draw without replacement)
