@@ -4634,7 +4634,7 @@ def tweet_community_notes_summary(notes_written, posts_not_needing_notes, posts_
         # Add verification report if available (production mode)
         if rating_status_counts:
             summary_lines.append("")
-            summary_lines.append("📊 Verification:")
+            summary_lines.append("📊 Verification (last 100):")
             helpful_count = rating_status_counts.get('currently_rated_helpful', 0)
             unhelpful_count = rating_status_counts.get('currently_rated_not_helpful', 0)
             nmr_count = rating_status_counts.get('needs_more_ratings', 0)
