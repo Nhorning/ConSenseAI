@@ -2353,7 +2353,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
             claude_format = (
                 "\n\n<CLAUDE_FORMAT>\n"
                 "You MUST structure your response as:\n"
-                "<thinking>[Your reasoning: analyze claims, sources, evidence, biases. NOT posted publicly]</thinking>\n"
+                "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
                 "<response>[Your tweet response - under 550 characters]</response>\n"
                 "</CLAUDE_FORMAT>"
             )
@@ -2416,7 +2416,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
             claude_combining_format = (
                 "\n\n<CLAUDE_FORMAT>\n"
                 "You MUST structure your response as:\n"
-                "<thinking>[Your reasoning: review model responses, identify consensus and disagreements, evaluate claims. NOT posted publicly]</thinking>\n"
+                "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
                 "<response>[Your combined tweet response - under 550 characters]</response>\n"
                 "</CLAUDE_FORMAT>"
             )
@@ -2446,7 +2446,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
                     claude_combining_format = (
                         "\n\n<CLAUDE_FORMAT>\n"
                         "You MUST structure your response as:\n"
-                        "<thinking>[Your reasoning: review model responses, identify consensus and disagreements, evaluate claims. NOT posted publicly]</thinking>\n"
+                        "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
                         "<response>[Your combined tweet response - under 550 characters]</response>\n"
                         "</CLAUDE_FORMAT>"
                     )
