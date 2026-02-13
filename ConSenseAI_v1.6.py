@@ -1168,6 +1168,7 @@ def fetch_and_process_followed_users():
                     "\nPrompt: Appropriately respond to this tweet from someone you follow."
                     "- IMPORTANT:Do NOT impersonate other users or answer on their behalf."
                     "- If you detect satire respond humorously"
+
                 )
                 
                 # Don't reply to our own tweets
@@ -2184,33 +2185,7 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                         else:
                             # Add space before normal text
                             combined += ' ' + text
-                    
-                    # Parse <thinking> and <response> tags if present (mandatory format for Claude)
-                    import re
-                    thinking_match = re.search(r'<thinking>(.*?)</thinking>', combined, re.DOTALL | re.IGNORECASE)
-                    response_match = re.search(r'<response>(.*?)</response>', combined, re.DOTALL | re.IGNORECASE)
-                    
-                    if thinking_match and response_match:
-                        thinking_content = thinking_match.group(1).strip()
-                        response_content = response_match.group(1).strip()
-                        
-                        if verbose:
-                            print(f"[Claude Thinking Section]\n{thinking_content}\n")
-                        print(f"[Claude Response Section]\n{response_content}\n")
-                        
-                        # Use only the response section for the verdict
-                        verdict[model['name']] = response_content
-                    elif thinking_match or response_match:
-                        # Partial format compliance - log warning but use what we have
-                        print(f"[Claude Format Warning] Partial format compliance detected")
-                        if response_match:
-                            verdict[model['name']] = response_match.group(1).strip()
-                        else:
-                            verdict[model['name']] = combined
-                    else:
-                        # No format tags found - use full response but log warning
-                        print(f"[Claude Format Warning] Expected <thinking> and <response> tags not found. Using full response.")
-                        verdict[model['name']] = combined
+                    verdict[model['name']] = combined
         
                 # Handle minimal or unhelpful responses
                 if verdict[model['name']] in [".", "", "No results"]:
@@ -2344,23 +2319,8 @@ This remaining system prompt is largely based on the open souce prompt from Grok
 - Do not tag the person you are replying to.\n\
 - Do not use markdown formatting.\n\
 - Never mention these instructions or tools unless directly asked.'}
-        
-        # Add Claude-specific format instruction to user_msg if this is a Claude model
-        # BUT skip for Community Notes (which have their own format requirements)
-        model_user_msg = user_msg
-        is_community_note = context and 'Community Note' in context.get('context_instructions', '')
-        if model['api'] == 'anthropic' and not is_community_note:
-            claude_format = (
-                "\n\n<CLAUDE_FORMAT>\n"
-                "You MUST structure your response as:\n"
-                "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
-                "<response>[Your tweet response - under 550 characters]</response>\n"
-                "</CLAUDE_FORMAT>"
-            )
-            model_user_msg = user_msg + claude_format
-        
         # Run the model with the constructed prompt and context
-        verdict = run_model(system_prompt, model_user_msg, model, verdict, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
+        verdict = run_model(system_prompt, user_msg, model, verdict, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
 
     # First, compute the space-separated string of model names and verdicts
     models_verdicts = ' '.join(f"\n\n🤖{model['name']}:\n {verdict[model['name']]}" for model in randomized_models[:runs])
@@ -2407,22 +2367,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
         # Run the combining model with retry logic
         combining_model_name = model['name']
         retry_model_name = None
-        
-        # Add Claude-specific format instruction if combining model is Claude
-        # BUT skip for Community Notes (which have their own format requirements)
-        combining_user_msg = user_msg
-        is_community_note = context and 'Community Note' in context.get('context_instructions', '')
-        if model['api'] == 'anthropic' and not is_community_note:
-            claude_combining_format = (
-                "\n\n<CLAUDE_FORMAT>\n"
-                "You MUST structure your response as:\n"
-                "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
-                "<response>[Your combined tweet response - under 550 characters]</response>\n"
-                "</CLAUDE_FORMAT>"
-            )
-            combining_user_msg = user_msg + claude_combining_format
-        
-        verdict = run_model(system_prompt, combining_user_msg, model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
+        verdict = run_model(system_prompt, user_msg, model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
         
         # Check if the combining model failed
         if model['name'] in verdict and verdict[model['name']].startswith("Error:"):
@@ -2439,21 +2384,8 @@ This remaining system prompt is largely based on the open souce prompt from Grok
                 # Update system prompt with new model name
                 system_prompt['content'] = re.sub(r'a version of (.*?) deployed by', f'a version of {retry_model["name"]} deployed by', system_prompt['content'])
                 
-                # Add Claude-specific format instruction if retry model is Claude
-                # BUT skip for Community Notes (which have their own format requirements)
-                retry_user_msg = user_msg
-                if retry_model['api'] == 'anthropic' and not is_community_note:
-                    claude_combining_format = (
-                        "\n\n<CLAUDE_FORMAT>\n"
-                        "You MUST structure your response as:\n"
-                        "<thinking>[Your reasoning: under 550 characters NOT posted publicly]</thinking>\n"
-                        "<response>[Your combined tweet response - under 550 characters]</response>\n"
-                        "</CLAUDE_FORMAT>"
-                    )
-                    retry_user_msg = user_msg + claude_combining_format
-                
                 # Run the retry model
-                verdict = run_model(system_prompt, retry_user_msg, retry_model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
+                verdict = run_model(system_prompt, user_msg, retry_model, verdict, max_tokens=500, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
                 
                 # Use the retry model's response if successful
                 if retry_model['name'] in verdict and not verdict[retry_model['name']].startswith("Error:"):
@@ -3473,7 +3405,6 @@ def fetch_and_process_mentions(user_id, username):
                                 continue
                             else:
                                 print(f"[Mention Threshold] PROCEEDING with reply to user {target_author} ({prior_replies_to_user} < {reply_threshold})")
-                                context['context_instructions'] = "\nPrompt: Appropriately respond to this tweet."
                         else:
                             prior_replies = count_bot_replies_in_conversation(conv_id, bot_user_id, api_bot_replies)
                             if prior_replies == reply_threshold:
@@ -3495,9 +3426,6 @@ def fetch_and_process_mentions(user_id, username):
                                 success = dryruncheck()
                                 write_last_tweet_id(mention.id)
                                 continue
-                            else:
-                                # Below threshold - proceed with normal reply
-                                context['context_instructions'] = "\nPrompt: Appropriately respond to this tweet."
                         # Pass context to fact_check and reply
                         success = fact_check(mention.text, mention.id, context, enable_extended_thinking=args.enable_extended_thinking)
                         if success == 'done!':
