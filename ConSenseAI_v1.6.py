@@ -2284,8 +2284,8 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     randomized_models = models[:3].copy()
     secure_random.shuffle(randomized_models)
 
-    # Then proceed with runs = 1 or  to keep it efficient
-    runs = 3
+    # Run 2 lower-tier models, then use higher-tier from company that hasn't run
+    runs = 2
     
     verdict = {}
     for model in randomized_models[:runs]:  # putting it back to 3 for now
@@ -2327,9 +2327,21 @@ This remaining system prompt is largely based on the open souce prompt from Grok
     
     # Combine the verdicts by one of the models
     try:  
-        #choose the combining model
-        #model = randomized_models[runs] #random.choice(randomized_models)  # choses the forth model to combine the verdicts
-        model = secure_random.choice(models[3:])  # chooses one of the higher tier models to combine the verdicts
+        # Choose the combining model from the company that hasn't run yet
+        # Determine which APIs were used in the lower-tier runs
+        used_apis = {model['api'] for model in randomized_models[:runs]}
+        all_apis = {'xai', 'openai', 'anthropic'}
+        unused_apis = list(all_apis - used_apis)
+        
+        if unused_apis:
+            # Use higher-tier model from company that hasn't run
+            unused_api = unused_apis[0]
+            model = next(m for m in models[3:] if m['api'] == unused_api)
+            print(f"[Combining Model] Selected {model['name']} from {unused_api} (not used in lower-tier runs)")
+        else:
+            # Fallback: randomly select any higher-tier model (shouldn't happen with runs=2)
+            model = secure_random.choice(models[3:])
+            print(f"[Combining Model] Fallback selection: {model['name']}")
 
         #we're gonna append this message to the system prompt of the combining model
         combine_msg = "\n\n   This is the *final pass*. You will be given responses from your previous runs of multiple models signified by 'Model Responses:'\n\
