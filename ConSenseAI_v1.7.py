@@ -1005,9 +1005,15 @@ def fetch_and_process_search(search_term: str, user_id=None):
                 write_last_search_id(search_term, t.id)
                 # brief pause between posts
                 time.sleep(5)
+            elif posted == 'forbidden':
+                print(f"[Search] Reply forbidden for tweet {t.id} — advancing cursor to skip next cycle")
+                write_last_search_id(search_term, t.id)
+                continue
             elif posted == 'delay!':
                 backoff_multiplier *= 2
                 print(f"[Search] Post rate-limited, backing off")
+                # Advance the since_id cursor so we don't re-process this tweet next cycle
+                write_last_search_id(search_term, t.id)
                 return
 
 
@@ -1286,6 +1292,15 @@ def fetch_and_process_followed_users():
                         time.sleep(5)  # Brief pause between posts
                         # CRITICAL: Break inner loop after first successful reply to this user
                         break  # Move to next user after replying once
+                    elif posted == 'forbidden':
+                        print(f"[Followed] Reply forbidden for tweet {t.id} — advancing cursor to skip next cycle")
+                        last_checked[str(user_id)] = str(t.id)
+                        try:
+                            with open(FOLLOWED_USERS_LAST_CHECK_FILE, 'w') as f:
+                                json.dump(last_checked, f, indent=2)
+                        except IOError as e:
+                            print(f"[Followed] Error saving last checked file: {e}")
+                        break  # Move to next user
                     elif posted == 'delay!':
                         backoff_multiplier *= 2
                         print(f"[Followed] Post rate-limited, backing off")
@@ -2522,6 +2537,11 @@ def post_reply(parent_tweet_id, reply_text, conversation_id=None, parent_author_
         # If rate limited, return delay to trigger backoff
         if hasattr(e, 'response') and e.response.status_code == 429:
             return 'delay!'
+        
+        # If forbidden (403), don't retry — re-auth won't help (e.g. not tagged in thread, deleted tweet, blocked)
+        if hasattr(e, 'response') and e.response.status_code == 403:
+            print("[Post Reply] 403 Forbidden — cannot reply to this tweet (not tagged, deleted, or restricted). Skipping.")
+            return 'forbidden'
         
         # For other API errors, try re-authenticating and retrying once
         print("[Post Reply] Re-authenticating and retrying post once...")
