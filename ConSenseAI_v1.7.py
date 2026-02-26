@@ -3635,7 +3635,7 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 if args.fetchthread:
                     try:
                         thread_response = read_client.search_recent_tweets(
-                            query=f"conversation_id:{conv_id} -from:{username}",
+                            query=f"conversation_id:{conv_id} -from:{bot_username}",
                             max_results=10,
                             tweet_fields=["text", "author_id", "created_at", "referenced_tweets", "in_reply_to_user_id", "attachments", "entities"],
                             expansions=["referenced_tweets.id", "attachments.media_keys"],

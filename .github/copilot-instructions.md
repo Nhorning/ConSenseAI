@@ -4,14 +4,14 @@ ConSenseAI is an X/Twitter bot that provides AI-powered fact-checking by leverag
 
 ## Project Architecture
 
-**Implementation:** Single-file bot `ConSenseAI_v1.6.py` (~6000 lines)  
+**Implementation:** Single-file bot `ConSenseAI_v1.7.py` (~7200 lines)  
 **Active Branch:** `main`  
 **Language:** Python 3.x with Tweepy, OpenAI, Anthropic, and xAI SDKs
 
 ### Core Pipeline
 1. **Discovery:** 4 parallel paths (mentions, search, followed users, Community Notes)
 2. **Context Building:** Cache-first with ancestor chain traversal (`get_tweet_context()`)
-3. **Analysis:** 3 lower-tier models → 1 higher-tier combiner (`fact_check()`, `run_model()`)
+3. **Analysis:** 2 lower-tier models + 1 higher-tier combiner from unused company (`fact_check()`, `run_model()`)
 4. **Response:** Post with attribution + cache updates (`post_reply()`)
 5. **Reflection:** Periodic standalone tweets (`post_reflection_on_recent_bot_threads()`)
 
@@ -134,13 +134,14 @@ Always check format before accessing fields.
   - Retweet resolution (detects retweets and sets `reply_target_id` to retweeter's tweet)
 
 ### AI Models Integration
-- **Lower-tier models** (indices 0-2): `grok-4-fast-reasoning`, `gpt-5-mini`, `claude-3-5-haiku-latest`
-- **Higher-tier models** (indices 3-5): `grok-4`, `gpt-5`, `claude-sonnet-4-5`
-- **Runtime behavior**:
-  - Randomly shuffles 3 lower-tier models for initial analysis
-  - Randomly selects 1 higher-tier model to combine responses
+- **Lower-tier models** (indices 0-2): `grok-4-1-fast-reasoning`, `gpt-5-mini`, `claude-haiku-4-5`
+- **Higher-tier models** (indices 3-5): `grok-4`, `gpt-5.2`, `claude-sonnet-4-5`
+- **Runtime behavior** (v1.7):
+  - Randomly selects 2 of 3 lower-tier models for initial analysis
+  - Automatically selects the higher-tier model from the company that didn't run (ensures all 3 companies participate)
+  - Example: If `gpt-5-mini` and `claude-haiku-4-5` run → `grok-4` combines
   - Each model runs independently with its own API client
-  - Web search enabled for Grok (SearchParameters) and Claude (web_search tool)
+  - Web search enabled for Grok (x_search, web_search tools) and Claude (web_search tool)
   - Vision support for GPT and Claude (analyzes media URLs from context)
 
 ### Safety & Rate Limiting
@@ -177,7 +178,7 @@ access_token_secret=your_access_token_secret
 
 ### Running the Bot
 ```bash
-python ConSenseAI_v1.6.py \
+python ConSenseAI_v1.7.py \
   --username consenseai \
   --delay 3 \
   --dryrun False \
@@ -198,7 +199,7 @@ python ConSenseAI_v1.6.py \
 - `--cn_test_mode True`: Submit CN in test mode (only visible to you)
 - `--cn_verify_helpfulness True`: Enable adversarial LLM verification of note helpfulness before submission
 
-Run `python ConSenseAI_v1.6.py --help` for full argument list.
+Run `python ConSenseAI_v1.7.py --help` for full argument list.
 
 
 ## Architecture & Data Flow
@@ -232,8 +233,8 @@ Run `python ConSenseAI_v1.6.py --help` for full argument list.
 ### Fact-Check Pipeline (`fact_check()`)
 1. Construct context string from ancestor_chain, thread_tweets, quoted_tweets, media
 2. Initialize LLM clients (xai_sdk, openai, anthropic)
-3. **First pass:** 3 randomized lower-tier models → `run_model()`
-4. **Second pass:** 1 random higher-tier model combines responses
+3. **First pass:** 2 randomly selected lower-tier models → `run_model()`
+4. **Second pass:** 1 higher-tier model from unused company combines responses
 5. Append model attribution to response
 6. If `generate_only=True`: return text (for search/CN pipelines)
 7. Else: `post_reply()` → update caches
@@ -403,7 +404,7 @@ def get_attr(obj, attr, default=None):
 
 ### Dry-Run Testing
 ```bash
-python ConSenseAI_v1.6.py --dryrun True --delay 1 --search_term "test"
+python ConSenseAI_v1.7.py --dryrun True --delay 1 --search_term "test"
 ```
 - Exercises full pipeline without posting
 - Prints generated responses to console
@@ -450,7 +451,7 @@ my_client = openai.OpenAI(api_key=keys.get('MY_MODEL_API_KEY'), base_url="https:
 ```
 
 ### Change Storage Filenames
-Edit constants near top of `ConSenseAI_v1.6.py`:
+Edit constants near top of `ConSenseAI_v1.7.py`:
 ```python
 TWEETS_FILE = 'bot_tweets.json'
 ANCESTOR_CHAIN_FILE = 'ancestor_chains.json'
@@ -463,7 +464,31 @@ print(f"[get_tweet_context] bot_username={bot_username or 'None'}, bot_replies_f
 ```
 
 
-## Recent Fixes (v1.6)
+## Recent Changes
+
+### v1.7 Model Orchestration Improvement (Feb 2026)
+**Change**: Reduced from 3 lower-tier models to 2, with intelligent combining model selection.
+
+**New Behavior**:
+- Randomly selects 2 of 3 lower-tier models for initial analysis
+- Automatically selects higher-tier combining model from the company that didn't run
+- Ensures all 3 AI companies (xAI, OpenAI, Anthropic) participate in every fact-check
+- Reduces API costs while maintaining diverse perspectives
+
+**Implementation**:
+```python
+runs = 2  # Down from 3
+used_apis = {model['api'] for model in randomized_models[:runs]}
+unused_apis = list({'xai', 'openai', 'anthropic'} - used_apis)
+model = next(m for m in models[3:] if m['api'] == unused_apis[0])
+```
+
+**Benefits**:
+- 33% reduction in lower-tier API calls
+- Guaranteed coverage across all model providers
+- More deterministic combining model selection (vs random)
+
+### v1.6 Fixes and Features
 
 ### 1. Retweet Handling in Followed Users (Nov 28, 2025)
 **Problem**: Bot was extracting and analyzing media from the original tweet when a followed user retweeted something, leading to irrelevant image descriptions.
