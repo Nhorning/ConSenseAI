@@ -7154,11 +7154,11 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
             print(f"[CN Smart Reflection] Error calculating WL, using default 10: {wl_error}")
             WL = 10
         
-        # Count notes written today (production mode only, not test_mode)
+        # Count notes written in last 24 hours (rolling window, production mode only)
         now = datetime.now()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        twenty_four_hours_ago = now - timedelta(hours=24)
         
-        notes_today = []
+        notes_last_24h = []
         for post_id, data in written_notes.items():
             if isinstance(data, dict) and data.get('note') is not None:
                 # Skip test mode notes
@@ -7172,47 +7172,56 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
                 if timestamp_str:
                     try:
                         note_time = datetime.fromisoformat(timestamp_str)
-                        if note_time >= today_start:
-                            notes_today.append({
+                        if note_time >= twenty_four_hours_ago:
+                            notes_last_24h.append({
                                 'post_id': post_id,
                                 'timestamp': note_time
                             })
                     except:
                         pass
         
-        # Sort by timestamp
-        notes_today.sort(key=lambda x: x['timestamp'])
+        # Sort by timestamp (oldest first for age-out calculation)
+        notes_last_24h.sort(key=lambda x: x['timestamp'])
         
-        notes_written_today = len(notes_today)
-        print(f"[CN Smart Reflection] Notes written today: {notes_written_today}/{WL}")
+        notes_written_24h = len(notes_last_24h)
+        print(f"[CN Smart Reflection] Notes in last 24h: {notes_written_24h}/{WL}")
         
-        # If we've already hit the daily limit, use a longer wait time
-        if notes_written_today >= WL:
-            # Calculate time until midnight (end of day)
-            tomorrow_start = today_start + timedelta(days=1)
-            time_until_reset = (tomorrow_start - now).total_seconds() / 60.0  # in minutes
-            
-            print(f"[CN Smart Reflection] Daily limit reached! Waiting {time_until_reset:.0f} min until reset")
-            return max(time_until_reset, 60)  # Wait at least 60 minutes
+        # If we've already hit the daily limit, wait until oldest note ages out
+        if notes_written_24h >= WL:
+            if notes_last_24h:
+                # Calculate when the oldest note will age out (24h from when it was written)
+                oldest_note_time = notes_last_24h[0]['timestamp']
+                age_out_time = oldest_note_time + timedelta(hours=24)
+                time_until_age_out = (age_out_time - now).total_seconds() / 60.0  # in minutes
+                
+                # Add a small buffer (5 min) to ensure the note has fully aged out
+                wait_time = max(time_until_age_out + 5, 5)
+                
+                print(f"[CN Smart Reflection] Limit reached! Oldest note ages out in {time_until_age_out:.0f} min (waiting {wait_time:.0f} min)")
+                return wait_time
+            else:
+                # Shouldn't happen, but fallback to 60 min
+                print(f"[CN Smart Reflection] Limit reached but no notes found, waiting 60 min")
+                return 60
         
-        # Calculate notes per reflection cycle from recent history
-        # Look at the last N reflection cycles (use timestamp gaps to estimate cycle boundaries)
-        if len(notes_today) >= 2:
+        # Calculate notes per reflection cycle from recent history in last 24h
+        # Look at timestamp gaps to estimate cycle boundaries
+        if len(notes_last_24h) >= 2:
             # Calculate average notes per cycle by looking at timestamp clustering
             # Assume notes written close together (within 30 min) are from same cycle
             
             cycles = []
-            current_cycle = [notes_today[0]]
+            current_cycle = [notes_last_24h[0]]
             
-            for i in range(1, len(notes_today)):
-                time_gap = (notes_today[i]['timestamp'] - notes_today[i-1]['timestamp']).total_seconds() / 60.0
+            for i in range(1, len(notes_last_24h)):
+                time_gap = (notes_last_24h[i]['timestamp'] - notes_last_24h[i-1]['timestamp']).total_seconds() / 60.0
                 
                 # If gap > 30 minutes, consider it a new cycle
                 if time_gap > 30:
                     cycles.append(current_cycle)
-                    current_cycle = [notes_today[i]]
+                    current_cycle = [notes_last_24h[i]]
                 else:
-                    current_cycle.append(notes_today[i])
+                    current_cycle.append(notes_last_24h[i])
             
             # Add the last cycle
             if current_cycle:
@@ -7221,7 +7230,7 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
             # Calculate average notes per cycle
             if len(cycles) > 0:
                 notes_per_cycle = sum(len(c) for c in cycles) / len(cycles)
-                print(f"[CN Smart Reflection] Detected {len(cycles)} cycles today, avg {notes_per_cycle:.1f} notes/cycle")
+                print(f"[CN Smart Reflection] Detected {len(cycles)} cycles in last 24h, avg {notes_per_cycle:.1f} notes/cycle")
             else:
                 notes_per_cycle = 1.0  # Default if we can't detect cycles
         else:
@@ -7229,18 +7238,18 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
             notes_per_cycle = 1.0
             print(f"[CN Smart Reflection] Not enough data for cycle detection, assuming {notes_per_cycle} notes/cycle")
         
-        # Calculate how many more notes we need today
-        notes_remaining = WL - notes_written_today
+        # Calculate how many more notes we need in the next 24 hours to reach WL
+        notes_remaining = WL - notes_written_24h
         
         # Calculate how many more cycles we need
         cycles_remaining = max(1, notes_remaining / notes_per_cycle) if notes_per_cycle > 0 else 1
         
-        # Calculate time remaining today (until midnight)
-        tomorrow_start = today_start + timedelta(days=1)
-        time_remaining_minutes = (tomorrow_start - now).total_seconds() / 60.0
+        # Spread cycles evenly over next 24 hours
+        time_window_hours = 24.0
+        time_window_minutes = time_window_hours * 60.0
         
         # Calculate optimal wait time
-        optimal_wait = time_remaining_minutes / cycles_remaining
+        optimal_wait = time_window_minutes / cycles_remaining
         
         # Apply constraints:
         # - Minimum wait: base_interval_minutes (respect the base interval)
@@ -7250,16 +7259,25 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
         min_wait = base_interval_minutes
         max_wait = 360  # 6 hours
         
-        # If we're behind pace (need to write more notes faster), use minimum wait
-        current_rate = notes_written_today / ((now - today_start).total_seconds() / 3600.0) if (now - today_start).total_seconds() > 0 else 0
-        target_rate = WL / 24.0  # notes per hour
+        # Calculate current rate (notes per hour over last 24h)
+        if notes_written_24h > 0 and len(notes_last_24h) >= 2:
+            # Time span of notes written (from oldest to newest in last 24h)
+            time_span_hours = (notes_last_24h[-1]['timestamp'] - notes_last_24h[0]['timestamp']).total_seconds() / 3600.0
+            if time_span_hours > 0:
+                current_rate = notes_written_24h / time_span_hours
+            else:
+                current_rate = notes_written_24h  # All written in less than an hour
+        else:
+            current_rate = 0
+        
+        target_rate = WL / 24.0  # notes per hour to hit WL over 24 hours
         
         if current_rate < target_rate * 0.8:  # Behind by 20% or more
             wait_time = min_wait
             print(f"[CN Smart Reflection] Behind pace (current: {current_rate:.2f}/hr, target: {target_rate:.2f}/hr), using minimum wait: {wait_time:.0f} min")
         else:
             wait_time = max(min_wait, min(optimal_wait, max_wait))
-            print(f"[CN Smart Reflection] On pace, calculated optimal wait: {wait_time:.0f} min (need {notes_remaining} more notes in {time_remaining_minutes:.0f} min)")
+            print(f"[CN Smart Reflection] On pace, calculated optimal wait: {wait_time:.0f} min (need {notes_remaining} more notes, {cycles_remaining:.1f} cycles over next 24h)")
         
         return wait_time
         
