@@ -7387,8 +7387,13 @@ def main():
         
         if cn_smart_reflection:
             last_cn_reflection_time = time.time()
-            cn_next_check_minutes = delay  # Start with base delay
-            print(f"[Main] Smart CN reflection enabled - will dynamically adjust timing to hit daily writing limit")
+            print(f"[Main] Smart CN reflection enabled - calculating initial interval based on current rate...")
+            # Calculate smart interval on startup rather than defaulting to base delay
+            cn_next_check_minutes = calculate_smart_cn_reflection_interval(
+                username=username, 
+                base_interval_minutes=delay
+            )
+            print(f"[Main] Initial CN check interval: {cn_next_check_minutes:.0f} minutes (will recalculate after each cycle)")
         
         try:
             while True:
