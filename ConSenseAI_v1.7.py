@@ -7238,26 +7238,25 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
             notes_per_cycle = 1.0
             print(f"[CN Smart Reflection] Not enough data for cycle detection, assuming {notes_per_cycle} notes/cycle")
         
-        # Calculate how many more notes we need in the next 24 hours to reach WL
-        notes_remaining = WL - notes_written_24h
+        # Calculate required rate to hit WL in a rolling 24h window
+        # Target: WL notes per 24 hours
+        target_rate_per_hour = WL / 24.0  # notes per hour
         
-        # Calculate how many more cycles we need
-        cycles_remaining = max(1, notes_remaining / notes_per_cycle) if notes_per_cycle > 0 else 1
-        
-        # Spread cycles evenly over next 24 hours
-        time_window_hours = 24.0
-        time_window_minutes = time_window_hours * 60.0
-        
-        # Calculate optimal wait time
-        optimal_wait = time_window_minutes / cycles_remaining
+        # Calculate how many cycles per hour we need to run
+        if notes_per_cycle > 0:
+            required_cycles_per_hour = target_rate_per_hour / notes_per_cycle
+            # Convert to wait time between cycles (in minutes)
+            optimal_wait = 60.0 / required_cycles_per_hour if required_cycles_per_hour > 0 else 360
+        else:
+            optimal_wait = 360  # Fallback
         
         # Apply constraints:
         # - Minimum wait: base_interval_minutes (respect the base interval)
-        # - Maximum wait: 6 hours (360 minutes) to avoid excessive delays
+        # - Maximum wait: 12 hours (720 minutes) to avoid excessive delays
         # - If we're behind pace, use base_interval to catch up faster
         
         min_wait = base_interval_minutes
-        max_wait = 360  # 6 hours
+        max_wait = 720  # 12 hours (increased from 6h to allow proper pacing)
         
         # Calculate current rate (notes per hour over last 24h)
         if notes_written_24h > 0 and len(notes_last_24h) >= 2:
@@ -7270,14 +7269,16 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
         else:
             current_rate = 0
         
-        target_rate = WL / 24.0  # notes per hour to hit WL over 24 hours
-        
-        if current_rate < target_rate * 0.8:  # Behind by 20% or more
+        # If we're significantly behind pace (< 80% of target), use minimum wait to catch up
+        if current_rate < target_rate_per_hour * 0.8:  # Behind by 20% or more
             wait_time = min_wait
-            print(f"[CN Smart Reflection] Behind pace (current: {current_rate:.2f}/hr, target: {target_rate:.2f}/hr), using minimum wait: {wait_time:.0f} min")
+            print(f"[CN Smart Reflection] Behind pace (current: {current_rate:.2f}/hr, target: {target_rate_per_hour:.2f}/hr), using minimum wait: {wait_time:.0f} min")
         else:
             wait_time = max(min_wait, min(optimal_wait, max_wait))
-            print(f"[CN Smart Reflection] On pace, calculated optimal wait: {wait_time:.0f} min (need {notes_remaining} more notes, {cycles_remaining:.1f} cycles over next 24h)")
+            cycles_per_day = (24 * 60) / wait_time if wait_time > 0 else 0
+            expected_notes_per_day = cycles_per_day * notes_per_cycle
+            print(f"[CN Smart Reflection] On pace, calculated optimal wait: {wait_time:.0f} min ({cycles_per_day:.1f} cycles/day × {notes_per_cycle:.1f} notes/cycle = {expected_notes_per_day:.1f} notes/day, target: {WL})")
+
         
         return wait_time
         
