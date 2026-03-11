@@ -7450,6 +7450,19 @@ def main():
                                     post_client=post_client
                                 )
                                 
+                                # Post reflection on recent threads (includes CN notes)
+                                print(f"[CN Smart Reflection] Posting reflection on recent bot threads (including CN)")
+                                try:
+                                    reflection_count = int(args.post_interval)  # Use same count as regular reflections
+                                    created_id = post_reflection_on_recent_bot_threads(reflection_count)
+                                    if created_id:
+                                        print(f"[CN Smart Reflection] Reflection posted successfully: {created_id}")
+                                    else:
+                                        print(f"[CN Smart Reflection] Reflection post was skipped or failed")
+                                except Exception as reflection_error:
+                                    print(f"[CN Smart Reflection] Error posting reflection: {reflection_error}")
+                                    # Don't fail the whole cycle if reflection fails
+                                
                                 # Update last check time
                                 last_cn_reflection_time = current_time
                                 
