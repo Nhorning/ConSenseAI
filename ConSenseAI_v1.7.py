@@ -2942,13 +2942,55 @@ def post_reflection_on_recent_bot_threads(n=10):
                     aggregated_chain.append(entry)
 
         summary_context = "\n\n".join(summary_points)
+        
+        # Load recent reflection posts to avoid repetition
+        recent_reflections = []
+        try:
+            # Get last reflection ID
+            last_reflection_id = bot_tweets.get('_last_reflection_id')
+            if last_reflection_id:
+                # Get the last 5 reflection posts (working backwards from last_reflection_id)
+                reflection_ids = []
+                for tweet_id in sorted(bot_tweets.keys(), reverse=True):
+                    if str(tweet_id).startswith('_'):  # Skip special keys
+                        continue
+                    try:
+                        # Check if this is a reflection post (not a reply)
+                        # Reflections are standalone tweets, replies have parent conversations
+                        tweet_text = bot_tweets.get(tweet_id, '')
+                        # Simple heuristic: if it's short and doesn't start with @ or common reply patterns
+                        if tweet_text and not tweet_text.startswith('@') and len(tweet_text) < 500:
+                            reflection_ids.append(tweet_id)
+                            recent_reflections.append(tweet_text)
+                            if len(recent_reflections) >= 5:
+                                break
+                    except:
+                        continue
+            
+            if recent_reflections:
+                print(f"[Reflection] Loaded {len(recent_reflections)} recent reflection posts to avoid repetition")
+        except Exception as e:
+            print(f"[Reflection] Error loading recent reflections: {e}")
+        
+        # Build prompt with anti-repetition instructions
         prompt = (
             "Prompt: Review the previous recent threads where you participated. "
             "Write a short tweet in your voice that is provocative but true. "
-            "Stick to one subject."
+            "Stick to one subject. "
             "Optimize for engagement. "
             "Do not talk about differences between models."
-            "Post the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
+        )
+        
+        if recent_reflections:
+            prompt += (
+                "\n\nIMPORTANT: Avoid repeating themes, topics, or phrasing from your recent reflection posts below. "
+                "Find a NEW angle or subject to discuss:\n"
+            )
+            for i, ref in enumerate(recent_reflections[:5], 1):
+                prompt += f"{i}. \"{ref}\"\n"
+        
+        prompt += (
+            "\nPost the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
         )
 
         # Only provide the ancestor_chain (the thread hierarchy) to the fact_check prompt
