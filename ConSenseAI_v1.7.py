@@ -4578,6 +4578,7 @@ parser.add_argument('--cn_on_reflection', type=lambda x: x.lower() in ['true', '
 parser.add_argument('--cn_skip_score_check', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, auto-pass ClaimOpinion validation (still calls API for logging but ignores rejection, default True)', default=True)
 parser.add_argument('--cn_verify_helpfulness', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, use adversarial LLM verification to check if note would be rated helpful before submission (default False)', default=False)
 parser.add_argument('--cn_max_retries', type=int, help='Max validation retries for Community Notes (total attempts = retries + 1, default 2)', default=2)
+parser.add_argument('--cn_smart_reflection', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, dynamically adjust reflection cycle timing to hit daily writing limit for CN (requires --cn_on_reflection True, default False)', default=False)
 parser.add_argument('--enable_extended_thinking', type=lambda x: x.lower() in ['true', '1', 'yes'], help='If True, enable Claude extended thinking mode for better reasoning but higher token costs (default False)', default=False)
 args = parser.parse_args()  # Will error on unrecognized arguments
 
@@ -7043,6 +7044,231 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
     
     return notes_written
 
+def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
+    """
+    Calculate optimal wait time for CN reflection cycles to hit daily writing limit.
+    
+    This function analyzes the daily writing limit (WL), notes written today, 
+    and the average rate of notes per cycle to dynamically adjust reflection timing.
+    
+    Args:
+        username: Bot username for accessing cn_written file
+        base_interval_minutes: Base interval between reflection cycles (default 3 minutes)
+    
+    Returns:
+        float: Recommended wait time in minutes before next CN reflection cycle
+    """
+    from datetime import datetime, timedelta
+    import json
+    import os
+    
+    try:
+        # Load written notes
+        cn_written_file = f'cn_written_{username}.json'
+        if not os.path.exists(cn_written_file):
+            print(f"[CN Smart Reflection] No cn_written file found, using base interval: {base_interval_minutes} min")
+            return base_interval_minutes
+        
+        with open(cn_written_file, 'r') as f:
+            written_notes = json.load(f)
+        
+        # Calculate writing limit (WL) - this is our daily target
+        try:
+            # Import the calculate_writing_limit function from within fetch_and_process_community_notes scope
+            # Since it's nested, we'll re-implement it here with the same logic
+            import math
+            
+            all_notes = []
+            for post_id, data in written_notes.items():
+                if isinstance(data, dict) and data.get('note') is not None and not data.get('test_mode', False) and not data.get('not_needed', False):
+                    status = data.get('twitter_rating_status', 'needs_more_ratings')
+                    timestamp = data.get('timestamp', '')
+                    all_notes.append({
+                        'post_id': post_id,
+                        'status': status,
+                        'timestamp': timestamp
+                    })
+            
+            # Sort by timestamp (most recent first)
+            all_notes.sort(key=lambda x: x['timestamp'], reverse=True)
+            
+            T = len(all_notes)  # Total notes written
+            
+            # Get non-NMR notes (for NH calculations)
+            non_nmr_notes = [n for n in all_notes if n['status'] != 'needs_more_ratings']
+            
+            # NH_5: Number of CRNH in last 5 non-NMR notes
+            NH_5 = sum(1 for n in non_nmr_notes[:5] if n['status'] == 'currently_rated_not_helpful')
+            
+            # NH_10: Number of CRNH in last 10 non-NMR notes
+            NH_10 = sum(1 for n in non_nmr_notes[:10] if n['status'] == 'currently_rated_not_helpful')
+            
+            # Calculate hit rates
+            def calc_hit_rate(notes):
+                if not notes:
+                    return 0.0
+                crh = sum(1 for n in notes if n['status'] == 'currently_rated_helpful')
+                crnh = sum(1 for n in notes if n['status'] == 'currently_rated_not_helpful')
+                return (crh - crnh) / len(notes) if len(notes) > 0 else 0.0
+            
+            HR_R = calc_hit_rate(all_notes[:20])  # Recent hit rate (last 20)
+            HR_L = calc_hit_rate(all_notes[:100])  # Long-term hit rate (last 100)
+            
+            # DN_30: Average daily notes in last 30 days
+            now = datetime.now()
+            thirty_days_ago = now - timedelta(days=30)
+            recent_notes = []
+            for note in all_notes:
+                try:
+                    note_time = datetime.fromisoformat(note['timestamp'])
+                    if note_time >= thirty_days_ago:
+                        recent_notes.append(note)
+                except:
+                    pass
+            DN_30 = len(recent_notes) / 30.0 if recent_notes else 0.0
+            
+            # Calculate writing limit (WL)
+            if NH_10 >= 8:
+                WL = 2
+            elif NH_5 >= 3:
+                WL = 5
+            else:
+                if T < 20:  # New writer
+                    WL = 10
+                else:
+                    # Calculate WL_L based on hit rates
+                    if HR_L < 0.1:
+                        WL_L = 200 * max(HR_R, HR_L)
+                    elif HR_L < 0.15:
+                        WL_L = 20 + 1600 * (HR_L - 0.1)
+                    elif HR_L < 0.2:
+                        WL_L = 100 + 8000 * (HR_L - 0.15)
+                    else:
+                        WL_L = 500
+                    
+                    WL = max(5, math.floor(min(DN_30 * 5, WL_L)))
+            
+            print(f"[CN Smart Reflection] Daily Writing Limit (WL): {WL}")
+            
+        except Exception as wl_error:
+            print(f"[CN Smart Reflection] Error calculating WL, using default 10: {wl_error}")
+            WL = 10
+        
+        # Count notes written today (production mode only, not test_mode)
+        now = datetime.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        notes_today = []
+        for post_id, data in written_notes.items():
+            if isinstance(data, dict) and data.get('note') is not None:
+                # Skip test mode notes
+                if data.get('test_mode', False):
+                    continue
+                # Skip "not_needed" notes (these don't count toward WL)
+                if data.get('not_needed', False):
+                    continue
+                
+                timestamp_str = data.get('timestamp', '')
+                if timestamp_str:
+                    try:
+                        note_time = datetime.fromisoformat(timestamp_str)
+                        if note_time >= today_start:
+                            notes_today.append({
+                                'post_id': post_id,
+                                'timestamp': note_time
+                            })
+                    except:
+                        pass
+        
+        # Sort by timestamp
+        notes_today.sort(key=lambda x: x['timestamp'])
+        
+        notes_written_today = len(notes_today)
+        print(f"[CN Smart Reflection] Notes written today: {notes_written_today}/{WL}")
+        
+        # If we've already hit the daily limit, use a longer wait time
+        if notes_written_today >= WL:
+            # Calculate time until midnight (end of day)
+            tomorrow_start = today_start + timedelta(days=1)
+            time_until_reset = (tomorrow_start - now).total_seconds() / 60.0  # in minutes
+            
+            print(f"[CN Smart Reflection] Daily limit reached! Waiting {time_until_reset:.0f} min until reset")
+            return max(time_until_reset, 60)  # Wait at least 60 minutes
+        
+        # Calculate notes per reflection cycle from recent history
+        # Look at the last N reflection cycles (use timestamp gaps to estimate cycle boundaries)
+        if len(notes_today) >= 2:
+            # Calculate average notes per cycle by looking at timestamp clustering
+            # Assume notes written close together (within 30 min) are from same cycle
+            
+            cycles = []
+            current_cycle = [notes_today[0]]
+            
+            for i in range(1, len(notes_today)):
+                time_gap = (notes_today[i]['timestamp'] - notes_today[i-1]['timestamp']).total_seconds() / 60.0
+                
+                # If gap > 30 minutes, consider it a new cycle
+                if time_gap > 30:
+                    cycles.append(current_cycle)
+                    current_cycle = [notes_today[i]]
+                else:
+                    current_cycle.append(notes_today[i])
+            
+            # Add the last cycle
+            if current_cycle:
+                cycles.append(current_cycle)
+            
+            # Calculate average notes per cycle
+            if len(cycles) > 0:
+                notes_per_cycle = sum(len(c) for c in cycles) / len(cycles)
+                print(f"[CN Smart Reflection] Detected {len(cycles)} cycles today, avg {notes_per_cycle:.1f} notes/cycle")
+            else:
+                notes_per_cycle = 1.0  # Default if we can't detect cycles
+        else:
+            # Not enough data, use a conservative estimate
+            notes_per_cycle = 1.0
+            print(f"[CN Smart Reflection] Not enough data for cycle detection, assuming {notes_per_cycle} notes/cycle")
+        
+        # Calculate how many more notes we need today
+        notes_remaining = WL - notes_written_today
+        
+        # Calculate how many more cycles we need
+        cycles_remaining = max(1, notes_remaining / notes_per_cycle) if notes_per_cycle > 0 else 1
+        
+        # Calculate time remaining today (until midnight)
+        tomorrow_start = today_start + timedelta(days=1)
+        time_remaining_minutes = (tomorrow_start - now).total_seconds() / 60.0
+        
+        # Calculate optimal wait time
+        optimal_wait = time_remaining_minutes / cycles_remaining
+        
+        # Apply constraints:
+        # - Minimum wait: base_interval_minutes (respect the base interval)
+        # - Maximum wait: 6 hours (360 minutes) to avoid excessive delays
+        # - If we're behind pace, use base_interval to catch up faster
+        
+        min_wait = base_interval_minutes
+        max_wait = 360  # 6 hours
+        
+        # If we're behind pace (need to write more notes faster), use minimum wait
+        current_rate = notes_written_today / ((now - today_start).total_seconds() / 3600.0) if (now - today_start).total_seconds() > 0 else 0
+        target_rate = WL / 24.0  # notes per hour
+        
+        if current_rate < target_rate * 0.8:  # Behind by 20% or more
+            wait_time = min_wait
+            print(f"[CN Smart Reflection] Behind pace (current: {current_rate:.2f}/hr, target: {target_rate:.2f}/hr), using minimum wait: {wait_time:.0f} min")
+        else:
+            wait_time = max(min_wait, min(optimal_wait, max_wait))
+            print(f"[CN Smart Reflection] On pace, calculated optimal wait: {wait_time:.0f} min (need {notes_remaining} more notes in {time_remaining_minutes:.0f} min)")
+        
+        return wait_time
+        
+    except Exception as e:
+        print(f"[CN Smart Reflection] Error calculating smart interval: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return base_interval_minutes
+
 # The main loop
 def main():
     # Initialize search term variables outside the restart loop so they persist across restarts
@@ -7130,6 +7356,21 @@ def main():
                     json.dump({"last_index": 0, "last_checked": datetime.datetime.now().isoformat()}, f)
         except Exception as e:
             print(f"[SearchInit] Warning initializing search state files: {e}")
+        
+        # Initialize smart CN reflection tracking
+        cn_smart_reflection = getattr(args, 'cn_smart_reflection', False)
+        cn_on_reflection = getattr(args, 'cn_on_reflection', False)
+        
+        # Validate that cn_smart_reflection requires cn_on_reflection
+        if cn_smart_reflection and not cn_on_reflection:
+            print("[Main] WARNING: --cn_smart_reflection requires --cn_on_reflection True. Disabling smart reflection.")
+            cn_smart_reflection = False
+        
+        if cn_smart_reflection:
+            last_cn_reflection_time = time.time()
+            cn_next_check_minutes = delay  # Start with base delay
+            print(f"[Main] Smart CN reflection enabled - will dynamically adjust timing to hit daily writing limit")
+        
         try:
             while True:
                 fetch_and_process_mentions(user_id, username)  # Changed from fetch_and_process_tweets
@@ -7168,6 +7409,54 @@ def main():
                         print(f"[Main] Community Notes check error: {e}")
                         # Don't raise - just log and continue
 
+                # Smart CN Reflection: Time-based CN checks to hit daily writing limit
+                # This runs independently of the regular reflection cycle
+                if cn_smart_reflection and getattr(args, 'check_community_notes', False):
+                    try:
+                        current_time = time.time()
+                        time_since_last_cn_check = (current_time - last_cn_reflection_time) / 60.0  # in minutes
+                        
+                        if time_since_last_cn_check >= cn_next_check_minutes:
+                            print(f"\n{'='*80}")
+                            print(f"[CN Smart Reflection] Time-based CN check triggered ({time_since_last_cn_check:.1f} min since last check)")
+                            print(f"{'='*80}\n")
+                            
+                            # Run Community Notes check
+                            try:
+                                cn_max_results = getattr(args, 'cn_max_results', 5)
+                                cn_test_mode = getattr(args, 'cn_test_mode', True)
+                                notes_written = fetch_and_process_community_notes(
+                                    user_id=user_id, 
+                                    max_results=cn_max_results, 
+                                    test_mode=cn_test_mode, 
+                                    post_client=post_client
+                                )
+                                
+                                # Update last check time
+                                last_cn_reflection_time = current_time
+                                
+                                # Calculate next check interval based on smart algorithm
+                                cn_next_check_minutes = calculate_smart_cn_reflection_interval(
+                                    username=username, 
+                                    base_interval_minutes=delay
+                                )
+                                
+                                print(f"\n[CN Smart Reflection] Next CN check in {cn_next_check_minutes:.0f} minutes")
+                                
+                            except Exception as cn_error:
+                                print(f"[CN Smart Reflection] Error during CN check: {cn_error}")
+                                # Don't raise - just log and continue
+                                # Keep the same interval for retry
+                        else:
+                            remaining_minutes = cn_next_check_minutes - time_since_last_cn_check
+                            if remaining_minutes > 0:
+                                print(f"[CN Smart Reflection] Next CN check in {remaining_minutes:.0f} min (every {cn_next_check_minutes:.0f} min)")
+                    
+                    except Exception as smart_cn_error:
+                        print(f"[CN Smart Reflection] Error in smart reflection logic: {smart_cn_error}")
+                        import traceback
+                        print(traceback.format_exc())
+
                 # Check whether enough bot replies have occurred to trigger a reflection post
                 try:
                     current_count = get_total_bot_reply_count()
@@ -7180,7 +7469,8 @@ def main():
                             last_summary_count = current_count
                             
                             # Run Community Notes check on reflection cycle if enabled
-                            if getattr(args, 'check_community_notes', False) and cn_on_reflection:
+                            # Skip if smart CN reflection is enabled (it handles CN checks on its own schedule)
+                            if getattr(args, 'check_community_notes', False) and cn_on_reflection and not cn_smart_reflection:
                                 try:
                                     print(f"[Reflection] Checking for Community Notes eligible posts")
                                     cn_max_results = getattr(args, 'cn_max_results', 5)
