@@ -2990,6 +2990,7 @@ def post_reflection_on_recent_bot_threads(n=10):
                 prompt += f"{i}. \"{ref}\"\n"
         
         prompt += (
+            "\nIf you haven't recently, advertize that you can be used by any account level on X (since elon banned Ask @Grok for free accounts). "
             "\nPost the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
         )
 
