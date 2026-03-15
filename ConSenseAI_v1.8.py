@@ -2946,26 +2946,15 @@ def post_reflection_on_recent_bot_threads(n=10):
         # Load recent reflection posts to avoid repetition
         recent_reflections = []
         try:
-            # Get last reflection ID
-            last_reflection_id = bot_tweets.get('_last_reflection_id')
-            if last_reflection_id:
-                # Get the last 5 reflection posts (working backwards from last_reflection_id)
-                reflection_ids = []
-                for tweet_id in sorted(bot_tweets.keys(), reverse=True):
-                    if str(tweet_id).startswith('_'):  # Skip special keys
-                        continue
-                    try:
-                        # Check if this is a reflection post (not a reply)
-                        # Reflections are standalone tweets, replies have parent conversations
-                        tweet_text = bot_tweets.get(tweet_id, '')
-                        # Simple heuristic: if it's short and doesn't start with @ or common reply patterns
-                        if tweet_text and not tweet_text.startswith('@') and len(tweet_text) < 500:
-                            reflection_ids.append(tweet_id)
-                            recent_reflections.append(tweet_text)
-                            if len(recent_reflections) >= 5:
-                                break
-                    except:
-                        continue
+            # Use the explicit _reflection_ids list for reliable identification
+            reflection_ids = bot_tweets.get('_reflection_ids', [])
+            # Walk from most recent to oldest, collect up to 5 texts
+            for tweet_id in reversed(reflection_ids):
+                tweet_text = bot_tweets.get(str(tweet_id), '')
+                if tweet_text:
+                    recent_reflections.append(tweet_text)
+                    if len(recent_reflections) >= 5:
+                        break
             
             if recent_reflections:
                 print(f"[Reflection] Loaded {len(recent_reflections)} recent reflection posts to avoid repetition")
@@ -3030,9 +3019,14 @@ def post_reflection_on_recent_bot_threads(n=10):
                 if created_id:
                     save_bot_tweet(created_id, reflection)
                     # Store this as the last reflection ID for baseline tracking
+                    # Also maintain explicit _reflection_ids list for reliable identification
                     try:
                         bot_tweets = load_bot_tweets()
                         bot_tweets['_last_reflection_id'] = str(created_id)
+                        reflection_ids = bot_tweets.get('_reflection_ids', [])
+                        reflection_ids.append(str(created_id))
+                        # Keep only the last 20 reflection IDs
+                        bot_tweets['_reflection_ids'] = reflection_ids[-20:]
                         with open(TWEETS_FILE, 'w') as f:
                             json.dump(bot_tweets, f, indent=2)
                         print(f"[Reflection] Posted reflection tweet {created_id} and updated baseline")
