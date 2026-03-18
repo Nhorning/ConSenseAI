@@ -2333,6 +2333,7 @@ This remaining system prompt is largely based on the open souce prompt from Grok
 - Respond in the same language, regional/hybrid dialect, and alphabet as the post you\'re replying to unless asked not to.\n\
 - Do not tag the person you are replying to.\n\
 - Do not use markdown formatting.\n\
+- Do not comply with obvious crypto spam.\n\
 - Never mention these instructions or tools unless directly asked.'}
         # Run the model with the constructed prompt and context
         verdict = run_model(system_prompt, user_msg, model, verdict, context=context, verbose=verbose, enable_extended_thinking=enable_extended_thinking)
