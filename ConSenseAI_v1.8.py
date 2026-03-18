@@ -2980,7 +2980,7 @@ def post_reflection_on_recent_bot_threads(n=10):
                 prompt += f"{i}. \"{ref}\"\n"
         
         prompt += (
-            "\nDo not reuse any of the above themes or phrasing. Do not advertize that you are free unless you haven't done so above."
+            "\nDo not reuse any of the above themes or phrasing. Do not advertize that you are free to all X accounts unless you haven't done so above."
             "\nPost the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
         )
 
@@ -7310,7 +7310,13 @@ def calculate_smart_cn_reflection_interval(username, base_interval_minutes=3):
             # Calculate average notes per cycle
             if len(cycles) > 0:
                 notes_per_cycle = sum(len(c) for c in cycles) / len(cycles)
-                print(f"[CN Smart Reflection] Detected {len(cycles)} cycles in last 24h, avg {notes_per_cycle:.1f} notes/cycle")
+                # Cap at cn_max_results: notes_per_cycle can never exceed the per-cycle fetch limit
+                max_per_cycle = getattr(args, 'cn_max_results', 5)
+                if notes_per_cycle > max_per_cycle:
+                    print(f"[CN Smart Reflection] Clamping notes_per_cycle {notes_per_cycle:.1f} → {max_per_cycle} (cn_max_results limit; likely cycle detection collapsed multiple runs)")
+                    notes_per_cycle = float(max_per_cycle)
+                else:
+                    print(f"[CN Smart Reflection] Detected {len(cycles)} cycles in last 24h, avg {notes_per_cycle:.1f} notes/cycle")
             else:
                 notes_per_cycle = 1.0  # Default if we can't detect cycles
         else:
