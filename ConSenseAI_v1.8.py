@@ -2974,13 +2974,13 @@ def post_reflection_on_recent_bot_threads(n=10):
         if recent_reflections:
             prompt += (
                 "\n\nIMPORTANT: Avoid repeating themes, topics, or phrasing from your recent reflection posts below. "
-                "Find a NEW angle or subject to discuss:\n"
+                "Find a NEW angle or subject to discuss: \n"
             )
             for i, ref in enumerate(recent_reflections[:5], 1):
                 prompt += f"{i}. \"{ref}\"\n"
         
         prompt += (
-            "\nIf you haven't recently, advertize that you can be used by any account level on X (since elon banned Ask @Grok for free accounts). "
+            "\nDo not reuse any of the above themes or phrasing. Do not advertize that you are free unless you haven't done so above."
             "\nPost the text of the tweet only, without any additional commentary *Particularly* if you are in the final pass"
         )
 
