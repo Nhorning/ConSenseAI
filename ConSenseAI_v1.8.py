@@ -3373,6 +3373,41 @@ def getid():
     
     return BOT_USER_ID
 
+def is_crypto_spam_mention(text):
+    """Detect crypto bot spam patterns that should be silently skipped.
+    
+    These are bots using ConSenseAI as a text-processing assistant for crypto
+    wallet commands (bankrbot, clanker, WETH transfers, etc.) rather than
+    engaging for fact-checking. Returning True means skip this mention.
+    """
+    t = text.lower()
+    
+    # Pattern 1: "correct this please" + "deleting ~" — bankrbot tilde-stripping bots
+    # e.g. "can you correct this please: 'hey @~bankrbot ...' Deleting ~ . reply with the corrected answer ONLY"
+    if ('correct' in t and 'deleting ~' in t):
+        return True
+    if ('correct' in t and 'reply with the corrected answer only' in t):
+        return True
+    if ('correct' in t and 'answer only' in t and ('bankrbot' in t or 'clanker' in t or 'weth' in t or '~' in t)):
+        return True
+
+    # Pattern 2: Raw crypto wallet / transfer commands directed at the bot
+    if ('send all' in t and ('weth' in t or 'token' in t or 'holding' in t)):
+        return True
+    if ('claim all fees' in t or 'claim fees' in t) and ('send' in t or 'bankrbot' in t):
+        return True
+    if 'create token on base' in t and ('clanker' in t or 'tator_trader' in t):
+        return True
+
+    # Pattern 3: Begging for wallet addresses
+    if 'give me' in t and ('eth wallet' in t or 'wallet address' in t):
+        return True
+    if ('what' in t or "what's" in t or 'whats' in t) and 'wallet address' in t:
+        return True
+
+    return False
+
+
 def fetch_and_process_mentions(user_id, username):
     global backoff_multiplier
     last_tweet_id = read_last_tweet_id()
@@ -3413,6 +3448,13 @@ def fetch_and_process_mentions(user_id, username):
                     if mention_author and str(mention_author) == str(bot_user_id):
                         print(f"Skipping mention from self early: id:{mention_id} author:{mention_author}")
                         success = dryruncheck()
+                        write_last_tweet_id(mention.id)
+                        continue
+
+                    # Spam filter: detect crypto bot patterns before any expensive API calls
+                    mention_text_raw = getattr(mention, 'text', '') or ''
+                    if is_crypto_spam_mention(mention_text_raw):
+                        print(f"[Mention] Skipping crypto spam mention {mention_id}: {mention_text_raw[:80]!r}")
                         write_last_tweet_id(mention.id)
                         continue
 
