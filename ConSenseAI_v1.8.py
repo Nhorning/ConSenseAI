@@ -4828,18 +4828,20 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
             with open(cn_written_file, 'r') as f:
                 historical_notes = json.load(f)
             
-            # Extract last 100 notes with Twitter-assigned rating status
+            # Extract notes with Twitter-assigned rating status
             notes_with_ratings = []
             for post_id, note_data in historical_notes.items():
                 if isinstance(note_data, dict) and 'twitter_rating_status' in note_data:
                     notes_with_ratings.append((post_id, note_data))
             
-            # Sort by timestamp (most recent first) and take last 100
+            # Sort by timestamp (most recent first), then scan the full history to
+            # collect the 5 most recent examples of each rating category.
             notes_with_ratings.sort(key=lambda x: x[1].get('timestamp', ''), reverse=True)
-            recent_notes = notes_with_ratings[:100]
             
-            # Categorize as helpful or unhelpful
-            for post_id, note_data in recent_notes:
+            # Categorize as helpful or unhelpful, scanning as deep as needed
+            for post_id, note_data in notes_with_ratings:
+                if len(helpful_examples) >= 5 and len(unhelpful_examples) >= 5:
+                    break
                 rating_status = note_data.get('twitter_rating_status', '')
                 note_content = note_data.get('note', '')
                 original_post = note_data.get('post_text', '')
@@ -4847,20 +4849,20 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
                 # Only count notes with explicit Twitter ratings (not "needs_more_ratings")
                 # Helpful: currently_rated_helpful
                 # Unhelpful: currently_rated_not_helpful
-                if rating_status == 'currently_rated_helpful':
+                if rating_status == 'currently_rated_helpful' and len(helpful_examples) < 5:
                     helpful_examples.append({
                         'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
                         'note': note_content,
                         'rating': rating_status
                     })
-                elif rating_status == 'currently_rated_not_helpful':
+                elif rating_status == 'currently_rated_not_helpful' and len(unhelpful_examples) < 5:
                     unhelpful_examples.append({
                         'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
                         'note': note_content,
                         'rating': rating_status
                     })
             
-            log_to_file(f"Loaded {len(helpful_examples)} helpful and {len(unhelpful_examples)} unhelpful examples from history (excluding {len(recent_notes) - len(helpful_examples) - len(unhelpful_examples)} unrated)")
+            log_to_file(f"Loaded {len(helpful_examples)} helpful and {len(unhelpful_examples)} unhelpful examples from history (scanned {len(notes_with_ratings)} rated notes total)")
             print(f"[CN Verification] Historical examples: {len(helpful_examples)} helpful, {len(unhelpful_examples)} unhelpful")
     
     except Exception as e:
