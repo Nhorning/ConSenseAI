@@ -1790,6 +1790,27 @@ def save_followed_user(user_id):
         except IOError as e:
             print(f"[Auto-Follow] Error saving followed user: {e}")
 
+def get_do_not_follow():
+    """Load the permanent do-not-follow list (blocked/suspended accounts).
+    Stored in bot_tweets.json under '_do_not_follow' and never overwritten by sync."""
+    tweets = load_bot_tweets()
+    return set(str(x) for x in tweets.get('_do_not_follow', []))
+
+def save_do_not_follow(user_id):
+    """Permanently mark a user_id so it is never attempted again."""
+    tweets = load_bot_tweets()
+    dnf = tweets.get('_do_not_follow', [])
+    uid = str(user_id)
+    if uid not in [str(x) for x in dnf]:
+        dnf.append(uid)
+        tweets['_do_not_follow'] = dnf
+        try:
+            with open(TWEETS_FILE, 'w') as f:
+                json.dump(tweets, f, indent=2)
+            print(f"[Auto-Follow] Added user {uid} to do-not-follow list")
+        except IOError as e:
+            print(f"[Auto-Follow] Error saving do-not-follow entry: {e}")
+
 def sync_followed_users_from_api():
     """
     Sync the cached followed users list with the actual following list.
@@ -1936,8 +1957,18 @@ def follow_user(user_id):
     except tweepy.errors.TooManyRequests:
         print(f"[Auto-Follow] Rate limited on follow request for user {user_id}")
         return False
+    except tweepy.errors.BadRequest as e:
+        # Blocked, suspended, or otherwise permanently unfollowable — never retry
+        print(f"[Auto-Follow] Bad request for user {user_id} (blocked/suspended): {e}")
+        save_do_not_follow(user_id)
+        return False
     except Exception as e:
-        print(f"[Auto-Follow] Error following user {user_id}: {e}")
+        err_str = str(e)
+        if '400' in err_str:
+            print(f"[Auto-Follow] 400 error for user {user_id} (blocked/suspended): {e}")
+            save_do_not_follow(user_id)
+        else:
+            print(f"[Auto-Follow] Error following user {user_id}: {e}")
         return False
 
 def check_and_follow_active_users(min_replies=3):
@@ -1949,24 +1980,28 @@ def check_and_follow_active_users(min_replies=3):
     
     user_counts = get_user_reply_counts()
     already_followed = get_followed_users()
+    do_not_follow = get_do_not_follow()
     
     # DEBUG: Print all user counts with details
     print(f"[Auto-Follow DEBUG] All user reply counts: {user_counts}")
     print(f"[Auto-Follow DEBUG] Already followed: {already_followed}")
+    print(f"[Auto-Follow DEBUG] Do-not-follow list: {do_not_follow}")
     
     # Show each user's status
     for uid, count in sorted(user_counts.items(), key=lambda x: x[1], reverse=True):
         if uid in already_followed:
             status = "already followed"
+        elif uid in do_not_follow:
+            status = "do-not-follow (blocked/suspended)"
         elif count >= min_replies:
             status = f"WILL FOLLOW (has {count} >= {min_replies})"
         else:
             status = f"not enough replies ({count} < {min_replies})"
         print(f"[Auto-Follow DEBUG] User {uid}: {count} replies - {status}")
     
-    # Filter to users with enough replies who we haven't followed yet
+    # Filter to users with enough replies who we haven't followed yet and aren't blocked
     to_follow = {uid: count for uid, count in user_counts.items() 
-                 if count >= min_replies and uid not in already_followed}
+                 if count >= min_replies and uid not in already_followed and uid not in do_not_follow}
     
     if not to_follow:
         print(f"[Auto-Follow] No new users to follow (checked {len(user_counts)} users, {len(already_followed)} already followed)")
