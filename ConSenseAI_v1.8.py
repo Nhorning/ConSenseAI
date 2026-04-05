@@ -4869,13 +4869,28 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
                 if isinstance(note_data, dict) and 'twitter_rating_status' in note_data:
                     notes_with_ratings.append((post_id, note_data))
             
-            # Sort by timestamp (most recent first), then scan the full history to
-            # collect the 5 most recent examples of each rating category.
+            # Sort by timestamp (most recent first)
             notes_with_ratings.sort(key=lambda x: x[1].get('timestamp', ''), reverse=True)
+            
+            # Analyze last 100 notes to determine how many examples to collect
+            # Minimum 5 per category, maximum is count available in last 100 notes
+            last_100_notes = notes_with_ratings[:100]
+            helpful_count_in_100 = sum(1 for _, note_data in last_100_notes 
+                                       if note_data.get('twitter_rating_status') == 'currently_rated_helpful')
+            unhelpful_count_in_100 = sum(1 for _, note_data in last_100_notes 
+                                         if note_data.get('twitter_rating_status') == 'currently_rated_not_helpful')
+            
+            # Set target: minimum 5, maximum available in last 100
+            helpful_target = max(5, helpful_count_in_100)
+            unhelpful_target = max(5, unhelpful_count_in_100)
+            
+            log_to_file(f"Last 100 notes contain: {helpful_count_in_100} helpful, {unhelpful_count_in_100} unhelpful")
+            log_to_file(f"Target examples to collect: {helpful_target} helpful, {unhelpful_target} unhelpful")
+            print(f"[CN Verification] Target: {helpful_target} helpful, {unhelpful_target} unhelpful (min=5, max in last 100 notes)")
             
             # Categorize as helpful or unhelpful, scanning as deep as needed
             for post_id, note_data in notes_with_ratings:
-                if len(helpful_examples) >= 5 and len(unhelpful_examples) >= 5:
+                if len(helpful_examples) >= helpful_target and len(unhelpful_examples) >= unhelpful_target:
                     break
                 rating_status = note_data.get('twitter_rating_status', '')
                 note_content = note_data.get('note', '')
@@ -4884,13 +4899,13 @@ def verify_note_helpfulness_adversarial(note_text, post_text, context, username,
                 # Only count notes with explicit Twitter ratings (not "needs_more_ratings")
                 # Helpful: currently_rated_helpful
                 # Unhelpful: currently_rated_not_helpful
-                if rating_status == 'currently_rated_helpful' and len(helpful_examples) < 5:
+                if rating_status == 'currently_rated_helpful' and len(helpful_examples) < helpful_target:
                     helpful_examples.append({
                         'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
                         'note': note_content,
                         'rating': rating_status
                     })
-                elif rating_status == 'currently_rated_not_helpful' and len(unhelpful_examples) < 5:
+                elif rating_status == 'currently_rated_not_helpful' and len(unhelpful_examples) < unhelpful_target:
                     unhelpful_examples.append({
                         'post': original_post[:200] + '...' if len(original_post) > 200 else original_post,
                         'note': note_content,
