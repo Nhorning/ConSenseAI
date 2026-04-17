@@ -2320,11 +2320,11 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     models = [
         #lower tier (index 0-2)
         {"name": "grok-4-1-fast-reasoning", "client": xai_client, "api": "xai"},
-        {"name": "gpt-5-mini", "client": openai_client, "api": "openai"},
+        {"name": "gpt-5.4-mini", "client": openai_client, "api": "openai"},
         {"name": "claude-haiku-4-5", "client": anthropic_client, "api": "anthropic"},
         #higher tier (index 3-5)
-        {"name": "grok-4.20-multi-agent-beta-0309", "client": xai_client, "api": "xai"},
-        {"name": "gpt-5.2", "client": openai_client, "api": "openai"},
+        {"name": "grok-4.20-multi-agent-0309", "client": xai_client, "api": "xai"},
+        {"name": "gpt-5.4", "client": openai_client, "api": "openai"},
         {"name": "claude-sonnet-4-6", "client": anthropic_client, "api": "anthropic"}
     ]
     
@@ -6331,7 +6331,7 @@ def fetch_and_process_community_notes(user_id=None, max_results=5, test_mode=Tru
             secure_random = random.SystemRandom()
             retry_model_list = [
                 {"name": "grok-4-1-fast-reasoning", "api": "xai"},
-                {"name": "gpt-5-mini", "api": "openai"},
+                {"name": "gpt-5.4-mini", "api": "openai"},
                 {"name": "claude-haiku-4-5", "api": "anthropic"}
             ]
             secure_random.shuffle(retry_model_list)  # Shuffle once, then rotate through this order
