@@ -1865,6 +1865,9 @@ def sync_followed_users_from_api():
             except IOError as e:
                 print(f"[Auto-Follow] Error saving synced followers: {e}")
             return
+        else:
+            print("[Auto-Follow] X API sync returned 0 users — skipping cache update to avoid false empty state")
+            return
             
     except Exception as e:
         print(f"[Auto-Follow] Unexpected error with X API: {e}")
@@ -1926,7 +1929,11 @@ def sync_followed_users_from_api():
             print(f"[Auto-Follow] Error parsing following list: {e}")
             return
         
-        # Update the cache with the actual list
+        # Update the cache with the actual list — but only if we got real data
+        if not actual_following:
+            print("[Auto-Follow] twitterapi.io sync returned 0 users — skipping cache update to avoid false empty state")
+            return
+
         tweets = load_bot_tweets()
         tweets['_followed_users'] = list(actual_following)
         
@@ -2009,16 +2016,22 @@ def check_and_follow_active_users(min_replies=3):
     
     print(f"[Auto-Follow] Found {len(to_follow)} users to follow: {to_follow}")
     
-    # Follow each user
+    # Cap follows per cycle to avoid triggering spam detection
+    MAX_FOLLOWS_PER_CYCLE = 5
+    to_follow_this_cycle = dict(list(sorted(to_follow.items(), key=lambda x: x[1], reverse=True))[:MAX_FOLLOWS_PER_CYCLE])
+    if len(to_follow) > MAX_FOLLOWS_PER_CYCLE:
+        print(f"[Auto-Follow] Capping to {MAX_FOLLOWS_PER_CYCLE} follows this cycle (deferring {len(to_follow) - MAX_FOLLOWS_PER_CYCLE} users to future cycles)")
+    
+    # Follow each user with meaningful delay between requests
     followed_count = 0
-    for user_id, count in to_follow.items():
+    for user_id, count in to_follow_this_cycle.items():
         if follow_user(user_id):
             save_followed_user(user_id)
             followed_count += 1
-            # Add small delay between follows to avoid rate limits
-            time.sleep(2)
+            # 30-second delay between follows to avoid rate limit / spam detection
+            time.sleep(30)
     
-    print(f"[Auto-Follow] Successfully followed {followed_count}/{len(to_follow)} users")
+    print(f"[Auto-Follow] Successfully followed {followed_count}/{len(to_follow_this_cycle)} users this cycle ({len(to_follow) - followed_count} deferred)")
 
 def load_keys():
     """Load keys from the key file. Format:
@@ -7514,7 +7527,7 @@ def main():
             # Calculate smart interval on startup rather than defaulting to base delay
             cn_next_check_minutes = calculate_smart_cn_reflection_interval(
                 username=username, 
-                base_interval_minutes=delay
+                base_interval_minutes=max(delay, 10)
             )
             print(f"[Main] Initial CN check interval: {cn_next_check_minutes:.0f} minutes (will recalculate after each cycle)")
         
@@ -7598,7 +7611,7 @@ def main():
                                 # Calculate next check interval based on smart algorithm
                                 cn_next_check_minutes = calculate_smart_cn_reflection_interval(
                                     username=username, 
-                                    base_interval_minutes=delay
+                                    base_interval_minutes=max(delay, 10)
                                 )
                                 
                                 print(f"\n[CN Smart Reflection] Next CN check in {cn_next_check_minutes:.0f} minutes")
