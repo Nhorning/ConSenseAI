@@ -7527,7 +7527,7 @@ def main():
             # Calculate smart interval on startup rather than defaulting to base delay
             cn_next_check_minutes = calculate_smart_cn_reflection_interval(
                 username=username, 
-                base_interval_minutes=max(delay, 10)
+                base_interval_minutes=max(delay, 3)
             )
             print(f"[Main] Initial CN check interval: {cn_next_check_minutes:.0f} minutes (will recalculate after each cycle)")
         
