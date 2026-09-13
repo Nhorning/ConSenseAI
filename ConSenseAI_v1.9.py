@@ -2282,8 +2282,8 @@ def run_model(system_prompt, user_msg, model, verdict, max_tokens=250, context=N
                             combined += ' ' + text
                     verdict[model['name']] = combined
         
-                # Handle minimal or unhelpful responses
-                if verdict[model['name']] in [".", "", "No results"]:
+                # Handle minimal, unhelpful, or missing (thinking-only, no text block) responses
+                if model['name'] not in verdict or verdict[model['name']] in [".", "", "No results"]:
                     verdict[model['name']] = "Search yielded no useful results. Unable to verify."
                 if hasattr(response, 'usage') and response.usage is not None:
                     if hasattr(response.usage, 'server_tool_use') and response.usage.server_tool_use is not None:
@@ -2383,22 +2383,26 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     randomized_models = models[:3].copy()
     secure_random.shuffle(randomized_models)
 
-    # Cap images sent to vision models: long threads can accumulate 50+ images, which
-    # makes it far more likely that one dead/expired URL (especially ephemeral news_img
-    # link-preview thumbnails) causes the *entire* multi-image request to fail. Always
-    # keep the current tweet's own media (tagged 'is_current' in get_tweet_context),
-    # then fill remaining slots with the most recent ancestor-chain images, deprioritizing
-    # card-preview thumbnails.
+    # Only trim images when there are more than MAX_IMAGES total - small threads are left untouched.
     MAX_IMAGES = 10
     if context and context.get('media') and len(context['media']) > MAX_IMAGES:
         original_count = len(context['media'])
-        current_media = [m for m in context['media'] if m.get('is_current')]
-        other_media = [m for m in context['media'] if not m.get('is_current')]
-        real_other = [m for m in other_media if 'news_img' not in m.get('url', '')]
-        card_previews = [m for m in other_media if 'news_img' in m.get('url', '')]
-        remaining_slots = max(MAX_IMAGES - len(current_media), 0)
-        context['media'] = current_media[:MAX_IMAGES] + (real_other + card_previews)[-remaining_slots:]
-        print(f"[Media Debug] Capped images from {original_count} to {len(context['media'])} (kept current tweet's media + most recent)")
+
+        # news_img link-preview card thumbnails consistently fail to download for the
+        # vision APIs (repeated 404s / "Unable to download the file" from both OpenAI and
+        # Anthropic across many unrelated tweets) - drop them first when trimming.
+        context['media'] = [m for m in context['media'] if 'news_img' not in m.get('url', '')]
+
+        # Cap remaining images: always keep the current tweet's own media (tagged
+        # 'is_current' in get_tweet_context), then fill remaining slots with the most
+        # recent ancestor-chain images.
+        if len(context['media']) > MAX_IMAGES:
+            current_media = [m for m in context['media'] if m.get('is_current')]
+            other_media = [m for m in context['media'] if not m.get('is_current')]
+            remaining_slots = max(MAX_IMAGES - len(current_media), 0)
+            context['media'] = current_media[:MAX_IMAGES] + other_media[-remaining_slots:]
+
+        print(f"[Media Debug] Trimmed images from {original_count} to {len(context['media'])}")
 
     # Run 2 lower-tier models, then use higher-tier from company that hasn't run
     runs = 2
