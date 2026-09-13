@@ -2383,6 +2383,23 @@ def fact_check(tweet_text, tweet_id, context=None, generate_only=False, verbose=
     randomized_models = models[:3].copy()
     secure_random.shuffle(randomized_models)
 
+    # Cap images sent to vision models: long threads can accumulate 50+ images, which
+    # makes it far more likely that one dead/expired URL (especially ephemeral news_img
+    # link-preview thumbnails) causes the *entire* multi-image request to fail. Always
+    # keep the current tweet's own media (tagged 'is_current' in get_tweet_context),
+    # then fill remaining slots with the most recent ancestor-chain images, deprioritizing
+    # card-preview thumbnails.
+    MAX_IMAGES = 10
+    if context and context.get('media') and len(context['media']) > MAX_IMAGES:
+        original_count = len(context['media'])
+        current_media = [m for m in context['media'] if m.get('is_current')]
+        other_media = [m for m in context['media'] if not m.get('is_current')]
+        real_other = [m for m in other_media if 'news_img' not in m.get('url', '')]
+        card_previews = [m for m in other_media if 'news_img' in m.get('url', '')]
+        remaining_slots = max(MAX_IMAGES - len(current_media), 0)
+        context['media'] = current_media[:MAX_IMAGES] + (real_other + card_previews)[-remaining_slots:]
+        print(f"[Media Debug] Capped images from {original_count} to {len(context['media'])} (kept current tweet's media + most recent)")
+
     # Run 2 lower-tier models, then use higher-tier from company that hasn't run
     runs = 2
     
@@ -3953,6 +3970,8 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
             if mention_id and str(last_id) != str(mention_id):
                 # Collect media and quoted tweets for the mention and append to the in-memory chain
                 mention_media = extract_media(tweet, includes)
+                for m in mention_media:
+                    m['is_current'] = True  # tag so media capping later prioritizes it
                 quoted_in_mention = [qr.data for qr in collect_quoted(getattr(tweet, 'referenced_tweets', None))]
                 
                 # Extract username from includes
@@ -4002,7 +4021,10 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
                 except Exception as e:
                     print(f"[Context Cache] Error saving updated chain: {e}")
 
-            context['media'].extend(extract_media(tweet, includes))
+            current_tweet_media = [m for m in extract_media(tweet, includes) if m is not None]
+            for m in current_tweet_media:
+                m['is_current'] = True  # tag so media capping later prioritizes it
+            context['media'].extend(current_tweet_media)
 
             # Generate full_thread_text from cached data
             if context["thread_tweets"]:
@@ -4312,8 +4334,11 @@ def get_tweet_context(tweet, includes=None, bot_username=None):
         if first_entry and isinstance(first_entry, dict):
             context["original_tweet"] = first_entry.get('tweet')
 
-    # Collect media
-    context['media'].extend([m for m in extract_media(tweet, includes) if m is not None])
+    # Collect media (tag current tweet's own media so capping later prioritizes it)
+    current_tweet_media = [m for m in extract_media(tweet, includes) if m is not None]
+    for m in current_tweet_media:
+        m['is_current'] = True
+    context['media'].extend(current_tweet_media)
     for entry in context['ancestor_chain']:
         if entry is None:
             continue
